@@ -22,5 +22,11 @@ watchEffect(() => {
         Log in with github
 
       </button>
+      <button
+        class="mt-3"
+        @click="auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })">
+        Log in with Google
+
+      </button>
   </div>
 </template>
