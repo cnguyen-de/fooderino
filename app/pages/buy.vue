@@ -3,7 +3,7 @@ const supabase = useSupabaseClient()
 const client = useSupabaseClient()
 
 const { data } = await useAsyncData('items', async () => {
-  const { data } = await client.from('items').select();
+  const { data } = await client.from('items').select().gte('amount_to_purchase', 1  );
   console.log(data);
   return data
 })
@@ -13,9 +13,4 @@ const { data } = await useAsyncData('items', async () => {
 
   {{  data }}
 
-  <button
-    class="mt-3"
-    @click="supabase.auth.signOut()">
-    Log out
-  </button>
   </template>
