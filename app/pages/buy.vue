@@ -9,8 +9,7 @@ const { data } = await useAsyncData('items', async () => {
 })
 </script>
 <template>
-  inventory
+  Buy
 
-  {{  data }}
-
+  <BuyList :items="data"></BuyList>
   </template>

@@ -1,17 +1,14 @@
 <script setup>
+import { fetchData } from '~/composables/fetchData';
 const supabase = useSupabaseClient()
-const client = useSupabaseClient()
 
 const { data } = await useAsyncData('items', async () => {
-  const { data } = await client.from('items').select();
-  console.log(data);
-  return data
+  return await fetchData();
 })
 </script>
 <template>
   inventory
-
-  {{  data }}
+  <InventoryList :items="data"></InventoryList>
 
   <button
     class="mt-3"
