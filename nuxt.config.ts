@@ -18,5 +18,10 @@ export default defineNuxtConfig({
       callback: "/confirm",
       exclude: ["/"]
     }
-  }
+  },
+  components: [
+    { path: "~/components/footer", pathPrefix: false },
+    { path: "~/components/header", pathPrefix: false },
+    { path: "~/components/items", pathPrefix: false }
+  ]
 });
