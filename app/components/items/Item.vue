@@ -10,7 +10,7 @@ const props = defineProps<ItemProps>();
 </script>
 
 <template>
-  <div class="flex flex-row">
+  <div class="rounded-md flex flex-row p-2 text-gray-200 bg-gray-700/20">
     <div>{{  name }}</div>
     <div class="flex-grow"></div>
     <slot />

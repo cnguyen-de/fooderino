@@ -1,9 +1,8 @@
 <script setup>
-import { fetchData } from '~/composables/fetchData';
 const supabase = useSupabaseClient()
 
 const { data } = await useAsyncData('items', async () => {
-  return await fetchData();
+  return await fetchInventoryItems();
 })
 </script>
 <template>
