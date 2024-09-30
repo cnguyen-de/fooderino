@@ -2,7 +2,8 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', '@vite-pwa/nuxt', '@nuxtjs/supabase'],
+  modules: ['@nuxtjs/tailwindcss', '@vite-pwa/nuxt', '@nuxtjs/supabase', 'shadcn-nuxt'],
+  shadcn: { prefix: '', componentDir: './app/components/ui' },
   future: {
     compatibilityVersion: 4
   },

@@ -13,6 +13,9 @@
       <div class="h-12">
         <Footer></Footer>
       </div>
+      <div class="absolute bottom-16 right-16">
+        <CreateNewItem></CreateNewItem>
+      </div>
     </div>
   </div>
 </template>
