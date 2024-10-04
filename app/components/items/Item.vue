@@ -12,6 +12,7 @@ export type ItemProps = {
   amount_to_purchase: number;
   showAmount: boolean;
   toRight: boolean;
+  disableSwipe?: boolean;
 };
 const props = withDefaults(defineProps<ItemProps>(), {
   id: 0,
@@ -19,8 +20,12 @@ const props = withDefaults(defineProps<ItemProps>(), {
   amount: 0,
   amount_to_purchase: 0,
   showAmount: false,
-  toRight: false
+  toRight: false,
+  disableSwipe: false
 });
+
+const emit = defineEmits(['itemSwiped']);
+
 const target = ref<HTMLElement | null>(null);
 const container = ref<HTMLElement | null>(null);
 const containerWidth = computed(() => container.value?.offsetWidth);
@@ -57,6 +62,7 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
   onSwipeEnd(e: TouchEvent, direction: UseSwipeDirection) {
     if (props.toRight) {
       if (lengthX.value < 0 && containerWidth.value && Math.abs(lengthX.value) / containerWidth.value >= 0.5) {
+        emit('itemSwiped', props);
         left.value = '100%';
         opacity.value = 0;
       } else {
@@ -65,6 +71,7 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
       }
     } else {
       if (lengthX.value > 0 && containerWidth.value && Math.abs(lengthX.value) / containerWidth.value >= 0.5) {
+        emit('itemSwiped', props);
         left.value = '-100%';
         opacity.value = 0;
       } else {
@@ -78,6 +85,7 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
 
 <template>
   <div
+    v-if="opacity > 0"
     class="item-container relative flex h-10 select-none flex-row items-center justify-center overflow-hidden"
     ref="container">
     <div
