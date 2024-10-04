@@ -42,26 +42,20 @@ const onSubmit = () => {
             <FormMessage />
           </FormItem>
           <FormItem>
-            <FormLabel>Email</FormLabel>
-
             <Select v-bind="componentField">
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a verified email to display" />
+                  <SelectValue placeholder="Type" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="m@example.com"> m@example.com </SelectItem>
-                  <SelectItem value="m@google.com"> m@google.com </SelectItem>
-                  <SelectItem value="m@support.com"> m@support.com </SelectItem>
+                  <SelectItem value="gram">gram</SelectItem>
+                  <SelectItem value="kg">kg</SelectItem>
+                  <SelectItem value="count">count</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <FormDescription>
-              You can manage email addresses in your
-              <a href="/examples/forms">email settings</a>.
-            </FormDescription>
             <FormMessage />
           </FormItem>
         </FormField>
