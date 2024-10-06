@@ -6,7 +6,7 @@ const { data } = await useAsyncData('items', async () => {
 });
 const categories = computed(() => {
   const cat = data.value.map((item) => item.location);
-  return [...new Set(cat)];
+  return [...new Set(cat)].sort((a, b) => a - b);
 });
 </script>
 <template>

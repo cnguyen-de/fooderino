@@ -7,7 +7,7 @@ colorMode.preference = 'dark';
 
 const categories = computed(() => {
   const stores = data.value.map((item) => item.store);
-  return [...new Set(stores)];
+  return [...new Set(stores)].sort((a, b) => a - b);
 });
 </script>
 <template>

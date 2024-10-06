@@ -1,8 +1,7 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <template>
-  <div class="flex h-full flex-row items-center justify-between">
+  <div class="flex h-full flex-row items-center justify-between p-2">
     <FooterLink link="/inventory"
       ><svg
         xmlns="http://www.w3.org/2000/svg"
