@@ -2,7 +2,14 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', '@vite-pwa/nuxt', '@nuxtjs/supabase', 'shadcn-nuxt', '@nuxtjs/color-mode'],
+  modules: [
+    '@nuxtjs/tailwindcss',
+    '@vite-pwa/nuxt',
+    '@nuxtjs/supabase',
+    'shadcn-nuxt',
+    '@nuxtjs/color-mode',
+    '@vee-validate/nuxt'
+  ],
   css: ['./assets/css/tailwind.css'],
   shadcn: { prefix: '', componentDir: './app/components/ui' },
   future: {
@@ -27,5 +34,11 @@ export default defineNuxtConfig({
     { path: '~/components/footer', pathPrefix: false },
     { path: '~/components/header', pathPrefix: false },
     { path: '~/components/items', pathPrefix: false }
-  ]
+  ],
+  //Work around dev tools error
+  vite: {
+    optimizeDeps: {
+      exclude: ['vee-validate']
+    }
+  }
 });
