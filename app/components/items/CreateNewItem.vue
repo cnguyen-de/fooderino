@@ -23,7 +23,7 @@ import {
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
-import { updateItems } from '~/composables/items';
+import { insertItem } from '~/composables/items';
 
 const formSchema = toTypedSchema(
   z.object({
@@ -41,7 +41,7 @@ const form = useForm({
 const isDrawerOpen = ref(false);
 const onSubmit = form.handleSubmit(async (values) => {
   console.log('Form submitted!', values);
-  await updateItems(values);
+  await insertItem(values);
   isDrawerOpen.value = false;
   await fetchInventoryItems();
 });

@@ -8,6 +8,13 @@ const props = defineProps<ListItemProps>();
 const onItemSwiped = (item: ItemProps) => {
   console.log('swiped', item.id);
 };
+const removeItemByOne = async (item: ItemProps) => {
+  const newItem = { ...item, amount: item.amount - 1 };
+  if (newItem.amount < newItem.default_amount) {
+    newItem.amount_to_purchase = newItem.default_amount - newItem.amount;
+  }
+  await updateItem(newItem);
+};
 </script>
 
 <template>
@@ -22,7 +29,8 @@ const onItemSwiped = (item: ItemProps) => {
       :to-right="true"
       :show-amount="false"
       @item-swiped="onItemSwiped($event)">
-      <div>{{ item.amount }}</div>
+      <button class="absolute right-4 z-50 mr-2 rounded bg-gray-500/50 px-2" @click="removeItemByOne(item)">-</button>
+      <div class="w-4 text-right">{{ item.amount }}</div>
     </Item>
   </div>
 </template>
