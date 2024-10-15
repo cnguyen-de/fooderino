@@ -30,7 +30,8 @@ const formSchema = toTypedSchema(
     name: z.string().min(2).max(50),
     amountType: z.string().min(2).max(50).default('count'),
     amount: z.string().min(1).max(50),
-    store: z.string().min(2).max(50)
+    store: z.string().min(2).max(50),
+    location: z.string().min(2).max(50)
   })
 );
 const form = useForm({
@@ -64,6 +65,33 @@ const onSubmit = form.handleSubmit(async (values) => {
           </FormItem>
         </FormField>
 
+        <FormField v-slot="{ componentField }" name="location">
+          <FormItem>
+            <FormControl>
+              <Input type="text" placeholder="Location" v-bind="componentField" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
+        <FormField v-slot="{ componentField }" name="amount">
+          <FormItem>
+            <FormControl>
+              <Input type="text" placeholder="Amount" v-bind="componentField" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
+        <FormField v-slot="{ componentField }" name="store">
+          <FormItem>
+            <FormControl>
+              <Input type="text" placeholder="Store" v-bind="componentField" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
         <FormField v-slot="{ componentField }" name="amountType">
           <FormItem>
             <Select v-bind="componentField">
@@ -80,22 +108,6 @@ const onSubmit = form.handleSubmit(async (values) => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <FormField v-slot="{ componentField }" name="amount">
-          <FormItem>
-            <FormControl>
-              <Input type="text" placeholder="Amount" v-bind="componentField" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <FormField v-slot="{ componentField }" name="store">
-          <FormItem>
-            <FormControl>
-              <Input type="text" placeholder="Store" v-bind="componentField" />
-            </FormControl>
             <FormMessage />
           </FormItem>
         </FormField>

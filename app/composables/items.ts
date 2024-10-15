@@ -7,6 +7,7 @@ export const updateItems = async (data) => {
     name: data.name,
     amount_type: data.amountType,
     store: data.store,
+    location: data.location,
     user: user.value.email
   });
 };
