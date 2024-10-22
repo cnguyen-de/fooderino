@@ -33,7 +33,7 @@ const left = ref('0');
 const opacity = ref(1);
 
 const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
-  passive: false,
+  passive: true,
   onSwipe(e: TouchEvent) {
     if (props.toRight) {
       if (containerWidth.value) {

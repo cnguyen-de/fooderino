@@ -8,7 +8,8 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase',
     'shadcn-nuxt',
     '@nuxtjs/color-mode',
-    '@vee-validate/nuxt'
+    '@vee-validate/nuxt',
+    '@pinia/nuxt'
   ],
   css: ['./assets/css/tailwind.css'],
   shadcn: { prefix: '', componentDir: './app/components/ui' },
