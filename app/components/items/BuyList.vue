@@ -25,7 +25,6 @@ const onItemSwiped = (item: ItemProps) => {
       show-amount
       @item-swiped="onItemSwiped($event)">
       <div class="px-2">{{ item.amount_to_purchase }}</div>
-      <AddToInventory :item="item" />
     </Item>
   </div>
 </template>

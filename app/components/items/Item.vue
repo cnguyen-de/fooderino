@@ -85,7 +85,7 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
 
 <template>
   <div
-    v-if="opacity > 0"
+    v-if="opacity > 0 && !disableSwipe"
     class="item-container relative flex h-10 select-none flex-row items-center justify-center overflow-hidden"
     ref="container">
     <div
@@ -104,6 +104,16 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
         <slot />
       </div>
     </div>
+  </div>
+  <div class="flex flex-row text-gray-200" v-else>
+    <div>{{ name }}</div>
+    <div
+      v-if="showAmount"
+      class="ml-2 flex size-6 items-center justify-center rounded-full border border-green-800 p-1 text-green-400">
+      {{ amount }}
+    </div>
+    <div class="flex-grow"></div>
+    <slot />
   </div>
 </template>
 

@@ -9,7 +9,7 @@ const onItemSwiped = (item: ItemProps) => {
   console.log('swiped', item.id);
 };
 const removeItemByOne = async (item: ItemProps) => {
-  const newItem = { ...item, amount: item.amount - 1 };
+  const newItem = { ...item, amount: item.amount > 0 ? item.amount - 1 : 0 };
   if (newItem.amount < newItem.default_amount) {
     newItem.amount_to_purchase = newItem.default_amount - newItem.amount;
   }
@@ -28,8 +28,11 @@ const removeItemByOne = async (item: ItemProps) => {
       :amount_to_purchase="item.amount_to_purchase"
       :to-right="true"
       :show-amount="false"
+      :disable-swipe="true"
       @item-swiped="onItemSwiped($event)">
-      <button class="absolute right-4 z-50 mr-2 size-8 rounded bg-gray-500/20" @click="removeItemByOne(item)">-</button>
+      <button class="z-50 mr-2 size-8 rounded bg-gray-500/20 hover:bg-gray-500/40" @click="removeItemByOne(item)">
+        -
+      </button>
       <div class="w-4 text-right">{{ item.amount }}</div>
     </Item>
   </div>

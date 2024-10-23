@@ -20,6 +20,7 @@ export default defineNuxtConfig({
     viewTransition: true
   },
   runtimeConfig: {
+    openaiApiKey: process.env.OPENAI_API_KEY,
     public: {
       baseUrl: process.env.BASE_URL || 'http://localhost:3000'
     }

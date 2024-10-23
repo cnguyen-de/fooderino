@@ -7,10 +7,10 @@
         class="flex h-12 items-center justify-center bg-gradient-to-r from-red-600 to-yellow-300 bg-clip-text p-2 font-bold tracking-wide text-transparent">
         FOODERINO
       </div>
-      <div class="flex-grow">
+      <div class="relative h-full flex-grow">
         <slot></slot>
       </div>
-      <div class="h-16">
+      <div class="fixed bottom-0 h-16 w-full">
         <Footer></Footer>
       </div>
       <div class="absolute bottom-16 right-16">
