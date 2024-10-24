@@ -13,8 +13,10 @@ const items = computed(() => {
 });
 </script>
 <template>
-  <div v-for="category in categories" :key="category">
-    <h2 class="px-2 font-bold text-white">{{ category }}</h2>
-    <InventoryList :items="items?.filter((item) => item.location === category)"></InventoryList>
+  <div class="max-h-[90%] overflow-scroll">
+    <div v-for="category in categories" :key="category">
+      <h2 class="px-2 font-bold text-white">{{ category }}</h2>
+      <InventoryList :items="items?.filter((item) => item.location === category)"></InventoryList>
+    </div>
   </div>
 </template>

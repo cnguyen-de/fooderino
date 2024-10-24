@@ -50,7 +50,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 <template>
   <Drawer class="" v-model:open="isDrawerOpen">
-    <DrawerTrigger class="text-blue-200">+</DrawerTrigger>
+    <DrawerTrigger class="size-8 rounded-full bg-orange-300/50 hover:bg-orange-300">+</DrawerTrigger>
     <DrawerContent class="mx-auto max-w-xl">
       <DrawerHeader>
         <DrawerTitle>Add new item</DrawerTitle>

@@ -33,9 +33,7 @@ const removeItemByOne = async (item: ItemProps) => {
       :show-amount="false"
       :disable-swipe="true"
       @item-swiped="onItemSwiped($event)">
-      <button class="z-50 mr-2 size-8 rounded bg-gray-500/20 hover:bg-gray-500/40" @click="removeItemByOne(item)">
-        -
-      </button>
+      <button class="mr-2 size-8 rounded bg-gray-500/20 hover:bg-gray-500/40" @click="removeItemByOne(item)">-</button>
       <div class="w-4 text-right">{{ item.amount }}</div>
     </Item>
   </div>
