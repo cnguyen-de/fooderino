@@ -3,8 +3,6 @@ import type { UseSwipeDirection } from '@vueuse/core';
 import { useSwipe } from '@vueuse/core';
 import { computed, ref } from 'vue';
 
-import { addItemToInventory } from '~/composables/addToInventory';
-
 export type ItemProps = {
   id: number;
   name: string;
@@ -105,7 +103,7 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
       </div>
     </div>
   </div>
-  <div class="flex flex-row text-gray-200" v-else>
+  <div class="flex flex-row text-gray-200" v-else-if="opacity > 0 && disableSwipe">
     <div>{{ name }}</div>
     <div
       v-if="showAmount"

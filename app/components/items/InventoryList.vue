@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { ItemProps } from './Item.vue';
+import { useItemStore } from '~/store/item';
 
 type ListItemProps = {
   items: ItemProps[];
 };
 const props = defineProps<ListItemProps>();
+
+const itemStore = useItemStore();
 const onItemSwiped = (item: ItemProps) => {
   console.log('swiped', item.id);
 };
@@ -13,7 +16,7 @@ const removeItemByOne = async (item: ItemProps) => {
   if (newItem.amount < newItem.default_amount) {
     newItem.amount_to_purchase = newItem.default_amount - newItem.amount;
   }
-  await updateItem(newItem);
+  await itemStore.updateItem(newItem);
 };
 </script>
 

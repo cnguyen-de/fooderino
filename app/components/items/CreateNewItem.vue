@@ -23,8 +23,9 @@ import {
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
-import { insertItem } from '~/composables/items';
 
+import { useItemStore } from '~/store/item';
+const itemStore = useItemStore();
 const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(2).max(50),
@@ -41,9 +42,8 @@ const form = useForm({
 const isDrawerOpen = ref(false);
 const onSubmit = form.handleSubmit(async (values) => {
   console.log('Form submitted!', values);
-  await insertItem(values);
+  await itemStore.insertItem(values);
   isDrawerOpen.value = false;
-  await fetchInventoryItems();
 });
 </script>
 

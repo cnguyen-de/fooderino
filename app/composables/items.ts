@@ -1,7 +1,6 @@
 export const insertItem = async (data) => {
   const client = useSupabaseClient();
   const user = useSupabaseUser();
-  console.log(user);
   const { data: updatedData, error } = await client.from('items').insert({
     amount: data.amount,
     name: data.name,

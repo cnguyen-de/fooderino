@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { addItemToInventory } from '~/composables/addToInventory';
+import { useItemStore } from '~/store/item';
+const itemStore = useItemStore();
 export type ItemProps = {
   item: Item;
 };
@@ -7,7 +8,7 @@ defineProps<ItemProps>();
 </script>
 
 <template>
-  <button @click="addItemToInventory(item)">
+  <button @click="itemStore.addItemToInventory(item)">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       fill="none"

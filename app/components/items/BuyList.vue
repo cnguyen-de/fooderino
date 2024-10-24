@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { ItemProps } from './Item.vue';
-import { addItemToInventory } from '~/composables/addToInventory';
+import { useItemStore } from '~/store/item';
+const itemStore = useItemStore();
 
 type ListItemProps = {
   items: ItemProps[];
 };
-const props = defineProps<ListItemProps>();
-const onItemSwiped = (item: ItemProps) => {
-  console.log('swiped', item.id, item);
-  addItemToInventory(item);
+defineProps<ListItemProps>();
+const onItemSwiped = async (item: ItemProps) => {
+  await itemStore.addItemToInventory(item);
 };
 </script>
 
