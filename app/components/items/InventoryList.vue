@@ -18,10 +18,20 @@ const removeItemByOne = async (item: ItemProps) => {
   }
   await itemStore.updateItem(newItem);
 };
+
+const renderType = (amountType: string) => {
+  console.log(amountType);
+  if (amountType === 'kg') {
+    return 'kg';
+  } else if (amountType === 'gram') {
+    return 'g';
+  }
+  return '';
+};
 </script>
 
 <template>
-  <div class="flex flex-col gap-1 p-4">
+  <div class="flex flex-col justify-center gap-1 p-4">
     <Item
       v-for="item in items"
       :key="item.id"
@@ -34,7 +44,7 @@ const removeItemByOne = async (item: ItemProps) => {
       :disable-swipe="true"
       @item-swiped="onItemSwiped($event)">
       <button class="mr-2 size-8 rounded bg-gray-500/20 hover:bg-gray-500/40" @click="removeItemByOne(item)">-</button>
-      <div class="w-4 text-right">{{ item.amount }}</div>
+      <div class="w-6 self-center whitespace-nowrap text-left">{{ item.amount }}{{ renderType(item.amount_type) }}</div>
     </Item>
   </div>
 </template>
