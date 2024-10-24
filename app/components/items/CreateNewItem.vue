@@ -31,8 +31,9 @@ const formSchema = toTypedSchema(
     name: z.string().min(2).max(50),
     amountType: z.string().min(2).max(50).default('count'),
     amount: z.string().min(1).max(50),
-    store: z.string().min(2).max(50),
-    location: z.string().min(2).max(50)
+    defaultAmount: z.string().min(1).max(50).default('0'),
+    store: z.string().min(2).max(50).default('Market'),
+    location: z.string().min(2).max(50).default('Fridge')
   })
 );
 const form = useForm({
@@ -55,7 +56,7 @@ const onSubmit = form.handleSubmit(async (values) => {
         <DrawerTitle>Add new item</DrawerTitle>
         <DrawerDescription></DrawerDescription>
       </DrawerHeader>
-      <form class="space-y-6 p-4" @submit="onSubmit">
+      <form class="space-y-2 p-4" @submit="onSubmit">
         <FormField v-slot="{ componentField }" name="name">
           <FormItem>
             <FormControl>
@@ -87,6 +88,15 @@ const onSubmit = form.handleSubmit(async (values) => {
           <FormItem>
             <FormControl>
               <Input type="text" placeholder="Store" v-bind="componentField" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
+        <FormField v-slot="{ componentField }" name="defaultAmount">
+          <FormItem>
+            <FormControl>
+              <Input type="text" placeholder="Amount of items should always be in Inventory" v-bind="componentField" />
             </FormControl>
             <FormMessage />
           </FormItem>
