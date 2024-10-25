@@ -20,7 +20,6 @@ const removeItemByOne = async (item: ItemProps) => {
 };
 
 const renderType = (amountType: string) => {
-  console.log(amountType);
   if (amountType === 'kg') {
     return 'kg';
   } else if (amountType === 'gram') {

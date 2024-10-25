@@ -16,7 +16,12 @@ const items = computed(() => {
   <div class="max-h-[90%] overflow-scroll">
     <div v-for="category in categories" :key="category">
       <h2 class="px-2 font-bold text-white">{{ category }}</h2>
-      <InventoryList :items="items?.filter((item) => item.location === category)"></InventoryList>
+      <InventoryList
+        :items="
+          items
+            ?.filter((item) => item.location === category)
+            .sort((a, b) => a.id - b.id || a.name.localeCompare(b.name))
+        "></InventoryList>
     </div>
   </div>
 </template>
