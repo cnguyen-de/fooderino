@@ -13,7 +13,7 @@ const items = computed(() => {
 });
 </script>
 <template>
-  <div class="max-h-[90%] overflow-scroll">
+  <div class="h-[calc(100%_-_64px)] w-full overflow-auto">
     <div v-for="category in categories" :key="category">
       <h2 class="px-2 font-bold text-white">{{ category }}</h2>
       <InventoryList

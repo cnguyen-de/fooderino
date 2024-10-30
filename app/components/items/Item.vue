@@ -103,7 +103,7 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
       </div>
     </div>
   </div>
-  <div class="flex flex-row text-gray-200" v-else-if="opacity > 0 && disableSwipe">
+  <div class="flex flex-row items-center bg-gray-700/20 px-2 text-gray-200" v-else-if="opacity > 0 && disableSwipe">
     <div>{{ name }}</div>
     <div
       v-if="showAmount"
