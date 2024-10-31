@@ -5,9 +5,6 @@ const { data } = await useAsyncData('items', async () => {
   return await itemStore.fetchBuyItems();
 });
 
-const colorMode = useColorMode();
-colorMode.preference = 'dark';
-
 const categories = computed(() => {
   const stores = itemStore?.purchasedItems?.map((item) => item.store);
   return [...new Set(stores)].sort((a, b) => a - b);
