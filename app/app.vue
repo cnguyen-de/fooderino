@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { useColorMode } from '@vueuse/core';
 import { useListStore } from './store/list';
 
 const listStore = useListStore();
-onMounted(() => {
-  const colorMode = useColorMode();
-  colorMode.preference = 'dark';
-  listStore.fetchLists();
+onMounted(async () => {
+  const colorMode = useColorMode({ emitAuto: true });
+  colorMode.value = 'dark';
+});
+await useAsyncData('lists', async () => {
+  return await listStore.fetchLists();
 });
 </script>
 

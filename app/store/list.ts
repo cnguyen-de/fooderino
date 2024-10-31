@@ -10,11 +10,13 @@ export const useListStore = defineStore('list', () => {
   });
 
   const fetchLists = async () => {
-    const res = await useFetch('/api/list', {
-      headers: useRequestHeaders(['cookie'])
-    });
-    state.lists = res.data;
-    return res.data;
+    const { data } = await useFetch('/api/list');
+    state.lists = data?.value.lists;
+    setSelectedList(data?.value.lists[0]);
+  };
+
+  const setSelectedList = (list: List) => {
+    state.selectedList = list;
   };
 
   return {

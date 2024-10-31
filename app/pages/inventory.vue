@@ -14,19 +14,7 @@ const items = computed(() => {
 </script>
 <template>
   <div class="h-[calc(100%_-_4rem)] w-full overflow-auto">
-    <div class="max-w-max text-white">
-      <Select>
-        <SelectTrigger>
-          <SelectValue placeholder="Select a List" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="list">list1</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
-
+    <ListSelector></ListSelector>
     <div v-for="category in categories" :key="category">
       <h2 class="px-2 font-bold text-white">{{ category }}</h2>
       <InventoryList
