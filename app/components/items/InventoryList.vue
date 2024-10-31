@@ -57,11 +57,18 @@ const renderType = (amountType: string) => {
       :show-amount="false"
       :disable-swipe="true"
       @item-swiped="onItemSwiped($event)">
-      <div class="mr-2 self-center whitespace-nowrap text-right">
-        {{ item.amount }}{{ renderType(item.amount_type) }}
-      </div>
-      <button class="mr-1 size-8 rounded bg-gray-500/20 hover:bg-gray-500/40" @click="removeItemByOne(item)">-</button>
-      <button class="-mr-2 size-8 rounded bg-gray-500/20 hover:bg-gray-500/40" @click="addItemByOne(item)">+</button>
+      <NumberField
+        :step="item.amount_type === 'count' ? '1' : '100'"
+        class="-mr-2 w-24"
+        id="age"
+        :default-value="item.amount"
+        :min="0">
+        <NumberFieldContent>
+          <NumberFieldDecrement class="rounded-full hover:bg-gray-700/30" @click="removeItemByOne(item)" />
+          <NumberFieldInput class="border-none" />
+          <NumberFieldIncrement class="rounded-full hover:bg-gray-700/30" @click="addItemByOne(item)" />
+        </NumberFieldContent>
+      </NumberField>
     </Item>
   </div>
 </template>
