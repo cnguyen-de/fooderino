@@ -50,7 +50,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 <template>
   <Drawer class="" v-model:open="isDrawerOpen">
-    <DrawerTrigger class="size-8 rounded-full bg-orange-300/50 hover:bg-orange-300">+</DrawerTrigger>
+    <DrawerTrigger class="size-10 rounded-full border border-solid border-gray-600/50 bg-gray-900">+</DrawerTrigger>
     <DrawerContent class="mx-auto max-w-xl">
       <DrawerHeader>
         <DrawerTitle>Add new item</DrawerTitle>
@@ -122,13 +122,15 @@ const onSubmit = form.handleSubmit(async (values) => {
           </FormItem>
         </FormField>
       </form>
-      <DrawerFooter class="flex flex-row justify-between">
-        <DrawerClose>
-          <Button variant="ghost" class="text-red-500">Cancel</Button>
-        </DrawerClose>
-        <DrawerClose>
-          <Button class="max-w-min" type="submit" @click.prevent="onSubmit">Submit</Button>
-        </DrawerClose>
+      <DrawerFooter>
+        <div class="flex flex-row justify-between">
+          <DrawerClose>
+            <Button variant="ghost" class="text-red-500">Cancel</Button>
+          </DrawerClose>
+          <DrawerClose>
+            <Button class="max-w-min" type="submit" @click.prevent="onSubmit">Submit</Button>
+          </DrawerClose>
+        </div>
       </DrawerFooter>
     </DrawerContent>
   </Drawer>
