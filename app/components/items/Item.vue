@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { UseSwipeDirection } from '@vueuse/core';
-import { useSwipe, onLongPress } from '@vueuse/core';
+import { type UseSwipeDirection,  } from '@vueuse/core';
+import { useSwipe, watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
 
 export type ItemProps = {
@@ -86,6 +86,15 @@ const onValueUpdated = (value: number) => {
   amountValue.value = value;
   emit('valueChanged', { ...props, amount: value });
 };
+
+const itemName = ref(props.name);
+watchDebounced(
+  itemName,
+  () => {
+    emit('valueChanged', { ...props, name: itemName.value });
+  },
+  { debounce: 500, maxWait: 1000 }
+);
 </script>
 
 <template>
@@ -114,7 +123,8 @@ const onValueUpdated = (value: number) => {
   <div
     class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 pl-4 pr-2 text-gray-200 hover:cursor-pointer"
     v-else-if="opacity >= 0 && disableSwipe">
-    <div>{{ name }}</div>
+    <Input v-model="itemName" class="w-1/2 rounded-full bg-transparent border-none  focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 focus-visible:bg-gray-700/50" />
+
     <div
       v-if="showAmount"
       class="ml-2 flex size-6 items-center justify-center rounded-full border border-green-800 p-1 text-green-400">
@@ -124,7 +134,7 @@ const onValueUpdated = (value: number) => {
     <NumberField
       :step="amount_type === 'count' ? '1' : '100'"
       class="mr-2 w-24"
-      id="amount"
+      :id="id"
       :default-value="amount"
       :model-value="amountValue"
       @update:model-value="onValueUpdated($event)"

@@ -6,7 +6,8 @@ watch(
   () => router.currentRoute.value,
   () => {
     currentRoute.value = router.currentRoute.value.path;
-  }
+  },
+  { immediate: true }
 );
 </script>
 
