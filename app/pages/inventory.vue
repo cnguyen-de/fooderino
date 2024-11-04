@@ -21,7 +21,7 @@ const items = computed(() => {
         :items="
           items
             ?.filter((item) => item.location === category)
-            .sort((a, b) => a.id - b.id || a.name.localeCompare(b.name))
+            .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
         "></InventoryList>
     </div>
   </div>
