@@ -3,11 +3,15 @@ import { type Item } from '../../types/Item';
 interface State {
   inventoryItems: Item[];
   purchasedItems: Item[];
+  selectedItems: string[];
+  filterInput: string;
 }
 export const useItemStore = defineStore('item', () => {
   const state = reactive<State>({
     inventoryItems: [],
-    purchasedItems: []
+    purchasedItems: [],
+    selectedItems: [],
+    filterInput: ''
   });
   const client = useSupabaseClient();
   const user = useSupabaseUser();
@@ -64,6 +68,38 @@ export const useItemStore = defineStore('item', () => {
     await fetchBuyItems();
   };
 
+  const selectItem = (id: string) => {
+    if (isItemSelected(id)) {
+      deselectItem(id);
+      return;
+    }
+    state.selectedItems.push(id);
+  };
+
+  const deselectItem = (id: string) => {
+    const index = state.selectedItems.indexOf(id);
+    state.selectedItems.splice(index, 1);
+  };
+
+  const deselectAllItems = () => {
+    state.selectedItems = [];
+  };
+
+  const isItemSelected = (id: string) => {
+    return state.selectedItems.includes(id);
+  };
+
+  const setFilterInput = (input: string) => {
+    state.filterInput = input;
+  };
+
+  const getFilteredInventoryItems = computed(() => {
+    if (state.filterInput === '' && state.filterInput) {
+      return state.inventoryItems;
+    }
+    return state.inventoryItems.filter((item) => item.name.toLowerCase().includes(state.filterInput.toLowerCase()));
+  });
+
   return {
     ...toRefs(state),
 
@@ -72,8 +108,14 @@ export const useItemStore = defineStore('item', () => {
     fetchInventoryItems,
     addItemToInventory,
     insertItem,
-    updateItem
+    updateItem,
+    selectItem,
+    deselectItem,
+    deselectAllItems,
+    setFilterInput,
 
     //Getters
+    isItemSelected,
+    getFilteredInventoryItems
   };
 });

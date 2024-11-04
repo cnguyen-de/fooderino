@@ -12,7 +12,17 @@ const onItemSwiped = (item: ItemProps) => {
   console.log('swiped', item.id);
 };
 const removeItemByOne = async (item: ItemProps) => {
-  const newItem = { ...item, amount: item.amount > 0 ? item.amount - 1 : 0 };
+  let newItem = {};
+  if (item.amount <= 0) {
+    newItem = { ...item, amount: 0 };
+  } else {
+    if (item.amount_type === 'count') {
+      newItem = { ...item, amount: item.amount - 1 };
+    } else if (item.amount_type === 'gram') {
+      newItem = { ...item, amount: item.amount - 100 };
+    }
+  }
+
   if (newItem.amount < newItem.default_amount) {
     newItem.amount_to_purchase = newItem.default_amount - newItem.amount;
   }
@@ -42,6 +52,9 @@ const renderType = (amountType: string) => {
   }
   return '';
 };
+const onItemClicked = (item: ItemProps) => {
+  itemStore.selectItem(item.id);
+};
 </script>
 
 <template>
@@ -56,7 +69,9 @@ const renderType = (amountType: string) => {
       :to-right="true"
       :show-amount="false"
       :disable-swipe="true"
-      @item-swiped="onItemSwiped($event)">
+      @item-swiped="onItemSwiped($event)"
+      @item-clicked="onItemClicked($event)"
+      :class="{ '!bg-gray-600/60': itemStore.isItemSelected(item.id) }">
       <NumberField
         :step="item.amount_type === 'count' ? '1' : '100'"
         class="-mr-2 w-24"

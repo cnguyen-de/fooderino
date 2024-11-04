@@ -17,8 +17,10 @@
       <div class="fixed bottom-0 h-16 w-full bg-black/40">
         <Footer></Footer>
       </div>
-      <div class="absolute bottom-16 right-8">
-        <CreateNewItem></CreateNewItem>
+      <div class="absolute bottom-16 w-full p-2">
+        <div class="duration-250 flex items-center justify-center transition-all">
+          <ActionBar></ActionBar>
+        </div>
       </div>
     </div>
   </div>

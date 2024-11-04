@@ -35,7 +35,8 @@ export default defineNuxtConfig({
   components: [
     { path: '~/components/footer', pathPrefix: false },
     { path: '~/components/header', pathPrefix: false },
-    { path: '~/components/items', pathPrefix: false }
+    { path: '~/components/items', pathPrefix: false },
+    { path: '~/components/action-bar', pathPrefix: false }
   ],
   //Work around dev tools error
   vite: {

@@ -4,12 +4,13 @@ const itemStore = useItemStore();
 const { data } = await useAsyncData('items', async () => {
   return await itemStore.fetchInventoryItems();
 });
+//.filter((item) => item.name.includes(itemStore.filterText)
 const categories = computed(() => {
-  const cat = itemStore.inventoryItems?.map((item) => item.location);
+  const cat = itemStore.getFilteredInventoryItems?.map((item) => item.location);
   return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
 });
 const items = computed(() => {
-  return [...new Set(itemStore.inventoryItems)].sort((a, b) => a - b);
+  return [...new Set(itemStore.getFilteredInventoryItems)].sort((a, b) => a - b);
 });
 </script>
 <template>

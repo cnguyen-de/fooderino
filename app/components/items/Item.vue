@@ -22,7 +22,7 @@ const props = withDefaults(defineProps<ItemProps>(), {
   disableSwipe: false
 });
 
-const emit = defineEmits(['itemSwiped']);
+const emit = defineEmits(['itemSwiped', 'itemClicked']);
 
 const target = ref<HTMLElement | null>(null);
 const container = ref<HTMLElement | null>(null);
@@ -79,6 +79,9 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
     }
   }
 });
+const onItemClick = () => {
+  emit('itemClicked', props);
+};
 </script>
 
 <template>
@@ -104,8 +107,9 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
     </div>
   </div>
   <div
-    class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 px-2 text-gray-200"
-    v-else-if="opacity > 0 && disableSwipe">
+    class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 px-2 text-gray-200 hover:cursor-pointer"
+    v-else-if="opacity > 0 && disableSwipe"
+    @click="onItemClick()">
     <div>{{ name }}</div>
     <div
       v-if="showAmount"
