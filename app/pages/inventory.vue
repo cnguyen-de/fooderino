@@ -1,8 +1,9 @@
 <script setup>
 import { useItemStore } from '~/store/item';
 const itemStore = useItemStore();
-const { data } = await useAsyncData('items', async () => {
-  return await itemStore.fetchInventoryItems();
+
+onMounted(() => {
+  itemStore.fetchInventoryItems();
 });
 const categories = computed(() => {
   const cat = itemStore.getFilteredInventoryItems?.map((item) => item.location);
