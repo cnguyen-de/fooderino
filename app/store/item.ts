@@ -1,4 +1,5 @@
 import { type Item } from '../../types/Item';
+import { useListStore } from './list';
 
 interface State {
   inventoryItems: Item[];
@@ -15,6 +16,7 @@ export const useItemStore = defineStore('item', () => {
   });
   const client = useSupabaseClient();
   const user = useSupabaseUser();
+  const listStore = useListStore();
 
   const fetchBuyItems = async () => {
     const { data } = await client.from('items').select().gte('amount_to_purchase', 1).eq('user', user.value.email);
@@ -22,7 +24,7 @@ export const useItemStore = defineStore('item', () => {
   };
 
   const fetchInventoryItems = async () => {
-    const { data } = await client.from('items').select().eq('user', user.value.email);
+    const { data } = await client.from('items').select().eq('list_id', listStore.selectedList?.id);
     state.inventoryItems = data;
   };
 
