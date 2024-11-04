@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { ItemProps } from './Item.vue';
+import type { Item } from '../../../types/Item';
 import { useItemStore } from '~/store/item';
 
 type ListItemProps = {
-  items: ItemProps[];
+  items: Item[];
 };
 const props = defineProps<ListItemProps>();
 
@@ -52,13 +52,9 @@ const renderType = (amountType: string) => {
   }
   return '';
 };
-const onItemClicked = (item: ItemProps) => {
-  if (itemStore.selectedItems?.length > 0) {
-    itemStore.selectItem(item.id);
-  }
-};
-const onItemLongPressed = (item: ItemProps) => {
-  itemStore.selectItem(item.id);
+const onItemAmountValueChanged = (item: Item) => {
+  itemStore.updateItem(item);
+  console.log(item, item.amount);
 };
 </script>
 
@@ -70,29 +66,16 @@ const onItemLongPressed = (item: ItemProps) => {
       :id="item.id"
       :name="item.name"
       :amount="item.amount"
+      :amount_type="item.amount_type"
       :amount_to_purchase="item.amount_to_purchase"
       :to-right="true"
       :show-amount="false"
       :disable-swipe="true"
       @item-swiped="onItemSwiped($event)"
-      @item-clicked="onItemClicked($event)"
-      @item-long-pressed="onItemLongPressed($event)"
+      @value-changed="onItemAmountValueChanged($event)"
       :class="{ '!bg-gray-600/60': itemStore.isItemSelected(item.id) }">
       <span class="text-gray-500">{{ item.amount_to_purchase }}</span>
       <AddToBuy :item="item"></AddToBuy>
-
-      <NumberField
-        :step="item.amount_type === 'count' ? '1' : '100'"
-        class="-mr-2 w-24"
-        id="age"
-        :default-value="item.amount"
-        :min="0">
-        <NumberFieldContent>
-          <NumberFieldDecrement class="rounded-full p-2 hover:bg-gray-700/30" @click="removeItemByOne(item)" />
-          <NumberFieldInput class="border-none" />
-          <NumberFieldIncrement class="rounded-full p-2 hover:bg-gray-700/30" @click="addItemByOne(item)" />
-        </NumberFieldContent>
-      </NumberField>
     </Item>
   </div>
 </template>

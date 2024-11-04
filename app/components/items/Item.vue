@@ -8,6 +8,7 @@ export type ItemProps = {
   name: string;
   amount: number;
   amount_to_purchase: number;
+  amount_type: string;
   showAmount: boolean;
   toRight: boolean;
   disableSwipe?: boolean;
@@ -22,7 +23,7 @@ const props = withDefaults(defineProps<ItemProps>(), {
   disableSwipe: false
 });
 
-const emit = defineEmits(['itemSwiped', 'itemClicked', 'itemLongPressed']);
+const emit = defineEmits(['itemSwiped', 'valueChanged']);
 
 const target = ref<HTMLElement | null>(null);
 const container = ref<HTMLElement | null>(null);
@@ -79,20 +80,12 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
     }
   }
 });
-const onItemClick = () => {
-  emit('itemClicked', props);
+const amountValue = ref(props.amount);
+
+const onValueUpdated = (value: number) => {
+  amountValue.value = value;
+  emit('valueChanged', { ...props, amount: value });
 };
-
-const itemLongPressHook = ref<HTMLElement>();
-
-function onLongPressCallbackHook(e: PointerEvent) {
-  emit('itemLongPressed', props);
-}
-onLongPress(itemLongPressHook, onLongPressCallbackHook, {
-  modifiers: {
-    prevent: true
-  }
-});
 </script>
 
 <template>
@@ -117,11 +110,10 @@ onLongPress(itemLongPressHook, onLongPressCallbackHook, {
       </div>
     </div>
   </div>
+
   <div
-    class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 px-4 text-gray-200 hover:cursor-pointer"
-    v-else-if="opacity > 0 && disableSwipe"
-    ref="itemLongPressHook"
-    @click="onItemClick()">
+    class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 pl-4 pr-2 text-gray-200 hover:cursor-pointer"
+    v-else-if="opacity >= 0 && disableSwipe">
     <div>{{ name }}</div>
     <div
       v-if="showAmount"
@@ -129,6 +121,20 @@ onLongPress(itemLongPressHook, onLongPressCallbackHook, {
       {{ amount }}
     </div>
     <div class="flex-grow"></div>
+    <NumberField
+      :step="amount_type === 'count' ? '1' : '100'"
+      class="mr-2 w-24"
+      id="amount"
+      :default-value="amount"
+      :model-value="amountValue"
+      @update:model-value="onValueUpdated($event)"
+      :min="0">
+      <NumberFieldContent>
+        <NumberFieldDecrement class="rounded-full hover:bg-gray-700/30" />
+        <NumberFieldInput class="border-none" />
+        <NumberFieldIncrement class="rounded-full hover:bg-gray-700/30" />
+      </NumberFieldContent>
+    </NumberField>
     <slot />
   </div>
 </template>
