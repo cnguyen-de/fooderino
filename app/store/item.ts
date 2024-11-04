@@ -19,7 +19,11 @@ export const useItemStore = defineStore('item', () => {
   const listStore = useListStore();
 
   const fetchBuyItems = async () => {
-    const { data } = await client.from('items').select().gte('amount_to_purchase', 1).eq('user', user.value.email);
+    const { data } = await client
+      .from('items')
+      .select()
+      .gte('amount_to_purchase', 1)
+      .eq('list_id', listStore.selectedList?.id);
     state.purchasedItems = data;
   };
 
@@ -62,7 +66,8 @@ export const useItemStore = defineStore('item', () => {
       default_amount: data.defaultAmount,
       store: data.store,
       location: data.location,
-      user: user.value.email
+      user: user.value.email,
+      list_id: listStore.selectedList?.id
     });
     await fetchInventoryItems();
     await fetchBuyItems();
