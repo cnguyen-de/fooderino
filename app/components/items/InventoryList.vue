@@ -53,6 +53,11 @@ const renderType = (amountType: string) => {
   return '';
 };
 const onItemClicked = (item: ItemProps) => {
+  if (itemStore.selectedItems?.length > 0) {
+    itemStore.selectItem(item.id);
+  }
+};
+const onItemLongPressed = (item: ItemProps) => {
   itemStore.selectItem(item.id);
 };
 </script>
@@ -71,6 +76,7 @@ const onItemClicked = (item: ItemProps) => {
       :disable-swipe="true"
       @item-swiped="onItemSwiped($event)"
       @item-clicked="onItemClicked($event)"
+      @item-long-pressed="onItemLongPressed($event)"
       :class="{ '!bg-gray-600/60': itemStore.isItemSelected(item.id) }">
       <NumberField
         :step="item.amount_type === 'count' ? '1' : '100'"

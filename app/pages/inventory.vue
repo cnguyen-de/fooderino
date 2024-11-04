@@ -4,7 +4,6 @@ const itemStore = useItemStore();
 const { data } = await useAsyncData('items', async () => {
   return await itemStore.fetchInventoryItems();
 });
-//.filter((item) => item.name.includes(itemStore.filterText)
 const categories = computed(() => {
   const cat = itemStore.getFilteredInventoryItems?.map((item) => item.location);
   return [...new Set(cat)].sort((a, b) => a.localeCompare(b));

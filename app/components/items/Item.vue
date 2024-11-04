@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UseSwipeDirection } from '@vueuse/core';
-import { useSwipe } from '@vueuse/core';
+import { useSwipe, onLongPress } from '@vueuse/core';
 import { computed, ref } from 'vue';
 
 export type ItemProps = {
@@ -22,7 +22,7 @@ const props = withDefaults(defineProps<ItemProps>(), {
   disableSwipe: false
 });
 
-const emit = defineEmits(['itemSwiped', 'itemClicked']);
+const emit = defineEmits(['itemSwiped', 'itemClicked', 'itemLongPressed']);
 
 const target = ref<HTMLElement | null>(null);
 const container = ref<HTMLElement | null>(null);
@@ -82,6 +82,17 @@ const { direction, isSwiping, lengthX, lengthY } = useSwipe(target, {
 const onItemClick = () => {
   emit('itemClicked', props);
 };
+
+const itemLongPressHook = ref<HTMLElement>();
+
+function onLongPressCallbackHook(e: PointerEvent) {
+  emit('itemLongPressed', props);
+}
+onLongPress(itemLongPressHook, onLongPressCallbackHook, {
+  modifiers: {
+    prevent: true
+  }
+});
 </script>
 
 <template>
@@ -107,8 +118,9 @@ const onItemClick = () => {
     </div>
   </div>
   <div
-    class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 px-2 text-gray-200 hover:cursor-pointer"
+    class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 px-4 text-gray-200 hover:cursor-pointer"
     v-else-if="opacity > 0 && disableSwipe"
+    ref="itemLongPressHook"
     @click="onItemClick()">
     <div>{{ name }}</div>
     <div
