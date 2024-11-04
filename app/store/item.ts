@@ -67,6 +67,7 @@ export const useItemStore = defineStore('item', () => {
       name: data.name,
       amount_type: data.amountType,
       default_amount: data.defaultAmount,
+      amount_to_purchase: data.amountToPurchase,
       store: data.store,
       location: data.location,
       user: user.value.email,

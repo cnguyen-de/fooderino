@@ -74,7 +74,8 @@ const onItemAmountValueChanged = (item: Item) => {
       @item-swiped="onItemSwiped($event)"
       @value-changed="onItemAmountValueChanged($event)"
       :class="{ '!bg-gray-600/60': itemStore.isItemSelected(item.id) }">
-      <span class="text-gray-500">{{ item.amount_to_purchase }}</span>
+
+      <span class="text-gray-400/50 tabular-nums">{{ item.amount_to_purchase }}</span>
       <AddToBuy :item="item"></AddToBuy>
     </Item>
   </div>

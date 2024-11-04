@@ -12,7 +12,7 @@ const props = defineProps<Props>();
 </script>
 
 <template>
-  <button class="rounded-full p-1 hover:bg-gray-700/30" @click="addToBuy(props?.item)">
+  <button class="rounded-full p-1 text-gray-400/50 hover:text-gray-200/50" @click="addToBuy(props?.item)">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
