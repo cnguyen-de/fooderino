@@ -9,7 +9,6 @@ const itemStore = useItemStore();
     <CreateNewItem></CreateNewItem>
     <div class="flex flex-row items-center gap-2" v-if="itemStore.selectedItems?.length > 0">
       <EditItem v-if="itemStore.selectedItems?.length === 1"></EditItem>
-      <AddToBuy></AddToBuy>
     </div>
   </div>
 </template>

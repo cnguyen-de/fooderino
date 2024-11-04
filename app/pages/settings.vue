@@ -2,7 +2,7 @@
 const supabase = useSupabaseClient();
 const logout = () => {
   supabase.auth.signOut();
-  window.reload();
+  window.location.reload();
 };
 </script>
 <template>

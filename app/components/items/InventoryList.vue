@@ -78,6 +78,9 @@ const onItemLongPressed = (item: ItemProps) => {
       @item-clicked="onItemClicked($event)"
       @item-long-pressed="onItemLongPressed($event)"
       :class="{ '!bg-gray-600/60': itemStore.isItemSelected(item.id) }">
+      <span class="text-gray-500">{{ item.amount_to_purchase }}</span>
+      <AddToBuy :item="item"></AddToBuy>
+
       <NumberField
         :step="item.amount_type === 'count' ? '1' : '100'"
         class="-mr-2 w-24"
@@ -85,9 +88,9 @@ const onItemLongPressed = (item: ItemProps) => {
         :default-value="item.amount"
         :min="0">
         <NumberFieldContent>
-          <NumberFieldDecrement class="rounded-full hover:bg-gray-700/30" @click="removeItemByOne(item)" />
+          <NumberFieldDecrement class="rounded-full p-2 hover:bg-gray-700/30" @click="removeItemByOne(item)" />
           <NumberFieldInput class="border-none" />
-          <NumberFieldIncrement class="rounded-full hover:bg-gray-700/30" @click="addItemByOne(item)" />
+          <NumberFieldIncrement class="rounded-full p-2 hover:bg-gray-700/30" @click="addItemByOne(item)" />
         </NumberFieldContent>
       </NumberField>
     </Item>

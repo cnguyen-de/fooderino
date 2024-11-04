@@ -50,18 +50,15 @@ export const useItemStore = defineStore('item', () => {
     await fetchInventoryItems();
   };
 
-  const addItemToBuy = async () => {
-    for (let itemId of state.selectedItems) {
-      const item = state.inventoryItems.find((item) => item.id === itemId);
-      await client
-        .from('items')
-        .update({
-          amount_to_purchase: item.amount_type === 'g' ? item.amount_to_purchase + 100 : item.amount_to_purchase + 1
-        })
-        .eq('id', item.id);
-    }
+  const addItemToBuy = async (item) => {
+    await client
+      .from('items')
+      .update({
+        amount_to_purchase: item.amount_type === 'g' ? item.amount_to_purchase + 100 : item.amount_to_purchase + 1
+      })
+      .eq('id', item.id);
     await fetchBuyItems();
-    deselectAllItems();
+    await fetchInventoryItems();
   };
 
   const insertItem = async (data) => {

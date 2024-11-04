@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { useItemStore } from '~/store/item';
+import type { Item } from '../../../types/Item';
 const itemStore = useItemStore();
-const addToBuy = () => {
-  itemStore.addItemToBuy();
+const addToBuy = (item) => {
+  itemStore.addItemToBuy(item);
 };
+interface Props {
+  item: Item;
+}
+const props = defineProps<Props>();
 </script>
 
 <template>
-  <button @click="addToBuy()">
+  <button class="rounded-full p-1 hover:bg-gray-700/30" @click="addToBuy(props?.item)">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
