@@ -3,9 +3,10 @@ export interface Item {
   name: string;
   location: string;
   store: string;
-  defaultAmount: number;
+  default_amount: number;
   amount: number;
-  amountType: string;
+  amount_type: string;
+  amount_to_purchase: number;
   createdAt: Date;
   user: string;
 }

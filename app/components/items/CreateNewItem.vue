@@ -1,25 +1,4 @@
 <script setup lang="ts">
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger
-} from '@/components/ui/drawer';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
@@ -43,7 +22,7 @@ const form = useForm({
 });
 
 const isDrawerOpen = ref(false);
-const isOpen = ref(false)
+const isOpen = ref(false);
 const onSubmit = form.handleSubmit(async (values) => {
   await itemStore.insertItem(values);
   isDrawerOpen.value = false;
@@ -105,50 +84,68 @@ const onSubmit = form.handleSubmit(async (values) => {
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ componentField }" name="amountToPurchase">
-          <FormItem>
-            <FormControl>
-              <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
         <Collapsible v-model:open="isOpen" class="mt-4">
-          <CollapsibleTrigger>More options</CollapsibleTrigger>
+          <CollapsibleTrigger class="flex flex-row items-center gap-1">
+            See more options
+            <span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-4">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
+              </svg>
+            </span>
+          </CollapsibleTrigger>
           <CollapsibleContent>
             <div class="flex flex-col gap-2">
-
-            <FormField v-slot="{ componentField }" name="defaultAmount">
-              <FormItem>
-                <FormControl>
-                  <Input type="text" placeholder="Amount of items should always be in Inventory" v-bind="componentField" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-
-            <FormField v-slot="{ componentField }" name="amountType">
-              <FormItem>
-                <Select v-bind="componentField">
+              <FormField v-slot="{ componentField }" name="amountToPurchase">
+                <FormItem>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Amount Type" />
-                    </SelectTrigger>
+                    <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
                   </FormControl>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="gram">gram</SelectItem>
-                      <SelectItem value="count">count</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            </FormField>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+
+              <FormField v-slot="{ componentField }" name="defaultAmount">
+                <FormItem>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Amount of items should always be in Inventory"
+                      v-bind="componentField" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+
+              <FormField v-slot="{ componentField }" name="amountType">
+                <FormItem>
+                  <Select v-bind="componentField">
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Amount Type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="gram">gram</SelectItem>
+                        <SelectItem value="count">count</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
             </div>
           </CollapsibleContent>
         </Collapsible>
-
       </form>
       <DrawerFooter>
         <div class="flex flex-row justify-between">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type UseSwipeDirection,  } from '@vueuse/core';
+import { type UseSwipeDirection } from '@vueuse/core';
 import { useSwipe, watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
 
@@ -95,6 +95,11 @@ watchDebounced(
   },
   { debounce: 500, maxWait: 1000 }
 );
+
+const isInputNotPressed = ref(true);
+const onInputClick = (state) => {
+  isInputNotPressed.value = state;
+};
 </script>
 
 <template>
@@ -123,7 +128,9 @@ watchDebounced(
   <div
     class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 pl-4 pr-2 text-gray-200 hover:cursor-pointer"
     v-else-if="opacity >= 0 && disableSwipe">
-    <Input v-model="itemName" class="-ml-4 pl-4 w-1/2 text-lg rounded-full bg-transparent border-none focus-visible:outline-none focus-visible:ring-0 focus-visible:bg-gray-700/50" />
+    <Input
+      v-model="itemName"
+      class="-ml-4 w-1/2 rounded-full border-none bg-transparent pl-4 text-lg focus-visible:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-0" />
 
     <div
       v-if="showAmount"
@@ -140,9 +147,16 @@ watchDebounced(
       @update:model-value="onValueUpdated($event)"
       :min="0">
       <NumberFieldContent>
-        <NumberFieldDecrement class="rounded-full text-gray-500/50 hover:text-gray-200/50" />
-        <NumberFieldInput class="border-none text-base" />
-        <NumberFieldIncrement class="rounded-full text-gray-500/50 hover:text-gray-200/50" />
+        <NumberFieldInput
+          class="peer border-none text-base"
+          @focusin="onInputClick(false)"
+          @focusout="onInputClick(true)" />
+        <NumberFieldDecrement
+          class="rounded-full text-gray-500/50 peer-focus:text-gray-200/50"
+          :disabled="isInputNotPressed" />
+        <NumberFieldIncrement
+          class="rounded-full text-gray-500/50 peer-focus:text-gray-200/50"
+          :disabled="isInputNotPressed" />
       </NumberFieldContent>
     </NumberField>
     <slot />

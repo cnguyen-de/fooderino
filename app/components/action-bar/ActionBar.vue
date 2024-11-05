@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
 import { useItemStore } from '~/store/item';
 const itemStore = useItemStore();
 </script>
