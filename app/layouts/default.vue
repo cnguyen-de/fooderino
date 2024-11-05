@@ -14,9 +14,6 @@
         <slot></slot>
       </div>
 
-      <div class="fixed bottom-16">
-        <ActionBar></ActionBar>
-      </div>
       <div class="fixed bottom-0 h-16 w-full bg-black/40">
         <Footer></Footer>
       </div>

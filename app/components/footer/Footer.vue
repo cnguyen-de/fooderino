@@ -8,7 +8,6 @@ const usernameFallback = computed(() =>
     .map((n) => n[0])
     .join('')
 );
-console.log(user);
 </script>
 
 <template>
