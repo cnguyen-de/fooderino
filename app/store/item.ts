@@ -48,6 +48,7 @@ export const useItemStore = defineStore('item', () => {
       })
       .eq('id', item.id);
     await fetchInventoryItems();
+    await fetchBuyItems();
   };
 
   const addItemToBuy = async (item) => {

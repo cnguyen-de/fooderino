@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import type { ItemProps } from './Item.vue';
 import { useItemStore } from '~/store/item';
+import type { Item } from '~~/types/Item';
 const itemStore = useItemStore();
 
 type ListItemProps = {
   items: ItemProps[];
 };
 defineProps<ListItemProps>();
-const onItemSwiped = async (item: ItemProps) => {
+const onValueChanged = (item: Item) => {
+  itemStore.updateItem(item);
+};
+const onAddItemToInventory = async (item: ItemProps) => {
   await itemStore.addItemToInventory(item);
 };
 </script>
@@ -20,11 +24,30 @@ const onItemSwiped = async (item: ItemProps) => {
       :id="item.id"
       :name="item.name"
       :amount="item.amount"
+      :amount_type="item.amount_type"
       :amount_to_purchase="item.amount_to_purchase"
+      :default_amount="item.default_amount"
       :to-right="false"
       show-amount
-      @item-swiped="onItemSwiped($event)">
-      <div class="px-2">{{ item.amount_to_purchase }}</div>
+      disable-swipe
+      :amount-as-number-input="false"
+      @value-changed="onValueChanged($event)">
+      <button
+        class="flex size-7 items-center justify-center rounded-full hover:bg-green-400/10 hover:text-green-500"
+        @click="onAddItemToInventory(item)">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-6">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      </button>
     </Item>
   </div>
 </template>

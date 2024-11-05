@@ -10,10 +10,8 @@ const props = defineProps<ListItemProps>();
 const itemStore = useItemStore();
 
 const onItemAmountValueChanged = (item: Item) => {
-  if (item.amount <= item.default_amount) {
+  if (item.amount < item.default_amount) {
     item.amount_to_purchase = item.default_amount - item.amount;
-  } else {
-    item.amount_to_purchase = 0;
   }
   itemStore.updateItem(item);
 };
