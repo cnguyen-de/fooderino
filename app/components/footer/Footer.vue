@@ -2,11 +2,12 @@
 import { useSupabaseUser } from '#imports';
 
 const user = useSupabaseUser();
-const usernameFallback = computed(() =>
-  user.value.user_metadata?.full_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
+const usernameFallback = computed(
+  () =>
+    user.value?.user_metadata?.full_name
+      .split(' ')
+      .map((n) => n[0])
+      .join('') ?? ''
 );
 </script>
 
@@ -43,7 +44,7 @@ const usernameFallback = computed(() =>
     <FooterLink link="/ai">🪄</FooterLink>
     <FooterLink link="/settings">
       <Avatar referrerpolicy="no-referrer">
-        <AvatarImage :src="user?.user_metadata.picture" alt="Avatar" referrerpolicy="no-referrer" />
+        <AvatarImage :src="user?.user_metadata?.picture ?? ''" alt="Avatar" referrerpolicy="no-referrer" />
         <AvatarFallback>{{ usernameFallback }}</AvatarFallback>
       </Avatar>
     </FooterLink>

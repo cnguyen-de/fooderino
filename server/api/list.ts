@@ -8,6 +8,9 @@ export default defineEventHandler(async (event: any) => {
     return { lists: [], user: null };
   }
 
-  const { data } = await client.from('lists').select('id, name').contains('users', [user.email]);
+  const { data } = await client
+    .from('lists')
+    .select('id, name, users')
+    .contains('users', JSON.stringify([{ email: user.email }]));
   return { lists: data, user: user.email };
 });
