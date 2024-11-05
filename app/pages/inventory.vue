@@ -14,15 +14,17 @@ const items = computed(() => {
 });
 </script>
 <template>
-  <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
-    <div v-for="category in categories" :key="category">
-      <h2 class="px-2 font-bold text-white">{{ category }}</h2>
-      <InventoryList
-        :items="
-          items
-            ?.filter((item) => item.location === category)
-            .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
-        "></InventoryList>
+  <NuxtLayout name="list">
+    <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
+      <div v-for="category in categories" :key="category">
+        <h2 class="px-2 font-bold text-white">{{ category }}</h2>
+        <InventoryList
+          :items="
+            items
+              ?.filter((item) => item.location === category)
+              .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
+          "></InventoryList>
+      </div>
     </div>
-  </div>
+  </NuxtLayout>
 </template>

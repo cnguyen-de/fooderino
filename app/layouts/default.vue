@@ -11,8 +11,6 @@
         </span>
       </div>
       <div class="relative h-full w-full pt-12">
-        <ListSelector></ListSelector>
-
         <slot></slot>
       </div>
 

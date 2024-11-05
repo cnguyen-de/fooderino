@@ -11,15 +11,17 @@ const categories = computed(() => {
 });
 </script>
 <template>
-  <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
-    <div v-for="category in categories" :key="category">
-      <h2 class="px-2 font-bold text-white">{{ category }}</h2>
-      <BuyList
-        :items="
-          itemStore?.purchasedItems
-            ?.filter((item) => item.store === category)
-            .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
-        "></BuyList>
+  <NuxtLayout name="list">
+    <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
+      <div v-for="category in categories" :key="category">
+        <h2 class="px-2 font-bold text-white">{{ category }}</h2>
+        <BuyList
+          :items="
+            itemStore?.purchasedItems
+              ?.filter((item) => item.store === category)
+              .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
+          "></BuyList>
+      </div>
     </div>
-  </div>
+  </NuxtLayout>
 </template>
