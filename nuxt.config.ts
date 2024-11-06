@@ -49,8 +49,9 @@ export default defineNuxtConfig({
     manifest: {
       name: 'Fooderino',
       short_name: 'Fooderino',
-      description: 'Fooderino is a check list app for groceries.',
+      description: 'Fooderino is a AI powered recipe and check list app for groceries.',
       theme_color: '#000000',
+      background_color: '#170206',
       lang: 'en',
       icons: [
         {
