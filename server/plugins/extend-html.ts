@@ -18,9 +18,9 @@ export default defineNitroPlugin((nitroApp) => {
                     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
                     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
                     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-                    <meta name="msapplication-TileColor" content="#ffffff">
+                    <meta name="msapplication-TileColor" content="#170206">
                     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-                    <meta name="theme-color" content="#ffffff">`);
+                    <meta name="theme-color" content="#170206">`);
   });
   // You can also intercept the response here.
   nitroApp.hooks.hook('render:response', (response, { event }) => {});
