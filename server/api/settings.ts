@@ -9,5 +9,8 @@ export default defineEventHandler(async (event: any) => {
   }
 
   const { data } = await client.from('users').select().eq('uid', user.id);
+  if (data?.length > 0) {
+    return { settings: data[0] };
+  }
   return { settings: data };
 });

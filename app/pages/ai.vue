@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { useChat } from '@ai-sdk/vue';
 import { useSettingsStore } from '~/store/settings';
+import { useRecipeStore } from '~/store/recipes';
+import RecipeCard from '~/components/recipes/RecipeCard.vue';
 
 const { messages, input, handleSubmit } = useChat();
 const settingsStore = useSettingsStore();
+await settingsStore.fetchSettings();
+const recipeStore = useRecipeStore();
 </script>
 
 <template>
@@ -30,17 +34,12 @@ const settingsStore = useSettingsStore();
   </div>
   <div
     v-else
-    class="stretch relative mx-auto flex max-h-[80%] w-full max-w-md flex-col items-start justify-start overflow-y-scroll p-4 text-white">
-    <div v-for="m in messages" :key="m.id" class="whitespace-pre-wrap">
-      {{ m.role === 'user' ? 'User: ' : 'AI: ' }}
-      {{ m.content }}
-    </div>
-
-    <form @submit="handleSubmit">
-      <input
-        class="fixed bottom-10 mb-8 w-[calc(100%_-_32px)] rounded border border-gray-300 p-2 text-gray-800 shadow-xl"
-        v-model="input"
-        placeholder="Say something..." />
-    </form>
+    class="stretch relative mx-auto flex h-[calc(100%_-_7rem)] w-full max-w-md flex-col items-start justify-start gap-4 overflow-y-scroll p-4 text-white">
+    <Alert>
+      <AlertTitle class="text-xl">🚧 AI functionality is under development</AlertTitle>
+      <AlertDescription> Some functions are not working properly yet! </AlertDescription>
+    </Alert>
+    <Button @click="recipeStore.generateRecipe()">Generate recipe</Button>
+    <RecipeCard :recipe="recipeStore.recipes"></RecipeCard>
   </div>
 </template>

@@ -9,9 +9,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const fetchSettings = async () => {
     const { data } = await useFetch('/api/settings');
-    if (data.value.settings?.length > 0) {
-      state.settings = data.value.settings[0];
-    }
+    state.settings = data.value.settings;
   };
 
   return {
