@@ -11,9 +11,9 @@ export default defineEventHandler(async (event) => {
     return { settings: null };
   }
   let hasAIRight = false;
-  const { data } = await client.from('users').select().eq('uid', user.id);
-  if (data?.length > 0) {
-    if (data[0].ai) {
+  const userInfo = await client.from('users').select().eq('uid', user.id);
+  if (userInfo.data?.length > 0) {
+    if (userInfo.data[0].ai) {
       hasAIRight = true;
     }
   }
@@ -21,6 +21,9 @@ export default defineEventHandler(async (event) => {
     return { content: 'User does not have AI functionality' };
   }
 
+  // Gather current user informations
+  const recipes = await client.from('recipes').select().eq('id', user.id);
+  const userKnownRecipes = recipes.data.map((recipe) => recipe?.name).join(', ');
   // Init LLM AI with user knowledges
   const apiKey = useRuntimeConfig().openaiApiKey;
   if (!apiKey) throw new Error('Missing OpenAI API key');
@@ -30,7 +33,7 @@ export default defineEventHandler(async (event) => {
   const messages = [];
   messages.push({
     role: 'system',
-    content: `You are help suggesting new recipes. The user likes ${'vietnamese food'} and already have the following recipes ${'Vietnamese Pho'}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in no more than 2 sentences", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false}`
+    content: `You are help suggesting new recipes. The user likes ${'vietnamese food'} and already have the following recipes ${userKnownRecipes}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in no more than 2 sentences", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false}`
   });
 
   const result = await generateText({
