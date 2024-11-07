@@ -8,13 +8,21 @@ const onAddRecipeIngredientsToBuy = (recipe) => {
     console.log('Adding ingredient to buy:', ingredient);
   });
 };
+
+const onSaveRecipe = (recipe) => {
+  if (!recipe.saved) {
+    recipeStore.insertRecipe(recipe);
+  } else {
+    console.log('what do, remove recipe?');
+  }
+};
 </script>
 
 <template>
   <RecipeCard
     :recipe="recipe"
     v-for="recipe of recipeStore.recipes"
-    @save-recipe="recipeStore.insertRecipe($event)"
+    @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy"
     @generate-another-recipe="recipeStore.generateRecipe()"></RecipeCard>
 </template>

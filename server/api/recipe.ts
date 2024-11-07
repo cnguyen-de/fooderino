@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   const messages = [];
   messages.push({
     role: 'system',
-    content: `You are help suggesting new recipes. The user likes ${'vietnamese food'} and already have the following recipes ${'Vietnamese Pho'}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in no more than 2 sentences", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}]}`
+    content: `You are help suggesting new recipes. The user likes ${'vietnamese food'} and already have the following recipes ${'Vietnamese Pho'}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in no more than 2 sentences", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false}`
   });
 
   const result = await generateText({

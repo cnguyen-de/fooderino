@@ -16,6 +16,12 @@ export const useRecipeStore = defineStore('recipes', () => {
   };
 
   const insertRecipe = async (recipe: Recipe) => {
+    const recipes = [...state.recipes];
+    const r = recipes.find((r) => r.name === recipe.name);
+    if (r) {
+      r.saved = true;
+    }
+    state.recipes = [...recipes];
     const { data } = await supabase.from('recipes').insert({ ...recipe, id: user.value?.id });
   };
 
