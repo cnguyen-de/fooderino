@@ -3,6 +3,7 @@ import { useRecipeStore } from '~/store/recipes';
 const recipeStore = useRecipeStore();
 recipeStore.fetchRecipes();
 
+// TODO
 const onAddRecipeIngredientsToBuy = (recipe) => {
   recipe.ingredients.forEach((ingredient) => {
     console.log('Adding ingredient to buy:', ingredient);

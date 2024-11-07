@@ -126,6 +126,13 @@ export const useItemStore = defineStore('item', () => {
     return state.inventoryItems?.filter((item) => item.name.toLowerCase().includes(state.filterInput.toLowerCase()));
   });
 
+  // TODO Implement UI
+  const deleteItem = async (id: string) => {
+    await client.from('items').delete().eq('id', id);
+    await fetchInventoryItems();
+    await fetchBuyItems();
+  };
+
   return {
     ...toRefs(state),
 

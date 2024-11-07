@@ -103,5 +103,3 @@ const onInputClick = (state) => {
     <slot />
   </div>
 </template>
-
-<style scoped></style>
