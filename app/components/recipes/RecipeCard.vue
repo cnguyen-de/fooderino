@@ -5,6 +5,7 @@ interface Props {
   recipe: Recipe;
 }
 const props = defineProps<Props>();
+const emit = defineEmits(['saveRecipe', 'addRecipeIngredientsToBuy', 'generateAnotherRecipe']);
 const isOpen = ref(true);
 </script>
 
@@ -40,10 +41,10 @@ const isOpen = ref(true);
     <CardFooter>
       <div class="flex w-full flex-row justify-between">
         <div class="flex flex-row gap-4">
-          <Button>♥️</Button>
-          <Button variant="secondary">🛒</Button>
+          <Button @click="emit('saveRecipe', props.recipe)">♥️</Button>
+          <Button variant="outline" @click="emit('addRecipeIngredientsToBuy', props.recipe)">🛒</Button>
         </div>
-        <Button variant="destructive">Another one?</Button>
+        <Button variant="destructive" @click="emit('generateAnotherRecipe')">Another one?</Button>
       </div>
     </CardFooter>
   </Card>

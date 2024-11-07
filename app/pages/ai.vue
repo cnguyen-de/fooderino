@@ -2,7 +2,7 @@
 import { useChat } from '@ai-sdk/vue';
 import { useSettingsStore } from '~/store/settings';
 import { useRecipeStore } from '~/store/recipes';
-import RecipeCard from '~/components/recipes/RecipeCard.vue';
+import RecipeList from '~/components/recipes/RecipeList.vue';
 
 const { messages, input, handleSubmit } = useChat();
 const settingsStore = useSettingsStore();
@@ -40,6 +40,6 @@ const recipeStore = useRecipeStore();
       <AlertDescription> Some functions are not working properly yet! </AlertDescription>
     </Alert>
     <Button @click="recipeStore.generateRecipe()">Generate recipe</Button>
-    <RecipeCard :recipe="recipeStore.recipes"></RecipeCard>
+    <RecipeList></RecipeList>
   </div>
 </template>

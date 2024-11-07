@@ -37,7 +37,8 @@ export default defineNuxtConfig({
     { path: '~/components/footer', pathPrefix: false },
     { path: '~/components/header', pathPrefix: false },
     { path: '~/components/items', pathPrefix: false },
-    { path: '~/components/lists', pathPrefix: false }
+    { path: '~/components/lists', pathPrefix: false },
+    { path: '~/components/recipes', pathPrefix: false }
   ],
   //Work around dev tools error
   vite: {

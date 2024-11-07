@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event);
   const client = await serverSupabaseClient(event);
 
+  // Check if user has AI rights
   if (typeof user === 'undefined' || user === null) {
     return { settings: null };
   }
@@ -20,6 +21,7 @@ export default defineEventHandler(async (event) => {
     return { content: 'User does not have AI functionality' };
   }
 
+  // Init LLM AI with user knowledges
   const apiKey = useRuntimeConfig().openaiApiKey;
   if (!apiKey) throw new Error('Missing OpenAI API key');
   const openai = createOpenAI({
@@ -27,9 +29,8 @@ export default defineEventHandler(async (event) => {
   });
   const messages = [];
   messages.push({
-    role: 'user',
-    content:
-      'Suggest a recipe for me. I like vietnamese food. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in no more than 2 sentences", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}]}'
+    role: 'system',
+    content: `You are help suggesting new recipes. The user likes ${'vietnamese food'} and already have the following recipes ${'Vietnamese Pho'}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in no more than 2 sentences", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}]}`
   });
 
   const result = await generateText({
