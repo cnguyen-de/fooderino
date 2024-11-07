@@ -8,6 +8,9 @@ const { messages, input, handleSubmit } = useChat();
 const settingsStore = useSettingsStore();
 await settingsStore.fetchSettings();
 const recipeStore = useRecipeStore();
+const generateRecipe = async () => {
+  await recipeStore.generateRecipe();
+};
 </script>
 
 <template>
@@ -39,7 +42,7 @@ const recipeStore = useRecipeStore();
       <AlertTitle class="text-xl">🚧 AI functionality is under development</AlertTitle>
       <AlertDescription> Some functions are not working properly yet! </AlertDescription>
     </Alert>
-    <Button @click="recipeStore.generateRecipe()">
+    <Button @click="generateRecipe">
       <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
       <span v-else class="animate-pulse">✨✨✨</span>
     </Button>
