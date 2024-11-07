@@ -2,17 +2,22 @@ import type { Recipe } from '~~/types/Recipe';
 
 interface State {
   recipes: Recipe[];
+  generating: boolean;
 }
+// TODO: ACCEPT BODY PARAMS FOR OVERRIDING PREFS AND KNOWN RECIPES
 export const useRecipeStore = defineStore('recipes', () => {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
   const state = reactive<State>({
-    recipes: null
+    recipes: null,
+    generating: false
   });
 
   const generateRecipe = async () => {
-    const { data } = await useFetch('/api/recipe');
+    state.generating = true;
+    const { data, status } = await useFetch('/api/recipe');
     state.recipes.unshift(data.value);
+    state.generating = false;
   };
 
   const insertRecipe = async (recipe: Recipe) => {

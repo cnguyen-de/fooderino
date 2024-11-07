@@ -34,12 +34,16 @@ const recipeStore = useRecipeStore();
   </div>
   <div
     v-else
-    class="stretch relative mx-auto flex h-[calc(100%_-_7rem)] w-full max-w-md flex-col items-start justify-start gap-4 overflow-y-scroll p-4 text-white">
+    class="stretch relative mx-auto flex h-[calc(100%_-_4rem)] w-full max-w-md flex-col items-start justify-start gap-4 overflow-y-scroll p-4 text-white">
     <Alert>
       <AlertTitle class="text-xl">🚧 AI functionality is under development</AlertTitle>
       <AlertDescription> Some functions are not working properly yet! </AlertDescription>
     </Alert>
-    <Button @click="recipeStore.generateRecipe()">Generate recipe</Button>
+    <Button @click="recipeStore.generateRecipe()">
+      <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
+      <span v-else class="animate-pulse">✨✨✨</span>
+    </Button>
+
     <RecipeList></RecipeList>
   </div>
 </template>
