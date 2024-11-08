@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
   const messages = [];
   messages.push({
     role: 'system',
-    content: `You are suggesting new recipes for ${userServings} servings. The user likes ${userFavCuisines} and already have the following recipes ${userKnownRecipes} and do not suggest ingredients that are part of user's allergies ${userAllergies}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false}`
+    content: `You are suggesting random well known recipes for ${userServings} servings. The user likes ${userFavCuisines} and already have the following recipes ${userKnownRecipes} and do not suggest ingredients that are part of user's allergies ${userAllergies}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false}`
   });
   const result = await generateText({
     model: openai('gpt-4o-mini'),

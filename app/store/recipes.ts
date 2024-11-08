@@ -19,6 +19,7 @@ export const useRecipeStore = defineStore('recipes', () => {
     const { data } = await useFetch('/api/recipe', {
       query: { recipes: state.recipes.map((r) => r.name).join(', ') }
     });
+    await insertRecipe(data.value);
     state.recipes.unshift(data.value);
     state.generating = false;
   };

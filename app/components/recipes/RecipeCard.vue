@@ -41,7 +41,10 @@ const isOpen = ref(!props.recipe?.saved);
     <CardFooter>
       <div class="flex w-full flex-row justify-between">
         <div class="flex flex-row gap-4">
-          <Button class="text-red-700" @click="emit('saveRecipe', props.recipe)"
+          <Button
+            :variant="recipe.saved ? 'outline' : 'default'"
+            class="text-red-700"
+            @click="emit('saveRecipe', props.recipe)"
             ><svg
               xmlns="http://www.w3.org/2000/svg"
               :fill="recipe.saved ? 'currentColor' : 'none'"
@@ -70,7 +73,6 @@ const isOpen = ref(!props.recipe?.saved);
             </svg>
           </Button>
         </div>
-        <Button v-if="!recipe.saved" variant="destructive" @click="emit('generateAnotherRecipe')">Another one?</Button>
       </div>
     </CardFooter>
   </Card>
