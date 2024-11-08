@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const user = useSupabaseUser()
+const user = useSupabaseUser();
 
 watch(user, () => {
   if (user.value) {
@@ -9,9 +9,9 @@ watch(user, () => {
 </script>
 
 <template>
-  <div>
-    <p>
-      Redirecting...
-    </p>
-  </div>
+  <NuxtLayout name="app">
+    <div>
+      <p>Redirecting...</p>
+    </div>
+  </NuxtLayout>
 </template>

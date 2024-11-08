@@ -4,11 +4,9 @@ import { useListStore } from '~/store/list';
 import { useAsyncData } from '#app';
 
 const listStore = useListStore();
+const colorMode = useColorMode();
+colorMode.value = 'dark';
 
-onMounted(async () => {
-  const colorMode = useColorMode({ emitAuto: true });
-  colorMode.value = 'dark';
-});
 await useAsyncData('lists', async () => {
   return await listStore.fetchLists();
 });

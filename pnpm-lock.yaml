@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   '@ai-sdk/openai':
     specifier: ^0.0.68
@@ -19,6 +23,9 @@ dependencies:
   '@radix-icons/vue':
     specifier: ^1.0.0
     version: 1.0.0(vue@3.5.12)
+  '@selemondev/vue3-marquee':
+    specifier: ^0.0.8
+    version: 0.0.8(tailwindcss@3.4.11)(typescript@5.6.2)
   '@vee-validate/nuxt':
     specifier: ^4.13.2
     version: 4.13.2(rollup@2.79.1)(vue@3.5.12)
@@ -40,6 +47,9 @@ dependencies:
   clsx:
     specifier: ^2.1.1
     version: 2.1.1
+  embla-carousel-vue:
+    specifier: ^8.3.1
+    version: 8.3.1(vue@3.5.12)
   lucide-vue-next:
     specifier: ^0.446.0
     version: 0.446.0(vue@3.5.12)
@@ -3169,6 +3179,16 @@ packages:
     dev: false
     optional: true
 
+  /@selemondev/vue3-marquee@0.0.8(tailwindcss@3.4.11)(typescript@5.6.2):
+    resolution: {integrity: sha512-PoZd52L3OywhQzCmrEe+C990z4NBZukGS/jxGjt2Xjv8y/nmJu+3trHM9UP0/8XpYAmcGO2NHy2sVARznV1wBQ==}
+    dependencies:
+      tailwindcss-animate: 1.0.7(tailwindcss@3.4.11)
+      vue: 3.5.12(typescript@5.6.2)
+    transitivePeerDependencies:
+      - tailwindcss
+      - typescript
+    dev: false
+
   /@sindresorhus/merge-streams@2.3.0:
     resolution: {integrity: sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg==}
     engines: {node: '>=18'}
@@ -4841,6 +4861,28 @@ packages:
 
   /electron-to-chromium@1.5.23:
     resolution: {integrity: sha512-mBhODedOXg4v5QWwl21DjM5amzjmI1zw9EPrPK/5Wx7C8jt33bpZNrC7OhHUG3pxRtbLpr3W2dXT+Ph1SsfRZA==}
+
+  /embla-carousel-reactive-utils@8.3.1(embla-carousel@8.3.1):
+    resolution: {integrity: sha512-Js6rTTINNGnUGPu7l5kTcheoSbEnP5Ak2iX0G9uOoI8okTNLMzuWlEIpYFd1WP0Sq82FFcLkKM2oiO6jcElZ/Q==}
+    peerDependencies:
+      embla-carousel: 8.3.1
+    dependencies:
+      embla-carousel: 8.3.1
+    dev: false
+
+  /embla-carousel-vue@8.3.1(vue@3.5.12):
+    resolution: {integrity: sha512-PfCvJeHLQgI0BfFkGDEeOcYJLhJzzTrSg8ukUJJWHnFJ00S//f3vG6U4sKGOELEnEW7Zj+JOEV/xRuX7DbMV8g==}
+    peerDependencies:
+      vue: ^3.2.37
+    dependencies:
+      embla-carousel: 8.3.1
+      embla-carousel-reactive-utils: 8.3.1(embla-carousel@8.3.1)
+      vue: 3.5.12(typescript@5.6.2)
+    dev: false
+
+  /embla-carousel@8.3.1:
+    resolution: {integrity: sha512-DutFjtEO586XptDn4cwvBJwsR/8fMa4jUk5Jk2g+/elKgu8mdn0Z2sx33g4JskvbLc1/6P8Xg4QlfELGJFcP5A==}
+    dev: false
 
   /emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -6960,7 +7002,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@vue/devtools-api': 6.6.3
+      '@vue/devtools-api': 6.6.4
       typescript: 5.6.2
       vue: 3.5.12(typescript@5.6.2)
       vue-demi: 0.14.10(vue@3.5.12)
@@ -9425,7 +9467,3 @@ packages:
   /zod@3.23.8:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
     dev: false
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
