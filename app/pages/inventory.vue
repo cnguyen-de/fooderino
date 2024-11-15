@@ -15,7 +15,7 @@ const items = computed(() => {
   if (!settingStore.settings?.show_empty_items) {
     items = items.filter((item) => item.amount > 0);
   }
-  return [...new Set(items)].sort((a, b) => a - b);
+  return items;
 });
 </script>
 <template>
