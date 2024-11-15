@@ -3,4 +3,5 @@ export interface Settings {
   servings: number;
   allergies: string;
   cuisines: string;
+  show_empty_items: boolean;
 }

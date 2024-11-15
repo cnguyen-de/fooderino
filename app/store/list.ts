@@ -1,4 +1,5 @@
 import type { List } from '../../types/List';
+import { useItemStore } from '~/store/item';
 interface State {
   lists: List[];
   selectedList: List | null;
@@ -17,8 +18,10 @@ export const useListStore = defineStore('list', () => {
     setSelectedList(data?.value?.lists[0]);
   };
 
-  const setSelectedList = (list: List) => {
+  const setSelectedList = async (list: List) => {
     state.selectedList = list;
+    const itemStore = useItemStore();
+    await itemStore.fetchInventoryItems();
   };
 
   const createList = async (name) => {
@@ -37,6 +40,7 @@ export const useListStore = defineStore('list', () => {
   return {
     ...toRefs(state),
     fetchLists,
-    createList
+    createList,
+    setSelectedList
   };
 });

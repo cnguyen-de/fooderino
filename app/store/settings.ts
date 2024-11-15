@@ -18,10 +18,19 @@ export const useSettingsStore = defineStore('settings', () => {
   const updateSettings = async (settings: Settings) => {
     console.log(settings);
     const { data } = await client.from('users').update(settings).eq('uid', user.value?.id);
+    await fetchSettings();
+  };
+
+  const toggleEmptyItems = async () => {
+    if (state.settings) {
+      const newSettings = { ...state.settings, show_empty_items: !state.settings.show_empty_items };
+      await updateSettings(newSettings);
+    }
   };
   return {
     ...toRefs(state),
     fetchSettings,
-    updateSettings
+    updateSettings,
+    toggleEmptyItems
   };
 });

@@ -19,6 +19,8 @@ export const useItemStore = defineStore('item', () => {
   const listStore = useListStore();
 
   const fetchBuyItems = async () => {
+    state.inventoryItems = [];
+
     if (!listStore.selectedList) {
       await listStore.fetchLists();
     }
@@ -31,6 +33,7 @@ export const useItemStore = defineStore('item', () => {
   };
 
   const fetchInventoryItems = async () => {
+    state.inventoryItems = [];
     if (!listStore.selectedList) {
       await listStore.fetchLists();
     }

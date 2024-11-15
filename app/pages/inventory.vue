@@ -1,7 +1,8 @@
 <script setup>
 import { useItemStore } from '~/store/item';
+import { useSettingsStore } from '~/store/settings';
 const itemStore = useItemStore();
-
+const settingStore = useSettingsStore();
 onMounted(() => {
   itemStore.fetchInventoryItems();
 });
@@ -10,7 +11,11 @@ const categories = computed(() => {
   return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
 });
 const items = computed(() => {
-  return [...new Set(itemStore.getFilteredInventoryItems)].sort((a, b) => a - b);
+  let items = itemStore.getFilteredInventoryItems;
+  if (!settingStore.settings?.show_empty_items) {
+    items = items.filter((item) => item.amount > 0);
+  }
+  return [...new Set(items)].sort((a, b) => a - b);
 });
 </script>
 <template>
