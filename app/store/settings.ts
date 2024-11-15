@@ -16,7 +16,6 @@ export const useSettingsStore = defineStore('settings', () => {
   };
 
   const updateSettings = async (settings: Settings) => {
-    console.log(settings);
     const { data } = await client.from('users').update(settings).eq('uid', user.value?.id);
     await fetchSettings();
   };
