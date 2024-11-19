@@ -4,7 +4,7 @@ const { auth } = useSupabaseClient();
 
 const redirectTo = `${useRuntimeConfig().public.baseUrl}/confirm`;
 
-watchEffect(() => {
+watch(user?.value, () => {
   if (user.value) {
     navigateTo('/inventory');
   }

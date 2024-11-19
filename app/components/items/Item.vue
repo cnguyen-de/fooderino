@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { type UseSwipeDirection } from '@vueuse/core';
-import { useSwipe, watchDebounced } from '@vueuse/core';
-import { computed, ref } from 'vue';
+import { watchDebounced } from '@vueuse/core';
 
 export type ItemProps = {
   id: number;
