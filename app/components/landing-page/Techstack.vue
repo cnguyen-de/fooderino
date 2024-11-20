@@ -9,34 +9,38 @@ interface sponsorsProps {
   name: string;
 }
 
-const sponsors: sponsorsProps[] = [
+const stacks: sponsorsProps[] = [
   {
     icon: 'crown',
-    name: 'Acmebrand'
+    name: 'Vue'
   },
   {
     icon: 'vegan',
-    name: 'Acmelogo'
+    name: 'Nuxt'
   },
   {
     icon: 'ghost',
-    name: 'Acmesponsor'
+    name: 'Supabase'
   },
   {
     icon: 'puzzle',
-    name: 'Acmeipsum'
+    name: 'Github Auth'
   },
   {
     icon: 'squirrel',
-    name: 'Acme'
+    name: 'Google Auth'
   },
   {
     icon: 'cookie',
-    name: 'Accmee'
+    name: 'Vercel'
   },
   {
     icon: 'drama',
-    name: 'Acmetech'
+    name: 'TailwindCSS'
+  },
+  {
+    icon: 'crown',
+    name: 'Shadcn UI'
   }
 ];
 
@@ -55,13 +59,13 @@ const iconMap: Record<
 </script>
 
 <template>
-  <section id="sponsors" class="mx-auto max-w-[75%] pb-24 sm:pb-32">
-    <h2 class="mb-6 text-center text-lg md:text-xl">Our Platinum Sponsors</h2>
+  <section id="techstack" class="mx-auto max-w-[75%] pb-24 sm:pb-32">
+    <h2 class="mb-6 text-center text-lg md:text-xl">Our Techstacks</h2>
 
     <div class="mx-auto">
       <Marquee class="gap-[3rem]" :pauseOnHover="true" :fade="true" innerClassName="gap-[3rem]">
-        <div v-for="{ icon, name } in sponsors" :key="name">
-          <div class="flex items-center text-xl font-medium md:text-2xl">
+        <div v-for="{ icon, name } in stacks" :key="name">
+          <div class="flex items-center whitespace-nowrap text-xl font-medium md:text-2xl">
             <component :is="iconMap[icon]" class="mr-2" stroke-width="3" />
             {{ name }}
           </div>

@@ -49,9 +49,9 @@ const iconMap: Record<
   <section id="benefits" class="container py-24 sm:py-32">
     <div class="grid place-items-center lg:grid-cols-2 lg:gap-24">
       <div>
-        <h2 class="mb-2 text-lg tracking-wider text-primary">Benefits</h2>
+        <h2 class="mb-2 text-lg tracking-wider text-primary">Usage</h2>
 
-        <h2 class="mb-4 text-3xl font-bold md:text-4xl">Your Shortcut to Success</h2>
+        <h2 class="mb-4 text-3xl font-bold md:text-4xl">How to use Fooderino</h2>
         <p class="mb-8 text-xl text-muted-foreground">
           Lorem ipsum dolor sit amet consectetur, adipisicing elit. Non ducimus reprehenderit architecto rerum similique
           facere odit deleniti necessitatibus quo quae.

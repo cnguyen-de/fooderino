@@ -54,7 +54,7 @@ const FAQList: FAQProps[] = [
     <h3 class="mt-4 font-medium">
       Still have questions?
       <p href="#" class="text-muted-foreground">
-        <a href="#" class="underline">Contact us</a>
+        <a href="#contact" class="underline">Contact us</a>
       </p>
     </h3>
   </section>

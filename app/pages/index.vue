@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import Navbar from '~/components/landing-page/Navbar.vue';
 import Hero from '~/components/landing-page/Hero.vue';
-import Sponsors from '~/components/landing-page/Sponsors.vue';
-import Benefits from '~/components/landing-page/Benefits.vue';
+import Techstack from '~/components/landing-page/Techstack.vue';
+import Usage from '~/components/landing-page/Usage.vue';
 import Features from '~/components/landing-page/Features.vue';
 import Services from '~/components/landing-page/Services.vue';
 import HowItWorks from '~/components/landing-page/HowItWorks.vue';
@@ -32,17 +32,20 @@ watch(
   <NuxtLayout name="empty">
     <Navbar />
     <Hero />
-    <Sponsors />
-    <Benefits />
-    <Features />
-    <Services />
+    <!--
     <HowItWorks />
+-->
+    <Features />
+    <Usage />
+    <Services />
     <Testimonials />
     <Team />
-    <Community />
+    <Techstack />
     <Pricing />
     <Contact />
+    <!--
     <FAQ />
+-->
     <Footer />
   </NuxtLayout>
 </template>

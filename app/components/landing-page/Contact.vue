@@ -1,28 +1,26 @@
 <script setup lang="ts">
 import { AlertCircle, Building2, Phone, Mail, Clock } from 'lucide-vue-next';
 
-interface ContactFormeProps {
+interface ContactFormProps {
   firstName: string;
   lastName: string;
-  email: string;
   subject: string;
   message: string;
 }
 
-const contactForm = reactive<ContactFormeProps>({
+const contactForm = reactive<ContactFormProps>({
   firstName: '',
   lastName: '',
-  email: '',
-  subject: 'Web Development',
+  subject: 'Other',
   message: ''
 });
 
 const invalidInputForm = ref<boolean>(false);
 
 const handleSubmit = () => {
-  const { firstName, lastName, email, subject, message } = contactForm;
+  const { firstName, lastName, subject, message } = contactForm;
 
-  const mailToLink = `mailto:leomirandadev@gmail.com?subject=${subject}&body=Hello I am ${firstName} ${lastName}, my Email is ${email}. %0D%0A${message}`;
+  const mailToLink = `mailto:contact+fooderino@may-solutions.io?subject=${subject}&body=${message} %0D%0A ${firstName} ${lastName}`;
 
   window.location.href = mailToLink;
 };
@@ -35,52 +33,20 @@ const handleSubmit = () => {
         <div class="mb-4">
           <h2 class="mb-2 text-lg tracking-wider text-primary">Contact</h2>
 
-          <h2 class="text-3xl font-bold md:text-4xl">Connect With Us</h2>
+          <h2 class="text-3xl font-bold md:text-4xl">Contact Us</h2>
         </div>
         <p class="mb-8 text-muted-foreground lg:w-5/6">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum ipsam sint enim exercitationem ex autem
-          corrupti quas tenetur
+          Do you have any questions, feedback, or suggestions? We would love to hear from you! Feel free to reach out to
+          us
         </p>
 
         <div class="flex flex-col gap-4">
-          <div>
-            <div class="mb-1 flex gap-2">
-              <Building2 />
-              <div class="font-bold">Find Us</div>
-            </div>
-
-            <div>742 Evergreen Terrace, Springfield, IL 62704</div>
+          <div class="mb-1 flex gap-2">
+            <Mail />
+            <h4 class="font-bold">Mail Us</h4>
           </div>
 
-          <div>
-            <div class="mb-1 flex gap-2">
-              <Phone />
-              <div class="font-bold">Call Us</div>
-            </div>
-
-            <div>+1 (619) 123-4567</div>
-          </div>
-
-          <div>
-            <div class="mb-1 flex gap-2">
-              <Mail />
-              <div class="font-bold">Mail Us</div>
-            </div>
-
-            <div>leomirandadev@gmail.com</div>
-          </div>
-
-          <div>
-            <div class="flex gap-2">
-              <Clock />
-              <div class="font-bold">Visit Us</div>
-            </div>
-
-            <div>
-              <div>Monday - Friday</div>
-              <div>8AM - 4PM</div>
-            </div>
-          </div>
+          <p>contact+fooderino@may-solutions.io</p>
         </div>
       </div>
 
@@ -92,18 +58,13 @@ const handleSubmit = () => {
             <div class="flex flex-col gap-8 md:flex-row">
               <div class="flex w-full flex-col gap-1.5">
                 <Label for="first-name">First Name</Label>
-                <Input id="first-name" type="text" placeholder="Leopoldo" v-model="contactForm.firstName" />
+                <Input id="first-name" type="text" placeholder="Max" v-model="contactForm.firstName" />
               </div>
 
               <div class="flex w-full flex-col gap-1.5">
                 <Label for="last-name">Last Name</Label>
-                <Input id="last-name" type="text" placeholder="Miranda" v-model="contactForm.lastName" />
+                <Input id="last-name" type="text" placeholder="Mustermann" v-model="contactForm.lastName" />
               </div>
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <Label for="email">Email</Label>
-              <Input id="email" type="email" placeholder="leomirandadev@gmail.com" v-model="contactForm.email" />
             </div>
 
             <div class="flex flex-col gap-1.5">
@@ -115,11 +76,10 @@ const handleSubmit = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="Web Development"> Web Development </SelectItem>
-                    <SelectItem value="Mobile Development"> Mobile Development </SelectItem>
-                    <SelectItem value="Figma Design"> Figma Design </SelectItem>
-                    <SelectItem value="REST API "> REST API </SelectItem>
-                    <SelectItem value="FullStack Project"> FullStack Project </SelectItem>
+                    <SelectItem value="Bug"> Bug </SelectItem>
+                    <SelectItem value="Feature Request"> Feature Request </SelectItem>
+                    <SelectItem value="Suggestions"> Suggestions </SelectItem>
+                    <SelectItem value="Other"> Other </SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -136,7 +96,7 @@ const handleSubmit = () => {
               <AlertDescription> There is an error in the form. Please check your input. </AlertDescription>
             </Alert>
 
-            <Button class="mt-4">Send message</Button>
+            <Button class="mt-4">Continue in your email app</Button>
           </form>
         </CardContent>
 

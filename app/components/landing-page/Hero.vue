@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ArrowRight } from 'lucide-vue-next';
+import { useMediaQuery } from '@vueuse/core';
+
+const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 </script>
 
 <template>
@@ -22,10 +25,14 @@ import { ArrowRight } from 'lucide-vue-next';
         </p>
 
         <div class="space-y-4 md:space-x-4 md:space-y-0">
-          <NuxtLink class="group/arrow w-5/6 font-bold md:w-1/4" to="/login">
-            <Button>
-              Let's Get Cooking!
-              <ArrowRight class="ml-2 size-5 transition-transform group-hover/arrow:translate-x-1" />
+          <NuxtLink class="group/arrow w-5/6 font-bold md:w-1/4" to="/inventory">
+            <Button variant="outline" class="bg-white hover:bg-gray-300">
+              <span
+                class="bg-gradient-to-r from-red-600 to-yellow-500 bg-clip-text font-bold tracking-wide text-transparent">
+                Let's Get Cooking!
+              </span>
+              <ArrowRight
+                class="text ml-2 size-5 text-yellow-500 transition-transform group-hover/arrow:translate-x-1" />
             </Button>
           </NuxtLink>
 
@@ -42,22 +49,23 @@ import { ArrowRight } from 'lucide-vue-next';
         <div
           class="img-shadow-animation absolute -top-6 right-12 h-12 w-[90%] rounded-full bg-primary/50 blur-3xl lg:h-[80%]"></div>
 
-        <Carousel>
+        <Carousel class="mx-8" :opts="{ loop: true }">
           <CarouselContent class="-ml-4">
             <CarouselItem class="pl-4">
               <img
-                class="img-border-animation relative mx-auto flex w-full items-center rounded-lg border border-t-2 border-t-primary/30 object-contain leading-none md:w-[1200px]"
-                src="/hero-image-inventory.png"
+                class="img-border-animation relative mx-auto flex w-full cursor-grab items-center rounded-lg border border-t-2 border-t-primary/30 object-contain leading-none md:w-[1200px]"
+                :src="isLargeScreen ? '/hero-inventory-desktop.png' : '/hero-inventory-mobile.png'"
                 alt="Fooderino Screenshot Inventory" />
             </CarouselItem>
             <CarouselItem class="pl-4">
               <img
-                class="img-border-animation relative mx-auto flex w-full items-center rounded-lg border border-t-2 border-t-primary/30 object-contain leading-none md:w-[1200px]"
-                src="/hero-image-ai.png"
+                class="img-border-animation relative mx-auto flex w-full cursor-grab items-center rounded-lg border border-t-2 border-t-primary/30 object-contain leading-none md:w-[1200px]"
+                :src="isLargeScreen ? '/hero-ai-desktop.png' : '/hero-ai-mobile.png'"
                 alt="Fooderino Screenshot AI" />
             </CarouselItem>
-            <CarouselItem class="pl-4"> ... </CarouselItem>
           </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
         </Carousel>
         <!-- gradient effect img -->
         <div

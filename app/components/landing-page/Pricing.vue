@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check } from 'lucide-vue-next';
+import { BadgeCheck } from 'lucide-vue-next';
 
 enum PopularPlan {
   NO = 0,
@@ -12,7 +12,7 @@ interface PlanProps {
   price: number;
   description: string;
   buttonText: string;
-  benefitList: string[];
+  benefitList?: string[];
 }
 
 const plans: PlanProps[] = [
@@ -20,25 +20,43 @@ const plans: PlanProps[] = [
     title: 'Free',
     popular: 0,
     price: 0,
-    description: 'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
-    buttonText: 'Start Free Trial',
-    benefitList: ['1 team member', '1 GB storage', 'Upto 2 pages', 'Community support', 'AI assistance']
+    description: 'Free forever.',
+    buttonText: 'Start For Free',
+    benefitList: [
+      '2 Lists',
+      '3 Invited Members',
+      'AI Assistance',
+      '10 Recipes Suggestions per Month',
+      'Feature Request'
+    ]
   },
   {
-    title: 'Premium',
+    title: 'Pro',
     popular: 1,
-    price: 45,
-    description: 'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
-    buttonText: 'Get starterd',
-    benefitList: ['4 team member', '8 GB storage', 'Upto 6 pages', 'Priority support', 'AI assistance']
+    price: 2,
+    description: 'Unlock the full potential of Fooderino, with stronger AI models and custom control.',
+    buttonText: 'Select Plan',
+    benefitList: [
+      'Unlimited Lists',
+      'Unlimited Invites',
+      'Extensive AI Assistance',
+      'Refined Control over Unlimited Recipes Suggestions',
+      'High Priority Support'
+    ]
   },
   {
-    title: 'Enterprise',
+    title: 'Buy Once Use Forever',
     popular: 0,
-    price: 120,
-    description: 'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
-    buttonText: 'Contact US',
-    benefitList: ['10 team member', '20 GB storage', 'Upto 10 pages', 'Phone & email support', 'AI assistance']
+    price: 20,
+    description: 'With all of Pro features, but you only pay once.',
+    buttonText: 'Buy Now',
+    benefitList: [
+      'Unlimited Lists',
+      'Unlimited Invites',
+      'Extensive AI Assistance',
+      'Refined Control over Unlimited Recipes Suggestions',
+      'High Priority Support'
+    ]
   }
 ];
 </script>
@@ -50,13 +68,14 @@ const plans: PlanProps[] = [
     <h2 class="mb-4 text-center text-3xl font-bold md:text-4xl">Get unlimitted access</h2>
 
     <h3 class="mx-auto pb-14 text-center text-xl text-muted-foreground md:w-1/2">
-      Lorem ipsum dolor sit amet consectetur adipisicing reiciendis.
+      Utilize the full potential of Fooderino with LLM-based AI assistance, priority support, and more.
     </h3>
 
     <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
       <Card
         v-for="{ title, popular, price, description, buttonText, benefitList } in plans"
         :key="title"
+        class="flex flex-col"
         :class="{
           'border-[1.5px] border-primary shadow-black/10 drop-shadow-xl dark:shadow-white/10 lg:scale-[1.1]':
             popular === PopularPlan?.YES
@@ -69,15 +88,15 @@ const plans: PlanProps[] = [
           <CardDescription class="pb-4">{{ description }}</CardDescription>
 
           <div>
-            <span class="text-3xl font-bold">${{ price }}</span>
+            <span class="text-3xl font-bold">€{{ price }}</span>
             <span class="text-muted-foreground"> /month</span>
           </div>
         </CardHeader>
 
-        <CardContent class="flex">
+        <CardContent class="flex grow">
           <div class="space-y-4">
             <span v-for="benefit in benefitList" :key="benefit" class="flex">
-              <Check class="mr-2 text-primary" />
+              <BadgeCheck class="mr-2 text-primary" />
               <h3>{{ benefit }}</h3>
             </span>
           </div>

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { ChevronsDown, Menu } from 'lucide-vue-next';
+import { ArrowRight, ChevronsDown, Menu } from 'lucide-vue-next';
 import GithubIcon from '@/icons/GithubIcon.vue';
 import ToggleTheme from '~/components/landing-page/ToggleTheme.vue';
 import { useColorMode } from '@vueuse/core';
@@ -27,10 +27,6 @@ const routeList: RouteProps[] = [
   {
     href: '#pricing',
     label: 'Pricing'
-  },
-  {
-    href: '#team',
-    label: 'Team'
   },
   {
     href: '#contact',
@@ -63,14 +59,10 @@ const mode = useColorMode();
 
 <template>
   <header
-    :class="{
-      'shadow-light': mode === 'light',
-      'shadow-dark': mode === 'dark',
-      'sticky top-5 z-40 mx-auto flex w-[90%] items-center justify-between rounded-2xl border bg-transparent p-2 px-4 shadow-md backdrop-blur-sm md:w-[70%] lg:w-[75%] lg:max-w-screen-xl': true
-    }">
+    class="sticky top-5 z-40 mx-auto flex w-[90%] items-center justify-between rounded-xl border bg-white/10 p-2 px-4 shadow-md backdrop-blur-lg dark:bg-black/10 md:w-[70%] lg:w-[75%] lg:max-w-screen-xl">
     <a href="/" class="flex items-center">
       <span
-        class="bg-gradient-to-r from-red-600 to-yellow-300 bg-clip-text text-lg font-bold tracking-wide text-transparent">
+        class="bg-gradient-to-r from-red-600 to-yellow-500 bg-clip-text text-lg font-bold tracking-wide text-transparent dark:to-yellow-300">
         FOODERINO
       </span>
     </a>
@@ -127,7 +119,7 @@ const mode = useColorMode();
               :key="label"
               as-child
               variant="ghost"
-              class="justify-start text-base">
+              class="justify-start text-base hover:bg-gray-500/20">
               <a :href="href">
                 {{ label }}
               </a>
@@ -137,8 +129,11 @@ const mode = useColorMode();
       </NavigationMenuList>
     </NavigationMenu>
 
-    <div class="hidden lg:flex">
+    <div class="hidden gap-2 lg:flex">
       <ToggleTheme />
+      <Button as-child variant="ghost" class="justify-start text-base hover:bg-gray-500/20">
+        <NuxtLink class="group/arrow font-bold" to="/login"> Login </NuxtLink>
+      </Button>
     </div>
   </header>
 </template>
