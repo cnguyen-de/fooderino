@@ -44,7 +44,7 @@ const plans: PlanProps[] = [
 </script>
 
 <template>
-  <section class="container py-24 sm:py-32">
+  <section id="pricing" class="container py-24 sm:py-32">
     <h2 class="mb-2 text-center text-lg tracking-wider text-primary">Pricing</h2>
 
     <h2 class="mb-4 text-center text-3xl font-bold md:text-4xl">Get unlimitted access</h2>

@@ -16,11 +16,16 @@ import Footer from '~/components/landing-page/Footer.vue';
 
 const user = useSupabaseUser();
 
-watch(user?.value, () => {
-  if (user.value) {
-    navigateTo('/inventory');
-  }
-});
+watch(
+  user?.value,
+  () => {
+    if (user.value?.id) {
+      console.log(user.value);
+      //navigateTo('/inventory');
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <template>

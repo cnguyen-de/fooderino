@@ -69,8 +69,8 @@ export const useItemStore = defineStore('item', () => {
       amount_type: data.amountType,
       default_amount: data.defaultAmount,
       amount_to_purchase: data.amountToPurchase,
-      store: data.store,
-      location: data.location,
+      store: data.store.trim(),
+      location: data.location.trim(),
       user: user.value.email,
       list_id: listStore.selectedList?.id
     });
@@ -85,8 +85,8 @@ export const useItemStore = defineStore('item', () => {
         amount: data.amount,
         amount_to_purchase: data.amount_to_purchase,
         name: data.name,
-        store: data.store,
-        location: data.location
+        store: data.store.trim(),
+        location: data.location.trim()
       })
       .eq('id', data.id);
 
