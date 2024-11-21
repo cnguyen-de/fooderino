@@ -16,12 +16,12 @@ const isLargeScreen = useMediaQuery('(min-width: 1024px)');
           <span>BETA Release</span>
         </Badge>
 
-        <div class="mx-auto max-w-screen-md text-center text-5xl font-bold md:text-6xl">
+        <div class="mx-auto text-center text-4xl font-bold sm:text-5xl md:text-6xl">
           <h1>Smart Recipes, Smarter Shopping</h1>
         </div>
 
         <p class="mx-auto max-w-screen-sm text-xl text-muted-foreground">
-          Your all-in-one app for groceries, inventory tracking, and recipe ideas.
+          Your mobile-first PWA app for groceries, inventory tracking, and recipe ideas.
         </p>
 
         <div class="space-y-4 md:space-x-4 md:space-y-0">
@@ -32,7 +32,7 @@ const isLargeScreen = useMediaQuery('(min-width: 1024px)');
                 Let's Get Cooking!
               </span>
               <ArrowRight
-                class="text ml-2 size-5 text-yellow-500 transition-transform group-hover/arrow:translate-x-1" />
+                class="text ml-2 size-5 animate-pulse text-yellow-600 transition-transform group-hover/arrow:translate-x-1" />
             </Button>
           </NuxtLink>
 

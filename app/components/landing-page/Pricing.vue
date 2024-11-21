@@ -22,13 +22,7 @@ const plans: PlanProps[] = [
     price: 0,
     description: 'Free forever.',
     buttonText: 'Start For Free',
-    benefitList: [
-      '2 Lists',
-      '3 Invited Members',
-      'AI Assistance',
-      '10 Recipes Suggestions per Month',
-      'Feature Request'
-    ]
+    benefitList: ['1 List', '3 Invited Members', 'AI Assistance', '10 Recipes Suggestions per Month', 'Feature Request']
   },
   {
     title: 'Pro',

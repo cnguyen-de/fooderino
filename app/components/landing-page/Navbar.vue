@@ -1,18 +1,12 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { ArrowRight, ChevronsDown, Menu } from 'lucide-vue-next';
-import GithubIcon from '@/icons/GithubIcon.vue';
+import { Menu } from 'lucide-vue-next';
 import ToggleTheme from '~/components/landing-page/ToggleTheme.vue';
 import { useColorMode } from '@vueuse/core';
 
 interface RouteProps {
   href: string;
   label: string;
-}
-
-interface FeatureProps {
-  title: string;
-  description: string;
 }
 
 const routeList: RouteProps[] = [
@@ -31,25 +25,6 @@ const routeList: RouteProps[] = [
   {
     href: '#contact',
     label: 'Contact'
-  },
-  {
-    href: '#faq',
-    label: 'FAQ'
-  }
-];
-
-const featureList: FeatureProps[] = [
-  {
-    title: 'Showcase Your Value ',
-    description: 'Highlight how your product solves user problems.'
-  },
-  {
-    title: 'Build Trust',
-    description: 'Leverages social proof elements to establish trust and credibility.'
-  },
-  {
-    title: 'Capture Leads',
-    description: 'Make your lead capture form visually appealing and strategically.'
   }
 ];
 
@@ -59,7 +34,7 @@ const mode = useColorMode();
 
 <template>
   <header
-    class="sticky top-5 z-40 mx-auto flex w-[90%] items-center justify-between rounded-xl border bg-white/10 p-2 px-4 shadow-md backdrop-blur-lg dark:bg-black/10 md:w-[70%] lg:w-[75%] lg:max-w-screen-xl">
+    class="sticky top-5 z-40 mx-auto flex w-[90%] items-center justify-between rounded-xl border-none bg-white/10 p-2 px-4 shadow-md backdrop-blur-lg dark:border dark:border-solid dark:bg-black/10 md:w-[70%] lg:w-[75%] lg:max-w-screen-xl">
     <a href="/" class="flex items-center">
       <span
         class="bg-gradient-to-r from-red-600 to-yellow-500 bg-clip-text text-lg font-bold tracking-wide text-transparent dark:to-yellow-300">

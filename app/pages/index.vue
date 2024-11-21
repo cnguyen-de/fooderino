@@ -38,12 +38,12 @@ watch(
     <Features />
     <Usage />
     <Services />
-    <Testimonials />
-    <Team />
     <Techstack />
+    <Testimonials />
     <Pricing />
     <Contact />
     <!--
+    <Team />
     <FAQ />
 -->
     <Footer />
