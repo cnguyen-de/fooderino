@@ -6,7 +6,7 @@ const { data } = await useAsyncData('items', async () => {
 });
 
 const categories = computed(() => {
-  const stores = itemStore?.purchasedItems?.map((item) => item.store);
+  const stores = itemStore?.purchasedItems?.map((item) => item.store.trim());
   return [...new Set(stores)].sort((a, b) => a.localeCompare(b));
 });
 </script>
