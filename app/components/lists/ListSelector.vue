@@ -126,7 +126,10 @@ const acceptInvite = async (accept) => {
     <div class="mr-2 mt-1.5 flex flex-row items-center gap-1">
       <InviteButton></InviteButton>
       <UserList
-        v-if="inviteStore.sentInvites?.length > 0"
+        v-if="
+          inviteStore.sentInvites?.length > 0 &&
+          inviteStore.sentInvites?.some((invite) => invite.list_id === selectedList?.id)
+        "
         v-for="invitedUser of inviteStore.sentInvites"
         :email="invitedUser.to"></UserList>
       <UserList
