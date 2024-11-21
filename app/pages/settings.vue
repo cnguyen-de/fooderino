@@ -20,17 +20,17 @@ const formSchema = toTypedSchema(
       .number()
       .min(1)
       .max(50)
-      .default(settingsStore.settings.servings ?? 0),
+      .default(settingsStore.settings?.servings ?? 0),
     allergies: z
       .string()
       .min(2)
       .max(500)
-      .default(settingsStore.settings.allergies ?? ''),
+      .default(settingsStore.settings?.allergies ?? ''),
     cuisines: z
       .string()
       .min(2)
       .max(500)
-      .default(settingsStore.settings.cuisines ?? '')
+      .default(settingsStore.settings?.cuisines ?? '')
   })
 );
 const form = useForm({

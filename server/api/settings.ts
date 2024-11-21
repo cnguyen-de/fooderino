@@ -8,7 +8,7 @@ export default defineEventHandler(async (event: any) => {
     return { settings: null };
   }
 
-  const { data } = await client.from('users').select().eq('uid', user.id);
+  const { data } = await client.from('users').select().eq('id', user.id);
   if (data?.length > 0) {
     return { settings: data[0] };
   }

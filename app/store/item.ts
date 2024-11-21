@@ -20,7 +20,7 @@ export const useItemStore = defineStore('item', () => {
 
   const fetchBuyItems = async () => {
     if (!listStore.selectedList) {
-      await listStore.fetchLists();
+      return;
     }
     const { data } = await client
       .from('items')
@@ -32,7 +32,7 @@ export const useItemStore = defineStore('item', () => {
 
   const fetchInventoryItems = async () => {
     if (!listStore.selectedList?.id) {
-      await listStore.fetchLists();
+      return;
     }
     const { data } = await client.from('items').select().eq('list_id', listStore.selectedList?.id);
     state.inventoryItems = data;

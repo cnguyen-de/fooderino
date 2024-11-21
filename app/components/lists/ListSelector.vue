@@ -4,6 +4,9 @@ import { useSettingsStore } from '~/store/settings';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useForm } from 'vee-validate';
+import { useInviteStore } from '~/store/invites';
+import UserList from '~/components/lists/UserList.vue';
+
 const listStore = useListStore();
 const { selectedList, lists } = toRefs(listStore);
 const settingStore = useSettingsStore();
@@ -16,15 +19,32 @@ const form = useForm({
   validationSchema: formSchema
 });
 
-const isDrawerOpen = ref(false);
+const isCreateListDrawerOpen = ref(false);
+const openCreateListDrawer = () => {
+  isCreateListDrawerOpen.value = true;
+};
 const onSubmit = form.handleSubmit(async (values) => {
   await useListStore().createList(values.name);
-  isDrawerOpen.value = false;
+  isCreateListDrawerOpen.value = false;
 });
 const selectedDropDownItem = ref(listStore.selectedList);
 watch(selectedDropDownItem, (value) => {
   listStore.setSelectedList(value);
 });
+
+const inviteStore = useInviteStore();
+inviteStore.getReceivedInvites();
+inviteStore.getSentInvites();
+const isAcceptInviteDrawerOpen = ref(false);
+const openAcceptInviteDrawer = (invite) => {
+  isAcceptInviteDrawerOpen.value = true;
+  inviteStore.setSelectedInvite(invite);
+};
+const acceptInvite = async (accept) => {
+  await inviteStore.acceptInvite(accept);
+  inviteStore.setSelectedInvite(null);
+  isAcceptInviteDrawerOpen.value = false;
+};
 </script>
 
 <template>
@@ -35,18 +55,14 @@ watch(selectedDropDownItem, (value) => {
           {{ selectedList?.name }} ▾
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent class="w-56">
+      <DropdownMenuContent>
         <DropdownMenuLabel>Your Lists</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup v-model="selectedDropDownItem">
           <DropdownMenuRadioItem v-for="list of lists" :value="list">{{ list?.name }}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    <Drawer v-model:open="isDrawerOpen">
-      <DrawerTrigger>
-        <div class="flex items-center justify-center">
-          <button>
+        <DropdownMenuItem>
+          <button @click="openCreateListDrawer()" class="flex items-center justify-center gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -59,35 +75,22 @@ watch(selectedDropDownItem, (value) => {
                 stroke-linejoin="round"
                 d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z" />
             </svg>
+            Create New List
           </button>
+        </DropdownMenuItem>
+        <div v-if="inviteStore.receivedInvites?.length > 0">
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Invitations</DropdownMenuLabel>
+          <DropdownMenuItem
+            v-for="invite of inviteStore.receivedInvites"
+            :key="invite.id"
+            class="whitespace-nowrap"
+            @click="openAcceptInviteDrawer(invite)">
+            From {{ invite.from }}
+          </DropdownMenuItem>
         </div>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Add new list</DrawerTitle>
-        </DrawerHeader>
-        <form class="space-y-2 p-4" @submit="onSubmit">
-          <FormField v-slot="{ componentField }" name="name">
-            <FormItem>
-              <FormControl>
-                <Input type="text" placeholder="Name" v-bind="componentField" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          </FormField>
-        </form>
-        <DrawerFooter>
-          <div class="flex flex-row justify-between">
-            <DrawerClose>
-              <Button class="text-red-500" variant="ghost"> Cancel </Button>
-            </DrawerClose>
-            <DrawerClose>
-              <Button type="submit" @click.prevent="onSubmit">Submit</Button>
-            </DrawerClose>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+      </DropdownMenuContent>
+    </DropdownMenu>
     <div class="ml-2 flex items-center justify-center">
       <button variant="ghost" @click="settingStore.toggleEmptyItems()">
         <svg
@@ -122,37 +125,66 @@ watch(selectedDropDownItem, (value) => {
     <div class="flex-grow"></div>
     <div class="mr-2 mt-1.5 flex flex-row items-center gap-1">
       <InviteButton></InviteButton>
-      <Popover v-for="user of selectedList.users">
-        <PopoverTrigger>
-          <Avatar class="size-8">
-            <AvatarImage :src="user.avatar" alt="@radix-vue" />
-            <AvatarFallback>{{
-              user.name
-                .split(' ')
-                .map((n) => n[0])
-                .join('.')
-            }}</AvatarFallback>
-          </Avatar>
-        </PopoverTrigger>
-        <PopoverContent>
-          <div class="flex flex-row gap-2">
-            <Avatar>
-              <AvatarImage :src="user.avatar" alt="@radix-vue" />
-              <AvatarFallback>{{
-                user.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('.')
-              }}</AvatarFallback>
-            </Avatar>
-            <div class="flex flex-col">
-              <p>{{ user.name }}</p>
-              <p class="text-sm font-thin">{{ user.email }}</p>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+      <UserList
+        v-if="inviteStore.sentInvites?.length > 0"
+        v-for="invitedUser of inviteStore.sentInvites"
+        :email="invitedUser.to"></UserList>
+      <UserList
+        v-for="user of selectedList?.users"
+        :avatar="user.avatar"
+        :name="user.name"
+        :email="user.email"
+        :key="user.email"></UserList>
     </div>
+
+    <Drawer v-model:open="isCreateListDrawerOpen" @onOpenChange="isCreateListDrawerOpen = $event">
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Add new list</DrawerTitle>
+        </DrawerHeader>
+        <form class="space-y-2 p-4" @submit="onSubmit">
+          <FormField v-slot="{ componentField }" name="name">
+            <FormItem>
+              <FormControl>
+                <Input type="text" placeholder="Name" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+        <DrawerFooter>
+          <div class="flex flex-row justify-between">
+            <DrawerClose>
+              <Button class="text-red-500" variant="ghost"> Cancel </Button>
+            </DrawerClose>
+            <DrawerClose>
+              <Button type="submit" @click.prevent="onSubmit">Submit</Button>
+            </DrawerClose>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
+    <Drawer v-model:open="isAcceptInviteDrawerOpen" @onOpenChange="isAcceptInviteDrawerOpen = $event">
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>List Invitation</DrawerTitle>
+          <DrawerDescription
+            >{{ inviteStore.selectedInvite?.from }} has invited you to join their list. Do you accept the
+            invitation?</DrawerDescription
+          >
+        </DrawerHeader>
+        <DrawerFooter>
+          <div class="flex flex-row justify-between">
+            <DrawerClose>
+              <Button class="text-red-500" variant="ghost" @click="acceptInvite(false)">Deny</Button>
+            </DrawerClose>
+            <DrawerClose>
+              <Button type="submit" @click.prevent="acceptInvite(true)">Accept</Button>
+            </DrawerClose>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   </div>
   <div v-else class="p-4">
     <NewList></NewList>

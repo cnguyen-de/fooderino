@@ -4,6 +4,7 @@ import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useForm } from 'vee-validate';
 import { AlertCircle } from 'lucide-vue-next';
+import { useInviteStore } from '~/store/invites';
 
 const listStore = useListStore();
 const { selectedList } = toRefs(listStore);
@@ -16,10 +17,12 @@ const form = useForm({
   validationSchema: formSchema
 });
 
+const inviteStore = useInviteStore();
 const isDrawerOpen = ref(false);
 const onSubmit = form.handleSubmit(async (values) => {
   //send invite
   //add feedback that invite was successfully sent
+  await inviteStore.sendInvite(values.email, selectedList.value.id);
   isDrawerOpen.value = false;
 });
 </script>

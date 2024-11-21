@@ -33,7 +33,8 @@ export const useListStore = defineStore('list', () => {
           name: user.value?.user_metadata?.full_name,
           avatar: user.value?.user_metadata?.picture
         }
-      ]
+      ],
+      admin: user.value?.id
     });
     await fetchLists();
   };
