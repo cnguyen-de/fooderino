@@ -3,6 +3,7 @@ interface Props {
   avatar?: string;
   name?: string;
   email: string;
+  admin?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -34,6 +35,7 @@ const shortName = computed(
           <p v-if="name">{{ name }}</p>
           <p v-else>Pending Invite</p>
           <p class="text-sm font-thin">{{ email }}</p>
+          <p v-if="admin" class="text-primary">Admin</p>
         </div>
       </div>
     </PopoverContent>

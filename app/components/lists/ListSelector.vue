@@ -53,8 +53,11 @@ const acceptInvite = async (accept) => {
   <div v-if="selectedList?.name" class="flex flex-row justify-between">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button class="mb-2 border-none bg-transparent px-2 text-2xl text-white" variant="outline">
+        <Button class="relative mb-2 border-none bg-transparent px-2 text-2xl text-white" variant="outline">
           {{ selectedList?.name }} ▾
+          <span
+            v-if="inviteStore.receivedInvites?.length > 0"
+            class="absolute right-0 top-1 size-2 animate-pulse rounded-full bg-primary"></span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
@@ -139,6 +142,7 @@ const acceptInvite = async (accept) => {
         :avatar="user.avatar"
         :name="user.name"
         :email="user.email"
+        :admin="user?.admin ?? false"
         :key="user.email"></UserList>
     </div>
 

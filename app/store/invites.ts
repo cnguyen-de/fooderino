@@ -1,4 +1,5 @@
 import { useListStore } from '~/store/list';
+import { toast } from 'vue-sonner';
 
 export const useInviteStore = defineStore('invite', () => {
   interface State {
@@ -29,7 +30,10 @@ export const useInviteStore = defineStore('invite', () => {
     const { data } = await client.from('users').select('id, email').eq('email', email);
     if (!data || data.length === 0) {
       console.log('User not found');
-      return;
+      toast('Failed to send invite', {
+        description: `User with ${email} not found`
+      });
+      console.error('User not found');
     }
     const invitedUser = data[0];
     await client.from('invites').insert({
@@ -39,6 +43,9 @@ export const useInviteStore = defineStore('invite', () => {
       list_id: selectedListId
     });
     await getSentInvites();
+    toast('Successfully sent invite', {
+      description: `An invite was sent to ${invitedUser.email}`
+    });
   };
 
   const setSelectedInvite = (invite: any) => {
@@ -50,6 +57,7 @@ export const useInviteStore = defineStore('invite', () => {
       query: { inviteId: state.selectedInvite.id, status: accept ? 'INVITE_ACCEPTED' : 'INVITE_REJECTED' }
     });
     await listStore.fetchLists();
+    await getReceivedInvites();
   };
 
   return {

@@ -25,9 +25,6 @@ const onSubmit = form.handleSubmit(async (values) => {
   //add feedback that invite was successfully sent
   await inviteStore.sendInvite(values.email, selectedList.value.id);
   isDrawerOpen.value = false;
-  toast('Successfully sent invite', {
-    description: `An invite was sent to ${values.email}`
-  });
 });
 </script>
 
@@ -49,12 +46,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     <DrawerContent>
       <DrawerHeader>
         <DrawerTitle>Invite someone to join the {{ selectedList?.name }} list</DrawerTitle>
-        <DrawerDescription>The invited person will be able to see the list</DrawerDescription>
-        <Alert variant="destructive">
-          <AlertCircle class="h-4 w-4" />
-          <AlertTitle>Work In Progress</AlertTitle>
-          <AlertDescription> This function does not yet work </AlertDescription>
-        </Alert>
+        <DrawerDescription>The invited person will be able to see and edit the list</DrawerDescription>
       </DrawerHeader>
       <form class="space-y-2 p-4" @submit="onSubmit">
         <FormField v-slot="{ componentField }" name="email">

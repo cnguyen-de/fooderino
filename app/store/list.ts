@@ -1,5 +1,6 @@
 import type { List } from '../../types/List';
 import { useItemStore } from '~/store/item';
+import { useInviteStore } from '~/store/invites';
 interface State {
   lists: List[];
   selectedList: List | null;
@@ -7,6 +8,8 @@ interface State {
 export const useListStore = defineStore('list', () => {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
+  const inviteStore = useInviteStore();
+
   const state = reactive<State>({
     lists: [],
     selectedList: null
@@ -22,6 +25,9 @@ export const useListStore = defineStore('list', () => {
     state.selectedList = list;
     const itemStore = useItemStore();
     await itemStore.fetchInventoryItems();
+    await itemStore.fetchBuyItems();
+    await inviteStore.getReceivedInvites();
+    await inviteStore.getSentInvites();
   };
 
   const createList = async (name) => {
@@ -31,7 +37,8 @@ export const useListStore = defineStore('list', () => {
         {
           email: user.value?.email,
           name: user.value?.user_metadata?.full_name,
-          avatar: user.value?.user_metadata?.picture
+          avatar: user.value?.user_metadata?.picture,
+          admin: true
         }
       ],
       admin: user.value?.id
