@@ -1,3 +1,5 @@
+import { useListStore } from '~/store/list';
+
 export const useInviteStore = defineStore('invite', () => {
   interface State {
     sentInvites: any;
@@ -13,7 +15,7 @@ export const useInviteStore = defineStore('invite', () => {
 
   const client = useSupabaseClient();
   const user = useSupabaseUser();
-
+  const listStore = useListStore();
   const getSentInvites = async () => {
     const { data } = await client.from('invites').select().eq('from', user.value?.email).eq('status', 'INVITE_PENDING');
     state.sentInvites = data;
@@ -47,6 +49,7 @@ export const useInviteStore = defineStore('invite', () => {
     const { data } = await useFetch('/api/invite', {
       query: { inviteId: state.selectedInvite.id, status: accept ? 'INVITE_ACCEPTED' : 'INVITE_REJECTED' }
     });
+    await listStore.fetchLists();
   };
 
   return {

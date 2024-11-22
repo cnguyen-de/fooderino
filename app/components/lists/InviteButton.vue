@@ -5,6 +5,7 @@ import * as z from 'zod';
 import { useForm } from 'vee-validate';
 import { AlertCircle } from 'lucide-vue-next';
 import { useInviteStore } from '~/store/invites';
+import { toast } from 'vue-sonner';
 
 const listStore = useListStore();
 const { selectedList } = toRefs(listStore);
@@ -24,6 +25,9 @@ const onSubmit = form.handleSubmit(async (values) => {
   //add feedback that invite was successfully sent
   await inviteStore.sendInvite(values.email, selectedList.value.id);
   isDrawerOpen.value = false;
+  toast('Successfully sent invite', {
+    description: `An invite was sent to ${values.email}`
+  });
 });
 </script>
 

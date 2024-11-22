@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useSettingsStore } from '~/store/settings';
-import { useAsyncData } from '#app';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useForm } from 'vee-validate';
+import { toast } from 'vue-sonner';
 
 const supabase = useSupabaseClient();
 const logout = () => {
@@ -38,6 +38,7 @@ const form = useForm({
 });
 const onSubmit = form.handleSubmit(async (values) => {
   await settingsStore.updateSettings(values);
+  toast('Successfully saved settings');
 });
 </script>
 <template>

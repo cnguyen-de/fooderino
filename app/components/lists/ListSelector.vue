@@ -6,6 +6,7 @@ import * as z from 'zod';
 import { useForm } from 'vee-validate';
 import { useInviteStore } from '~/store/invites';
 import UserList from '~/components/lists/UserList.vue';
+import { toast } from 'vue-sonner';
 
 const listStore = useListStore();
 const { selectedList, lists } = toRefs(listStore);
@@ -43,6 +44,7 @@ const openAcceptInviteDrawer = (invite) => {
 const acceptInvite = async (accept) => {
   await inviteStore.acceptInvite(accept);
   inviteStore.setSelectedInvite(null);
+  toast('Successfully joined list');
   isAcceptInviteDrawerOpen.value = false;
 };
 </script>

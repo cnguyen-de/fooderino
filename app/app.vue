@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useColorMode, useMediaQuery } from '@vueuse/core';
 import { useListStore } from '~/store/list';
-import { useAsyncData } from '#app';
 import { useSettingsStore } from '~/store/settings';
+import { Toaster } from '~/components/ui/sonner';
 
 const listStore = useListStore();
 const settingStore = useSettingsStore();
@@ -25,4 +25,5 @@ await useAsyncData('userSettings', async () => {
       <NuxtPage />
     </NuxtLayout>
   </div>
+  <Toaster />
 </template>
