@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { BadgeCheck } from 'lucide-vue-next';
 
+enum Plan {
+  FREE = 0,
+  PRO = 1,
+  BUY_ONCE = 2
+}
 enum PopularPlan {
   NO = 0,
   YES = 1
 }
 
 interface PlanProps {
+  id: number;
   title: string;
   popular: PopularPlan;
   price: number;
@@ -17,6 +23,7 @@ interface PlanProps {
 
 const plans: PlanProps[] = [
   {
+    id: 0,
     title: 'Free',
     popular: 0,
     price: 0,
@@ -25,6 +32,7 @@ const plans: PlanProps[] = [
     benefitList: ['1 List', '3 Invited Members', 'AI Assistance', '10 Recipes Suggestions per Month', 'Feature Request']
   },
   {
+    id: 1,
     title: 'Pro',
     popular: 1,
     price: 2,
@@ -39,6 +47,7 @@ const plans: PlanProps[] = [
     ]
   },
   {
+    id: 2,
     title: 'Buy Once Use Forever',
     popular: 0,
     price: 20,
@@ -53,6 +62,17 @@ const plans: PlanProps[] = [
     ]
   }
 ];
+
+const handlePricingButton = (id: number) => {
+  console.log('Selected Plan:', plans[id].title);
+  if (id === Plan.FREE) {
+    navigateTo('/signup');
+  } else if (id === Plan.PRO) {
+    //navigateTo('/payment');
+  } else {
+    // strip link buy once
+  }
+};
 </script>
 
 <template>
@@ -67,7 +87,7 @@ const plans: PlanProps[] = [
 
     <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
       <Card
-        v-for="{ title, popular, price, description, buttonText, benefitList } in plans"
+        v-for="{ id, title, popular, price, description, buttonText, benefitList } in plans"
         :key="title"
         class="flex flex-col"
         :class="{
@@ -97,7 +117,10 @@ const plans: PlanProps[] = [
         </CardContent>
 
         <CardFooter>
-          <Button :variant="popular === PopularPlan?.NO ? 'secondary' : 'default'" class="w-full">
+          <Button
+            :variant="popular === PopularPlan?.NO ? 'secondary' : 'default'"
+            class="w-full"
+            @click="handlePricingButton(id)">
             {{ buttonText }}
           </Button>
         </CardFooter>

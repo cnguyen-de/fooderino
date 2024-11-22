@@ -2,7 +2,7 @@
 import { Marquee } from '@selemondev/vue3-marquee';
 import '@selemondev/vue3-marquee/dist/style.css';
 
-import { Crown, Vegan, Ghost, Puzzle, Squirrel, Cookie, Drama } from 'lucide-vue-next';
+import { Crown, Vegan, Ghost, Puzzle, Squirrel, Cookie, Drama, CreditCard } from 'lucide-vue-next';
 
 interface sponsorsProps {
   icon: string;
@@ -41,6 +41,10 @@ const stacks: sponsorsProps[] = [
   {
     icon: 'crown',
     name: 'Shadcn UI'
+  },
+  {
+    icon: 'creditcard',
+    name: 'Stripe'
   }
 ];
 
@@ -54,7 +58,8 @@ const iconMap: Record<
   puzzle: Puzzle,
   squirrel: Squirrel,
   cookie: Cookie,
-  drama: Drama
+  drama: Drama,
+  creditcard: CreditCard
 };
 </script>
 
