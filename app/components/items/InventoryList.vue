@@ -18,7 +18,7 @@ const onItemAmountValueChanged = (item: Item) => {
 </script>
 
 <template>
-  <div class="flex flex-col justify-center gap-1 p-4">
+  <div class="flex flex-col justify-center gap-1 px-4">
     <TransitionGroup>
       <Item
         v-for="item in items"

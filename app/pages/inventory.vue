@@ -25,7 +25,7 @@ const items = computed(() => {
       <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
         <div v-for="category in categories" :key="category">
           <Collapsible default-open>
-            <CollapsibleTrigger class="group/collapsible">
+            <CollapsibleTrigger class="group/collapsible py-2">
               <div class="flex flex-row">
                 <h2 class="pl-4 font-bold text-white">{{ category }}</h2>
                 <ChevronRight
