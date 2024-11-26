@@ -18,6 +18,19 @@ const items = computed(() => {
   }
   return items;
 });
+
+const isEditCategoryOpen = ref(false);
+const selectedCategory = ref('');
+const selectedOldCategory = ref('');
+const openEditCategoryDrawer = (category) => {
+  isEditCategoryOpen.value = true;
+  selectedCategory.value = category;
+  selectedOldCategory.value = category;
+};
+const editCategory = async () => {
+  await itemStore.renameCategory(selectedOldCategory.value, selectedCategory.value);
+  isEditCategoryOpen.value = false;
+};
 </script>
 <template>
   <NuxtLayout name="app">
@@ -25,13 +38,27 @@ const items = computed(() => {
       <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
         <div v-for="category in categories" :key="category">
           <Collapsible default-open>
-            <CollapsibleTrigger class="group/collapsible py-2">
-              <div class="flex flex-row">
+            <div class="flex flex-row justify-between pr-4">
+              <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
                 <h2 class="pl-4 font-bold text-white">{{ category }}</h2>
                 <ChevronRight
                   class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-              </div>
-            </CollapsibleTrigger>
+              </CollapsibleTrigger>
+              <button class="text-gray-300/50" @click.prevent="openEditCategoryDrawer(category)">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-6">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                </svg>
+              </button>
+            </div>
             <CollapsibleContent>
               <InventoryList
                 :items="
@@ -43,6 +70,28 @@ const items = computed(() => {
           </Collapsible>
         </div>
       </div>
+
+      <!-- Edit category-->
+      <Drawer v-model:open="isEditCategoryOpen" @onOpenChange="isEditCategoryOpen = $event">
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle class="pb-4">Edit Category</DrawerTitle>
+            <DrawerDescription>
+              <Input type="text" v-model="selectedCategory"></Input>
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter>
+            <div class="flex flex-row justify-between">
+              <DrawerClose>
+                <Button class="text-red-500" variant="ghost">Close</Button>
+              </DrawerClose>
+              <DrawerClose>
+                <Button type="submit" @click.prevent="editCategory">Rename</Button>
+              </DrawerClose>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </NuxtLayout>
   </NuxtLayout>
 </template>

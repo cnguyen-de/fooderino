@@ -133,6 +133,14 @@ export const useItemStore = defineStore('item', () => {
     await fetchBuyItems();
   };
 
+  const renameCategory = async (oldCategory: string, newCategory: string) => {
+    const items = state.inventoryItems.filter((item) => item.location === oldCategory);
+    for (const item of items) {
+      await client.from('items').update({ location: newCategory }).eq('id', item.id);
+    }
+    await fetchInventoryItems();
+  };
+
   return {
     ...toRefs(state),
 
@@ -147,6 +155,7 @@ export const useItemStore = defineStore('item', () => {
     deselectItem,
     deselectAllItems,
     setFilterInput,
+    renameCategory,
 
     //Getters
     isItemSelected,

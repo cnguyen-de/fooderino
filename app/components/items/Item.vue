@@ -11,7 +11,7 @@ export type ItemProps = {
   toRight: boolean;
   disableSwipe?: boolean;
   amountAsNumberInput?: boolean;
-  default_amount: number;
+  default_amount?: number;
 };
 const props = withDefaults(defineProps<ItemProps>(), {
   id: 0,

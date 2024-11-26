@@ -21,8 +21,8 @@ const onAddItemToInventory = async (item: ItemProps) => {
     <TransitionGroup>
       <Item
         v-for="item in items"
-        :key="item.id"
-        :id="item.id"
+        :key="item.itemId"
+        :itemId="item.itemId"
         :name="item.name"
         :amount="item.amount"
         :amount_type="item.amount_type"
