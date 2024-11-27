@@ -63,7 +63,7 @@ export const useItemStore = defineStore('item', () => {
   };
 
   const insertItem = async (data) => {
-    const { data: updatedData, error } = await client.from('items').insert({
+    await client.from('items').insert({
       amount: data.amount,
       name: data.name,
       amount_type: data.amountType,

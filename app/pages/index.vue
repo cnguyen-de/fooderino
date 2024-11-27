@@ -20,8 +20,7 @@ watch(
   user?.value,
   () => {
     if (user.value?.id) {
-      console.log(user.value);
-      //navigateTo('/inventory');
+      navigateTo('/inventory');
     }
   },
   { immediate: true }
