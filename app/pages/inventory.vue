@@ -8,7 +8,9 @@ onMounted(() => {
   itemStore.fetchInventoryItems();
 });
 const categories = computed(() => {
-  const cat = itemStore.getFilteredInventoryItems?.map((item) => item.location.trim());
+  const cat = itemStore.getFilteredInventoryItems
+    ?.filter((item) => (settingStore.settings?.show_empty_items ? true : item.amount > 0))
+    .map((item) => item.location.trim());
   return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
 });
 const items = computed(() => {
