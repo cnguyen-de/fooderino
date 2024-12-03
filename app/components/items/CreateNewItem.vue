@@ -5,16 +5,28 @@ import * as z from 'zod';
 
 import { useItemStore } from '~/store/item';
 const itemStore = useItemStore();
+const props = defineProps<{
+  location?: string;
+  store?: string;
+}>();
 
 const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(2).max(50),
     amountType: z.string().min(2).max(50).default('count'),
     amount: z.string().min(1).max(50),
-    amountToPurchase: z.string().min(1).max(50).default('1'),
+    amountToPurchase: z.string().min(1).max(50).default('0'),
     defaultAmount: z.string().min(1).max(50).default('0'),
-    store: z.string().min(2).max(50).default('Market'),
-    location: z.string().min(2).max(50).default('Fridge')
+    store: z
+      .string()
+      .min(2)
+      .max(50)
+      .default(props.store ?? ''),
+    location: z
+      .string()
+      .min(2)
+      .max(50)
+      .default(props.location ?? '')
   })
 );
 const form = useForm({
@@ -31,7 +43,8 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 <template>
   <Drawer class="" v-model:open="isDrawerOpen">
-    <DrawerTrigger class="">
+    <DrawerTrigger class="flex flex-row items-center">
+      <slot></slot>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"

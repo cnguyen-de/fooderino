@@ -1,5 +1,7 @@
 <script setup>
 import { useItemStore } from '~/store/item';
+import { ChevronRight } from 'lucide-vue-next';
+
 const itemStore = useItemStore();
 const { data } = await useAsyncData('items', async () => {
   return await itemStore.fetchBuyItems();
@@ -15,13 +17,25 @@ const categories = computed(() => {
     <NuxtLayout name="list">
       <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
         <div v-for="category in categories" :key="category">
-          <h2 class="px-2 font-bold text-white">{{ category }}</h2>
-          <BuyList
-            :items="
-              itemStore?.purchasedItems
-                ?.filter((item) => item.store === category)
-                .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
-            "></BuyList>
+          <Collapsible default-open>
+            <div class="flex flex-row pr-4">
+              <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
+                <h2 class="px-2 font-bold text-white">{{ category }}</h2>
+                <ChevronRight
+                  class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+              </CollapsibleTrigger>
+              <CreateNewItem :store="category"></CreateNewItem>
+              <span class="flex-grow"></span>
+            </div>
+            <CollapsibleContent>
+              <BuyList
+                :items="
+                  itemStore?.purchasedItems
+                    ?.filter((item) => item.store === category)
+                    .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
+                "></BuyList>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </div>
     </NuxtLayout>

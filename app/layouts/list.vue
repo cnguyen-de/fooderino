@@ -4,7 +4,4 @@
     <ListSelector></ListSelector>
     <slot />
   </div>
-  <div class="fixed bottom-16">
-    <ActionBar></ActionBar>
-  </div>
 </template>

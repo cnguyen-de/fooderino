@@ -40,12 +40,14 @@ const editCategory = async () => {
       <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
         <div v-for="category in categories" :key="category">
           <Collapsible default-open>
-            <div class="flex flex-row justify-between pr-4">
+            <div class="flex flex-row pr-4">
               <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
                 <h2 class="pl-4 font-bold text-white">{{ category }}</h2>
                 <ChevronRight
                   class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               </CollapsibleTrigger>
+              <CreateNewItem :location="category"></CreateNewItem>
+              <span class="flex-grow"></span>
               <button class="text-gray-300/50" @click.prevent="openEditCategoryDrawer(category)">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -70,6 +72,10 @@ const editCategory = async () => {
                 "></InventoryList>
             </CollapsibleContent>
           </Collapsible>
+        </div>
+
+        <div v-if="categories?.length === 0" class="p-2">
+          <CreateNewItem>Add an item to the list </CreateNewItem>
         </div>
       </div>
 
