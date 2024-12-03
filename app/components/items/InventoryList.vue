@@ -28,6 +28,7 @@ const onItemAmountValueChanged = (item: Item) => {
         :amount="item.amount"
         :amount_type="item.amount_type"
         :amount_to_purchase="item.amount_to_purchase"
+        :default_amount="item.default_amount"
         :to-right="true"
         :show-amount="false"
         :disable-swipe="true"
