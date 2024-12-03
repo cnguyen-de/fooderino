@@ -9,6 +9,7 @@ const isEditItemDrawerOpen = ref(false);
 const showDeleteConfirmation = ref(false);
 const newCategory = ref('');
 const locationRef = ref(props.isBuyList ? props.item.store : props.item.location);
+const defaultAmountRef = ref(props.item.default_amount);
 const onDeleteItem = async () => {
   await itemStore.deleteItem(props.item.id);
   isEditItemDrawerOpen.value = false;
@@ -19,6 +20,11 @@ const changeLocation = async () => {
   } else {
     await itemStore.updateItem({ ...props.item, location: newCategory.value });
   }
+  isEditItemDrawerOpen.value = false;
+};
+
+const changeDefaultAmount = async () => {
+  await itemStore.updateItem({ ...props.item, default_amount: defaultAmountRef.value });
   isEditItemDrawerOpen.value = false;
 };
 </script>
@@ -40,10 +46,29 @@ const changeLocation = async () => {
     </DrawerTrigger>
     <DrawerContent>
       <DrawerHeader>
-        <DrawerTitle>Edit item {{ item.name }}</DrawerTitle>
+        <DrawerTitle>More Options: {{ item.name }}</DrawerTitle>
       </DrawerHeader>
       <DrawerFooter>
-        <div class="flex flex-row gap-2">
+        <div class="flex flex-row items-center gap-2">
+          <label for="defaultAmount" class="whitespace-nowrap">Default Amount</label>
+          <Input id="defaultAmount" v-model="defaultAmountRef" name="defaultAmount" />
+          <Button @click="changeDefaultAmount()">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-6">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </Button>
+        </div>
+        <div class="flex flex-row items-center gap-2">
+          <label for="defaultAmount" class="whitespace-nowrap">Category</label>
           <Input v-model="locationRef" readonly />
           <div class="flex items-center">
             <svg
@@ -57,8 +82,8 @@ const changeLocation = async () => {
             </svg>
           </div>
           <Input v-model="newCategory" placeholder="New Value" />
-          <Button @click="changeLocation()"
-            ><svg
+          <Button @click="changeLocation()">
+            <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"

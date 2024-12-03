@@ -92,29 +92,24 @@ const setStore = (store: string) => {
       </DrawerHeader>
       <form class="space-y-2 p-4" @submit="onSubmit">
         <FormField v-slot="{ componentField }" name="name">
-          <FormItem>
+          <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+            <FormLabel>Name</FormLabel>
             <FormControl>
               <Input type="text" placeholder="Name" v-bind="componentField" />
             </FormControl>
-            <FormMessage />
           </FormItem>
         </FormField>
 
         <FormField v-slot="{ componentField }" name="location">
-          <FormItem class="relative">
+          <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+            <FormLabel>Category </FormLabel>
             <FormControl>
-              <Input
-                class="peer"
-                type="text"
-                placeholder="Fridge / Cupboard"
-                v-model="location"
-                @focus="showCats = true" />
+              <Input type="text" placeholder="Fridge / Cupboard" v-model="location" @focus="showCats = true" />
             </FormControl>
-            <FormMessage />
             <div
               v-if="showCats"
-              class="absolute top-9 w-full rounded-b border border-t-0 bg-background p-2 text-gray-200">
-              <div class="flex max-h-20 flex-col overflow-auto">
+              class="absolute right-0 top-10 z-10 w-[calc(100%_-_72px)] rounded-b border border-t-0 bg-gray-900 p-2 text-gray-200">
+              <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
                   class="inline-block hover:bg-gray-500"
                   v-for="category of itemStore.inventoryCategories.filter((cat) =>
@@ -129,28 +124,28 @@ const setStore = (store: string) => {
         </FormField>
 
         <FormField v-if="showAmount" v-slot="{ componentField }" name="amount">
-          <FormItem>
+          <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+            <FormLabel>Amount</FormLabel>
             <FormControl>
               <Input type="text" placeholder="Amount of item you have" v-bind="componentField" />
             </FormControl>
-            <FormMessage />
           </FormItem>
         </FormField>
         <FormField v-else v-slot="{ componentField }" name="amountToPurchase">
-          <FormItem>
+          <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+            <FormLabel>Purchase Amount</FormLabel>
             <FormControl>
               <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
             </FormControl>
-            <FormMessage />
           </FormItem>
         </FormField>
 
         <FormField v-slot="{ componentField }" name="store">
-          <FormItem class="relative">
+          <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+            <FormLabel>Store</FormLabel>
             <FormControl>
               <Input type="text" placeholder="Where to buy item" v-model="store" @focus="showStores = true" />
             </FormControl>
-            <FormMessage />
             <div
               v-if="showStores"
               class="absolute top-9 w-full rounded-b border border-t-0 bg-background p-2 text-gray-200">
@@ -189,36 +184,41 @@ const setStore = (store: string) => {
           <CollapsibleContent>
             <div class="flex flex-col gap-2">
               <FormField v-if="showAmount" v-slot="{ componentField }" name="amountToPurchase">
-                <FormItem>
+                <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+                  <FormLabel>Purchase Amount</FormLabel>
                   <FormControl>
                     <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               </FormField>
               <FormField v-else v-slot="{ componentField }" name="amount">
-                <FormItem>
+                <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+                  <FormLabel>Amount</FormLabel>
                   <FormControl>
                     <Input type="text" placeholder="Amount of item you have" v-bind="componentField" />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               </FormField>
 
               <FormField v-slot="{ componentField }" name="defaultAmount">
-                <FormItem>
+                <FormItem class="relative mb-4 grid grid-cols-[64px_1fr] place-items-center gap-2">
+                  <FormLabel>Default Amount</FormLabel>
+                  <FormDescription class="absolute top-10">
+                    Automatically add to purchase list after the amount is lower than
+                  </FormDescription>
                   <FormControl>
                     <Input
                       type="text"
                       placeholder="Amount of items should always be in Inventory"
                       v-bind="componentField" />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               </FormField>
 
               <FormField v-slot="{ componentField }" name="amountType">
-                <FormItem>
+                <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
+                  <FormLabel>Amount Type</FormLabel>
+
                   <Select v-bind="componentField">
                     <FormControl>
                       <SelectTrigger>
@@ -232,7 +232,6 @@ const setStore = (store: string) => {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
                 </FormItem>
               </FormField>
             </div>
