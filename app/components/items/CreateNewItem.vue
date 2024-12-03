@@ -15,7 +15,7 @@ const formSchema = toTypedSchema(
     name: z.string().min(2).max(50),
     amountType: z.string().min(2).max(50).default('count'),
     amount: z.string().min(1).max(50),
-    amountToPurchase: z.string().min(1).max(50).default('0'),
+    amountToPurchase: z.string().min(1).max(50),
     defaultAmount: z.string().min(1).max(50).default('0'),
     store: z
       .string()
@@ -29,10 +29,17 @@ const formSchema = toTypedSchema(
       .default(props.location ?? '')
   })
 );
-const form = useForm({
+let form = useForm({
   validationSchema: formSchema
 });
-
+onUpdated(() => {
+  form = useForm({
+    validationSchema: formSchema
+  });
+});
+const showAmount = computed(() => {
+  return props.location !== undefined;
+});
 const isDrawerOpen = ref(false);
 const isOpen = ref(false);
 const onSubmit = form.handleSubmit(async (values) => {
@@ -79,10 +86,18 @@ const onSubmit = form.handleSubmit(async (values) => {
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ componentField }" name="amount">
+        <FormField v-if="showAmount" v-slot="{ componentField }" name="amount">
           <FormItem>
             <FormControl>
               <Input type="text" placeholder="Amount of item you have" v-bind="componentField" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+        <FormField v-else v-slot="{ componentField }" name="amountToPurchase">
+          <FormItem>
+            <FormControl>
+              <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -117,10 +132,18 @@ const onSubmit = form.handleSubmit(async (values) => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div class="flex flex-col gap-2">
-              <FormField v-slot="{ componentField }" name="amountToPurchase">
+              <FormField v-if="showAmount" v-slot="{ componentField }" name="amountToPurchase">
                 <FormItem>
                   <FormControl>
                     <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+              <FormField v-else v-slot="{ componentField }" name="amount">
+                <FormItem>
+                  <FormControl>
+                    <Input type="text" placeholder="Amount of item you have" v-bind="componentField" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
