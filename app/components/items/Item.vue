@@ -84,7 +84,7 @@ const onInputClick = (state) => {
       :default-value="amountValue"
       :model-value="amountValue"
       @update:model-value="onValueUpdated($event)"
-      :min="amountAsNumberInput ? 0 : default_amount">
+      :min="0">
       <NumberFieldContent>
         <NumberFieldInput
           class="peer border-none text-base"
