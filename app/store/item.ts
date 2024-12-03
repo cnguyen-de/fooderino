@@ -1,6 +1,7 @@
 import { BuyList } from './../../.nuxt/components.d';
 import { type Item } from '../../types/Item';
 import { useListStore } from './list';
+import { useSettingsStore } from './settings';
 
 interface State {
   inventoryItems: Item[];
@@ -18,6 +19,7 @@ export const useItemStore = defineStore('item', () => {
   const client = useSupabaseClient();
   const user = useSupabaseUser();
   const listStore = useListStore();
+  const settingStore = useSettingsStore();
 
   const fetchBuyItems = async () => {
     if (!listStore.selectedList) {
@@ -128,7 +130,9 @@ export const useItemStore = defineStore('item', () => {
   });
 
   const inventoryCategories = computed(() => {
-    const cat = getFilteredInventoryItems.value.map((item) => item.location.trim());
+    const cat = getFilteredInventoryItems.value
+      ?.filter((item) => (settingStore.settings?.show_empty_items ? true : item.amount > 0))
+      .map((item) => item.location.trim());
     return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
   });
 

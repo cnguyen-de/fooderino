@@ -7,9 +7,7 @@ const settingStore = useSettingsStore();
 onMounted(() => {
   itemStore.fetchInventoryItems();
 });
-const categories = computed(() =>
-  itemStore.inventoryCategories?.filter((item) => (settingStore.settings?.show_empty_items ? true : item.amount > 0))
-);
+const categories = computed(() => itemStore.inventoryCategories);
 const items = computed(() => {
   let items = itemStore.getFilteredInventoryItems;
   if (!settingStore.settings?.show_empty_items) {
