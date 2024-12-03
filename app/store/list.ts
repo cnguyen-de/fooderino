@@ -18,7 +18,9 @@ export const useListStore = defineStore('list', () => {
   const fetchLists = async () => {
     const { data } = await useFetch('/api/list');
     state.lists = data?.value?.lists;
-    setSelectedList(data?.value?.lists[0]);
+    if (!state.selectedList) {
+      setSelectedList(data?.value?.lists[0]);
+    }
   };
 
   const setSelectedList = async (list: List) => {
@@ -45,10 +47,25 @@ export const useListStore = defineStore('list', () => {
     });
     await fetchLists();
   };
+
+  const removeUser = async (email) => {
+    console.log(state.selectedList.admin, user.value?.id);
+    if (state.selectedList.admin !== user.value?.id) {
+      return;
+    }
+    await supabase
+      .from('lists')
+      .update({
+        users: state.selectedList.users.filter((user) => user.email !== email)
+      })
+      .eq('id', state.selectedList.id);
+    await fetchLists();
+  };
   return {
     ...toRefs(state),
     fetchLists,
     createList,
-    setSelectedList
+    setSelectedList,
+    removeUser
   };
 });

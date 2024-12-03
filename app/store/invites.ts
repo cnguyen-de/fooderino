@@ -60,6 +60,11 @@ export const useInviteStore = defineStore('invite', () => {
     await getReceivedInvites();
   };
 
+  const removeInvite = async (email) => {
+    await client.from('invites').delete().eq('to', email).eq('from', user.value?.email);
+    await getSentInvites();
+  };
+
   return {
     ...toRefs(state),
 
@@ -67,6 +72,7 @@ export const useInviteStore = defineStore('invite', () => {
     getSentInvites,
     sendInvite,
     setSelectedInvite,
-    acceptInvite
+    acceptInvite,
+    removeInvite
   };
 });

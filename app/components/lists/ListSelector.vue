@@ -47,6 +47,15 @@ const acceptInvite = async (accept) => {
   toast('Successfully joined list');
   isAcceptInviteDrawerOpen.value = false;
 };
+const onRemoveUser = async (email: string, isInvite = false) => {
+  if (isInvite) {
+    await inviteStore.removeInvite(email);
+  } else {
+    await listStore.removeUser(email);
+  }
+
+  toast('Successfully removed user', email);
+};
 </script>
 
 <template>
@@ -136,14 +145,17 @@ const acceptInvite = async (accept) => {
           inviteStore.sentInvites?.some((invite) => invite.list_id === selectedList?.id)
         "
         v-for="invitedUser of inviteStore.sentInvites"
-        :email="invitedUser.to"></UserList>
+        :email="invitedUser.to"
+        @remove-user="onRemoveUser($event, true)"></UserList>
       <UserList
         v-for="user of selectedList?.users"
         :avatar="user.avatar"
         :name="user.name"
         :email="user.email"
         :admin="user?.admin ?? false"
-        :key="user.email"></UserList>
+        :key="user.email"
+        @remove-user="onRemoveUser($event)">
+      </UserList>
     </div>
 
     <Drawer v-model:open="isCreateListDrawerOpen" @onOpenChange="isCreateListDrawerOpen = $event">

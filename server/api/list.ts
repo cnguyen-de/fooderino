@@ -10,7 +10,7 @@ export default defineEventHandler(async (event: any) => {
 
   const { data } = await client
     .from('lists')
-    .select('uid, id, name, users')
+    .select('uid, id, name, users, admin')
     .contains('users', JSON.stringify([{ email: user.email }]));
   return { lists: data?.sort((a, b) => a.uid - b.uid), user: user.email };
 });

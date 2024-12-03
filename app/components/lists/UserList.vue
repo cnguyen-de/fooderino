@@ -7,7 +7,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-
+const emit = defineEmits(['removeUser']);
 const shortName = computed(
   () =>
     props.name
@@ -15,6 +15,10 @@ const shortName = computed(
       .map((n) => n[0])
       .join('.') ?? props.email[0]
 );
+
+const removeUser = (email: string) => {
+  emit('removeUser', email);
+};
 </script>
 
 <template>
@@ -35,7 +39,8 @@ const shortName = computed(
           <p v-if="name">{{ name }}</p>
           <p v-else>Pending Invite</p>
           <p class="text-sm font-thin">{{ email }}</p>
-          <p v-if="admin" class="text-primary">Admin</p>
+          <p v-if="admin" class="text-white">Admin</p>
+          <button class="self-start text-red-500" v-if="!admin" @click="removeUser(email)">Remove</button>
         </div>
       </div>
     </PopoverContent>
