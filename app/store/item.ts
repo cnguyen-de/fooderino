@@ -126,8 +126,7 @@ export const useItemStore = defineStore('item', () => {
     return state.inventoryItems?.filter((item) => item.name.toLowerCase().includes(state.filterInput.toLowerCase()));
   });
 
-  // TODO Implement UI
-  const deleteItem = async (id: string) => {
+  const deleteItem = async (id: number) => {
     await client.from('items').delete().eq('id', id);
     await fetchInventoryItems();
     await fetchBuyItems();
@@ -156,6 +155,7 @@ export const useItemStore = defineStore('item', () => {
     deselectAllItems,
     setFilterInput,
     renameCategory,
+    deleteItem,
 
     //Getters
     isItemSelected,

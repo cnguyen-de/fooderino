@@ -79,7 +79,7 @@ const onInputClick = (state) => {
     <div class="flex-grow"></div>
     <NumberField
       :step="amount_type === 'count' ? '1' : '100'"
-      class="mr-2 w-24"
+      class="w-20"
       :id="id"
       :default-value="amountValue"
       :model-value="amountValue"
@@ -91,10 +91,10 @@ const onInputClick = (state) => {
           @focusin="onInputClick(false)"
           @focusout="onInputClick(true)" />
         <NumberFieldDecrement
-          class="rounded-full text-gray-500/50 peer-focus:text-gray-200/50"
+          class="rounded-full px-1 text-gray-500/50 peer-focus:text-gray-200/50"
           :disabled="isInputNotPressed" />
         <NumberFieldIncrement
-          class="rounded-full text-gray-500/50 peer-focus:text-gray-200/50"
+          class="rounded-full px-1 text-gray-500/50 peer-focus:text-gray-200/50"
           :disabled="isInputNotPressed" />
       </NumberFieldContent>
     </NumberField>

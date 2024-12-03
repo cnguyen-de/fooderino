@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import type { ItemProps } from './Item.vue';
 import { useItemStore } from '~/store/item';
 import type { Item } from '~~/types/Item';
 const itemStore = useItemStore();
 
 type ListItemProps = {
-  items: ItemProps[];
+  items: Item[];
 };
 defineProps<ListItemProps>();
 const onValueChanged = (item: Item) => {
@@ -33,6 +32,7 @@ const onAddItemToInventory = async (item: ItemProps) => {
         disable-swipe
         :amount-as-number-input="false"
         @value-changed="onValueChanged($event)">
+        <EditItem :item="item" is-buy-list></EditItem>
         <button
           class="flex size-7 items-center justify-center rounded-full hover:bg-green-400/10 hover:text-green-500"
           @click="onAddItemToInventory(item)">
