@@ -1,3 +1,4 @@
+import { BuyList } from './../../.nuxt/components.d';
 import { type Item } from '../../types/Item';
 import { useListStore } from './list';
 
@@ -126,6 +127,16 @@ export const useItemStore = defineStore('item', () => {
     return state.inventoryItems?.filter((item) => item.name.toLowerCase().includes(state.filterInput.toLowerCase()));
   });
 
+  const inventoryCategories = computed(() => {
+    const cat = getFilteredInventoryItems.value.map((item) => item.location.trim());
+    return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
+  });
+
+  const buyCategories = computed(() => {
+    const cat = state.purchasedItems.map((item) => item.store.trim());
+    return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
+  });
+
   const deleteItem = async (id: number) => {
     await client.from('items').delete().eq('id', id);
     await fetchInventoryItems();
@@ -159,6 +170,8 @@ export const useItemStore = defineStore('item', () => {
 
     //Getters
     isItemSelected,
-    getFilteredInventoryItems
+    getFilteredInventoryItems,
+    inventoryCategories,
+    buyCategories
   };
 });

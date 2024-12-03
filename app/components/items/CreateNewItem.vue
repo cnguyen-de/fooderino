@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm } from 'vee-validate';
+import { useForm, useField } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 
@@ -14,17 +14,25 @@ const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(2).max(50),
     amountType: z.string().min(2).max(50).default('count'),
-    amount: z.string().min(1).max(50),
-    amountToPurchase: z.string().min(1).max(50),
+    amount: z
+      .string()
+      .min(1)
+      .max(50)
+      .default(props.location ? '1' : '0'),
+    amountToPurchase: z
+      .string()
+      .min(1)
+      .max(50)
+      .default(props.store ? '1' : '0'),
     defaultAmount: z.string().min(1).max(50).default('0'),
     store: z
       .string()
-      .min(2)
+      .min(1)
       .max(50)
       .default(props.store ?? ''),
     location: z
       .string()
-      .min(2)
+      .min(1)
       .max(50)
       .default(props.location ?? '')
   })
@@ -32,20 +40,35 @@ const formSchema = toTypedSchema(
 let form = useForm({
   validationSchema: formSchema
 });
-onUpdated(() => {
-  form = useForm({
-    validationSchema: formSchema
-  });
+const isDrawerOpen = ref(false);
+watch(isDrawerOpen, (value) => {
+  if (!value) {
+    form = useForm({
+      validationSchema: formSchema
+    });
+  }
 });
+const { value: location } = useField('location') as { value: string };
+const { value: store } = useField('store') as { value: string };
 const showAmount = computed(() => {
   return props.location !== undefined;
 });
-const isDrawerOpen = ref(false);
 const isOpen = ref(false);
 const onSubmit = form.handleSubmit(async (values) => {
   await itemStore.insertItem(values);
   isDrawerOpen.value = false;
 });
+
+const showCats = ref(false);
+const showStores = ref(false);
+const setLocation = (category: string) => {
+  form.setFieldValue('location', category, true);
+  showCats.value = false;
+};
+const setStore = (store: string) => {
+  form.setFieldValue('store', store, true);
+  showStores.value = false;
+};
 </script>
 
 <template>
@@ -78,11 +101,30 @@ const onSubmit = form.handleSubmit(async (values) => {
         </FormField>
 
         <FormField v-slot="{ componentField }" name="location">
-          <FormItem>
+          <FormItem class="relative">
             <FormControl>
-              <Input type="text" placeholder="Fridge / Cupboard" v-bind="componentField" />
+              <Input
+                class="peer"
+                type="text"
+                placeholder="Fridge / Cupboard"
+                v-model="location"
+                @focus="showCats = true" />
             </FormControl>
             <FormMessage />
+            <div
+              v-if="showCats"
+              class="absolute top-9 w-full rounded-b border border-t-0 bg-background p-2 text-gray-200">
+              <div class="flex max-h-20 flex-col overflow-auto">
+                <div
+                  class="inline-block hover:bg-gray-500"
+                  v-for="category of itemStore.inventoryCategories.filter((cat) =>
+                    cat.toLowerCase().includes(location.toLowerCase())
+                  )"
+                  @click="setLocation(category)">
+                  {{ category }}
+                </div>
+              </div>
+            </div>
           </FormItem>
         </FormField>
 
@@ -104,11 +146,25 @@ const onSubmit = form.handleSubmit(async (values) => {
         </FormField>
 
         <FormField v-slot="{ componentField }" name="store">
-          <FormItem>
+          <FormItem class="relative">
             <FormControl>
-              <Input type="text" placeholder="Where to buy item" v-bind="componentField" />
+              <Input type="text" placeholder="Where to buy item" v-model="store" @focus="showStores = true" />
             </FormControl>
             <FormMessage />
+            <div
+              v-if="showStores"
+              class="absolute top-9 w-full rounded-b border border-t-0 bg-background p-2 text-gray-200">
+              <div class="flex max-h-20 flex-col overflow-auto">
+                <div
+                  class="inline-block hover:bg-gray-500"
+                  v-for="category of itemStore.buyCategories.filter((cat) =>
+                    cat.toLowerCase().includes(store.toLowerCase())
+                  )"
+                  @click="setStore(category)">
+                  {{ category }}
+                </div>
+              </div>
+            </div>
           </FormItem>
         </FormField>
 

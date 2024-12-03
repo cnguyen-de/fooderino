@@ -34,8 +34,6 @@ watch(selectedDropDownItem, (value) => {
 });
 
 const inviteStore = useInviteStore();
-inviteStore.getReceivedInvites();
-inviteStore.getSentInvites();
 const isAcceptInviteDrawerOpen = ref(false);
 const openAcceptInviteDrawer = (invite) => {
   isAcceptInviteDrawerOpen.value = true;

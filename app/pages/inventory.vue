@@ -7,12 +7,9 @@ const settingStore = useSettingsStore();
 onMounted(() => {
   itemStore.fetchInventoryItems();
 });
-const categories = computed(() => {
-  const cat = itemStore.getFilteredInventoryItems
-    ?.filter((item) => (settingStore.settings?.show_empty_items ? true : item.amount > 0))
-    .map((item) => item.location.trim());
-  return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
-});
+const categories = computed(() =>
+  itemStore.inventoryCategories?.filter((item) => (settingStore.settings?.show_empty_items ? true : item.amount > 0))
+);
 const items = computed(() => {
   let items = itemStore.getFilteredInventoryItems;
   if (!settingStore.settings?.show_empty_items) {
