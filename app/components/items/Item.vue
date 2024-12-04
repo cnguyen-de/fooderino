@@ -74,6 +74,7 @@ const onInputClick = (state) => {
     </div>
     <Input
       v-model="itemName"
+      :id="id"
       class="-ml-4 w-1/2 rounded-full border-none bg-transparent pl-4 text-lg focus-visible:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-0" />
 
     <div class="flex-grow"></div>
