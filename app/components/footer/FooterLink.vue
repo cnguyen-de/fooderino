@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{ link: string }>();
+const props = withDefaults(defineProps<{ link: string; includeChild?: boolean }>(), {
+  includeChild: false
+});
 const router = useRouter();
 const currentRoute = ref();
 watch(
@@ -9,12 +11,19 @@ watch(
   },
   { immediate: true }
 );
+console.log(currentRoute, props.link);
+const isCurrentRoute = () => {
+  if (props.includeChild) {
+    return currentRoute.value.includes(props.link);
+  }
+  return currentRoute.value === props.link;
+};
 </script>
 
 <template>
   <div
     class="flex h-full w-full items-center justify-center rounded-md"
-    :class="{ 'bg-gray-600/50': currentRoute === link }">
+    :class="{ 'bg-gray-600/50': isCurrentRoute() }">
     <NuxtLink class="font-bold text-gray-300" :to="link"><slot></slot></NuxtLink>
   </div>
 </template>
