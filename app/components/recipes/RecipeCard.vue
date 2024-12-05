@@ -50,8 +50,9 @@ const recipeStore = useRecipeStore(); // probably use a util instead
               </li>
             </ul>
           </div>
-          <div>
-            {{ recipe?.instructions }}
+          <div v-if="recipe?.instructions">
+            <h4 class="mt-2 font-bold">Instructions</h4>
+            <MarkdownRenderer class="ml-4" :source="recipe?.instructions"></MarkdownRenderer>
           </div>
         </CardContent>
       </CollapsibleContent>
