@@ -11,7 +11,6 @@ watch(
   },
   { immediate: true }
 );
-console.log(currentRoute, props.link);
 const isCurrentRoute = () => {
   if (props.includeChild) {
     return currentRoute.value.includes(props.link);

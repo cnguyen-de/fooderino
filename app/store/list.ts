@@ -49,7 +49,6 @@ export const useListStore = defineStore('list', () => {
   };
 
   const removeUser = async (email) => {
-    console.log(state.selectedList.admin, user.value?.id);
     if (state.selectedList.admin !== user.value?.id) {
       return;
     }
