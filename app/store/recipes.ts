@@ -1,13 +1,16 @@
 import type { Recipe } from '~~/types/Recipe';
+import { useItemStore } from './item';
+import { useListStore } from './list';
 
 interface State {
   recipes: Recipe[];
   generating: boolean;
 }
-// TODO: ACCEPT BODY PARAMS FOR OVERRIDING PREFS AND KNOWN RECIPES
 export const useRecipeStore = defineStore('recipes', () => {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
+  const itemStore = useItemStore();
+  const listStore = useListStore();
   const state = reactive<State>({
     recipes: null,
     generating: false
@@ -16,8 +19,13 @@ export const useRecipeStore = defineStore('recipes', () => {
   const generateRecipe = async () => {
     state.generating = true;
     const { data } = await useFetch('/api/recipe', {
-      query: { recipes: state.recipes.map((r) => r.name).join(', ') }
+      query: {
+        recipes: state.recipes.map((r) => r.name).join(', '),
+        useHasIngredients: true,
+        listId: listStore.selectedList?.id
+      }
     });
+    if (!data.value) return;
     await insertRecipe(data.value);
     state.recipes.unshift(data.value);
     state.generating = false;
@@ -38,10 +46,33 @@ export const useRecipeStore = defineStore('recipes', () => {
     state.recipes = data;
   };
 
+  const savedRecipes = computed(() => state.recipes?.filter((r) => r.saved));
+  const generatedRecipes = computed(() => state.recipes?.filter((r) => !r.saved));
+
+  const hasIngredients = (ingredient: string) => {
+    //check if ingredient is part of the inventoryItems array, ignore cases and accents in text
+    return itemStore.inventoryItems.some((item) =>
+      item.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .includes(
+          ingredient
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+        )
+    );
+  };
   return {
     ...toRefs(state),
     generateRecipe,
     insertRecipe,
-    fetchRecipes
+    fetchRecipes,
+
+    // Getters
+    savedRecipes,
+    generatedRecipes,
+    hasIngredients
   };
 });

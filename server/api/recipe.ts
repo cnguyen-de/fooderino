@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     return { settings: null };
   }
   let hasAIRight = false;
-  const userInfos = await client.from('users').select().eq('uid', user.id);
+  const userInfos = await client.from('users').select().eq('id', user.id);
   let userSettings: Settings = {};
   if (userInfos.data?.length > 0) {
     userSettings = userInfos.data[0];
@@ -31,6 +31,14 @@ export default defineEventHandler(async (event) => {
   const userAllergies = userSettings.allergies ?? 'no allergies';
   const userServings = userSettings.servings ?? '1';
   const userFavCuisines = userSettings.cuisines ?? 'no preferences';
+  const useHasIngredients = reqQuery.useHasIngredients ?? false;
+  let userHasIngredients = '';
+  if (useHasIngredients) {
+    const listId = reqQuery.listId ?? null;
+    if (!listId) throw new Error('Missing listId');
+    const inventoryItems = await client.from('items').select('name').eq('list_id', listId);
+    userHasIngredients = inventoryItems.data?.map((item) => item?.name).join(', ') ?? '';
+  }
 
   // Init LLM AI with user knowledge
   const apiKey = useRuntimeConfig().openaiApiKey;
@@ -41,7 +49,7 @@ export default defineEventHandler(async (event) => {
   const messages = [];
   messages.push({
     role: 'system',
-    content: `You are suggesting random well known recipes for ${userServings} servings. The user likes ${userFavCuisines} and already have the following recipes ${userKnownRecipes} and do not suggest ingredients that are part of user's allergies ${userAllergies}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false}`
+    content: `You are suggesting random well known recipes for ${userServings} servings. ${useHasIngredients ? 'Suggest a recipe that uses the following ingredients' + userHasIngredients : ''} The user likes ${userFavCuisines} and already have the following recipes ${userKnownRecipes} and do not suggest ingredients in the recipe that are part of user's allergies ${userAllergies}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name that should be the same as the input ingredients if there is any", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false, "instructions": "instructions to cook the dish, short and in list format"}`
   });
   const result = await generateText({
     model: openai('gpt-4o-mini'),

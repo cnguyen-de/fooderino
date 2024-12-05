@@ -3,6 +3,7 @@ export interface Recipe {
   description: string;
   ingredients: Ingredient[];
   saved: boolean;
+  instructions: string;
 }
 
 export interface Ingredient {

@@ -2,7 +2,6 @@
 import { useChat } from '@ai-sdk/vue';
 import { useSettingsStore } from '~/store/settings';
 import { useRecipeStore } from '~/store/recipes';
-import RecipeList from '~/components/recipes/RecipeList.vue';
 
 const { messages, input, handleSubmit } = useChat();
 const settingsStore = useSettingsStore();
@@ -39,7 +38,7 @@ const generateRecipe = async () => {
       </div>
       <div
         v-else
-        class="relative mx-auto flex h-[calc(100%_-_6.5rem)] w-full flex-col items-start justify-start gap-4 overflow-y-scroll p-4 text-white">
+        class="relative mx-auto flex w-full flex-col items-start justify-start gap-4 overflow-y-scroll text-white">
         <Alert>
           <AlertTitle class="text-xl">🚧 AI functionality is under development</AlertTitle>
           <AlertDescription> Some functions are not working properly yet! </AlertDescription>
@@ -48,6 +47,8 @@ const generateRecipe = async () => {
           <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
           <span v-else class="animate-pulse">✨✨✨</span>
         </Button>
+
+        <GeneratedRecipeList></GeneratedRecipeList>
       </div>
     </NuxtLayout>
   </NuxtLayout>

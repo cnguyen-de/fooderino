@@ -71,7 +71,7 @@ export const useItemStore = defineStore('item', () => {
       name: data.name,
       amount_type: data.amountType,
       default_amount: data.defaultAmount,
-      amount_to_purchase: data.amountToPurchase,
+      amount_to_purchase: data.amountToPurchase ?? data.amount_to_purchase,
       store: data.store?.trim(),
       location: data.location?.trim(),
       user: user.value.email,
@@ -155,6 +155,10 @@ export const useItemStore = defineStore('item', () => {
     await fetchInventoryItems();
   };
 
+  const allItems = computed(() => {
+    return [...state.inventoryItems, ...state.purchasedItems].map((item) => item.name);
+  });
+
   return {
     ...toRefs(state),
 
@@ -176,6 +180,7 @@ export const useItemStore = defineStore('item', () => {
     isItemSelected,
     getFilteredInventoryItems,
     inventoryCategories,
-    buyCategories
+    buyCategories,
+    allItems
   };
 });

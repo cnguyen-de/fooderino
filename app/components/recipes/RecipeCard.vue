@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import type { Recipe } from '~~/types/Recipe';
-
+import { useRecipeStore } from '~/store/recipes';
 interface Props {
   recipe: Recipe;
 }
 const props = defineProps<Props>();
 const emit = defineEmits(['saveRecipe', 'addRecipeIngredientsToBuy', 'generateAnotherRecipe']);
 const isOpen = ref(!props.recipe?.saved);
+
+const recipeStore = useRecipeStore(); // probably use a util instead
 </script>
 
 <template>
-  <Card v-if="recipe" class="w-full">
+  <Card v-if="recipe" class="w-full bg-background/30">
     <Collapsible v-model:open="isOpen">
       <CollapsibleTrigger>
         <CardHeader>
@@ -24,8 +26,22 @@ const isOpen = ref(!props.recipe?.saved);
         <CardContent>
           <div class="grid grid-cols-2">
             <ul>
-              <li v-for="ingredient of recipe?.ingredients" :key="ingredient.name">
-                {{ ingredient.name }}
+              <li
+                v-for="ingredient of recipe?.ingredients"
+                :key="ingredient.name"
+                :class="recipeStore.hasIngredients(ingredient.name) ? 'text-green-500' : 'text-gray-200'">
+                <span>{{ ingredient.name }}</span>
+                <span v-if="recipeStore.hasIngredients(ingredient.name)" class="ml-1 inline-block h-4"
+                  ><svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                    class="size-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                </span>
               </li>
             </ul>
             <ul class="text-right">
@@ -34,17 +50,17 @@ const isOpen = ref(!props.recipe?.saved);
               </li>
             </ul>
           </div>
+          <div>
+            {{ recipe?.instructions }}
+          </div>
         </CardContent>
       </CollapsibleContent>
     </Collapsible>
 
     <CardFooter>
       <div class="flex w-full flex-row justify-between">
-        <div class="flex flex-row gap-4">
-          <Button
-            :variant="recipe.saved ? 'outline' : 'default'"
-            class="text-red-700"
-            @click="emit('saveRecipe', props.recipe)"
+        <div class="flex flex-row gap-3">
+          <Button variant="outline" class="text-red-700" @click="emit('saveRecipe', props.recipe)"
             ><svg
               xmlns="http://www.w3.org/2000/svg"
               :fill="recipe.saved ? 'currentColor' : 'none'"

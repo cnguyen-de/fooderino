@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Basically copy of RecipeList, make composable or layout component instead
 import { useRecipeStore } from '~/store/recipes';
 import { useItemStore } from '~/store/item';
 import { toast } from 'vue-sonner';
@@ -6,12 +7,8 @@ const recipeStore = useRecipeStore();
 const itemStore = useItemStore();
 recipeStore.fetchRecipes();
 
-// TODO
 const onAddRecipeIngredientsToBuy = (recipe) => {
   recipe.ingredients.forEach((ingredient) => {
-    if (recipeStore.hasIngredients(ingredient.name)) {
-      return;
-    }
     const item = { ...ingredient, amount_to_purchase: ingredient.amount };
     delete item.amount;
     itemStore.insertItem(item);
@@ -31,7 +28,7 @@ const onSaveRecipe = (recipe) => {
 <template>
   <RecipeCard
     :recipe="recipe"
-    v-for="recipe of recipeStore.savedRecipes"
+    v-for="recipe of recipeStore.generatedRecipes"
     @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy"
     @generate-another-recipe="recipeStore.generateRecipe()"></RecipeCard>
