@@ -44,6 +44,9 @@ const onSubmit = form.handleSubmit(async (values) => {
 <template>
   <NuxtLayout name="app">
     <div class="flex h-[calc(100%_-_4rem)] flex-col justify-center p-4">
+      <h1 class="text-2xl font-bold">User Settings</h1>
+      <p class="text-gray-500">Manage your account settings</p>
+      <div class="my-4 border-b border-solid border-gray-500/50"></div>
       <form class="" @submit="onSubmit">
         <h2 class="mt-3 text-xl font-bold">Recipe Generation Preferences</h2>
         <p class="text-gray-500">Set your preferences for recipe generation</p>
@@ -86,9 +89,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
       <div class="flex-grow"></div>
       <div class="mb-2 w-full">
-        <h1 class="text-2xl font-bold">User Settings</h1>
-        <p class="text-gray-500">Manage your account settings</p>
-        <Button variant="destructive" class="mt-3" @click="logout()">Log out</Button>
+        <Button variant="outline" class="mt-3 w-full text-red-500" @click="logout()">Log out</Button>
       </div>
     </div>
   </NuxtLayout>
