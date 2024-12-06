@@ -26,8 +26,8 @@ export default defineEventHandler(async (event) => {
 
   // Gather current user preferences
   const reqQuery = getQuery(event);
-  const recipes = await client.from('recipes').select().eq('id', user.id);
-  const userKnownRecipes = reqQuery.recipes ?? recipes.data?.map((recipe) => recipe?.name).join(', ');
+  const recipes = await client.from('recipes').select('name').eq('id', user.id);
+  const userKnownRecipes = recipes.data?.map((recipe) => recipe?.name).join(', ');
   const userAllergies = userSettings.allergies ?? 'no allergies';
   const userServings = userSettings.servings ?? '1';
   const userFavCuisines = userSettings.cuisines ?? 'no preferences';

@@ -12,7 +12,7 @@ export const useRecipeStore = defineStore('recipes', () => {
   const itemStore = useItemStore();
   const listStore = useListStore();
   const state = reactive<State>({
-    recipes: null,
+    recipes: [],
     generating: false
   });
 
@@ -20,14 +20,13 @@ export const useRecipeStore = defineStore('recipes', () => {
     state.generating = true;
     const { data } = await useFetch('/api/recipe', {
       query: {
-        recipes: state.recipes.map((r) => r.name).join(', '),
         useHasIngredients: true,
         listId: listStore.selectedList?.id
       }
     });
     if (!data.value) return;
     await insertRecipe(data.value);
-    state.recipes.unshift(data.value);
+    state.recipes?.unshift(data.value);
     state.generating = false;
   };
 

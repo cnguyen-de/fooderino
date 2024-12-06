@@ -16,19 +16,18 @@ watchDebounced(
 <template>
   <div class="relative">
     <Input
-      :class="{ 'm-0 !w-0 !overflow-hidden !p-0': close }"
-      class="duration-250 right-0 h-7 w-full rounded !border-0 bg-gray-300/90 pl-7 text-gray-700 transition-all focus-visible:border-none focus-visible:outline-none focus-visible:ring-0"
-      placeholder="Filter"
+      class="right-0 h-8 w-full rounded !border-0 bg-gray-700/50 pl-7 text-gray-300 transition-all focus-visible:border-none focus-visible:outline-none focus-visible:ring-0"
+      placeholder="Find items"
       v-model="input">
     </Input>
-    <span class="absolute left-1 top-1" @click="close = !close">
+    <span class="absolute left-1.5 top-2">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class="size-5">
+        class="size-4">
         <path
           stroke-linecap="round"
           stroke-linejoin="round"

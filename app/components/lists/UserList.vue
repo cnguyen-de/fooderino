@@ -1,6 +1,6 @@
 <script setup lang="ts">
 interface Props {
-  avatar?: string;
+  avatar: string;
   name?: string;
   email: string;
   admin?: boolean;
@@ -23,7 +23,7 @@ const removeUser = (email: string) => {
 
 <template>
   <Popover>
-    <PopoverTrigger>
+    <PopoverTrigger class="size-8">
       <Avatar class="size-8">
         <AvatarImage :src="avatar" alt="@radix-vue" />
         <AvatarFallback>{{ shortName }}</AvatarFallback>

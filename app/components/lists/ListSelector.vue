@@ -102,7 +102,7 @@ const onRemoveUser = async (email: string, isInvite = false) => {
       </DropdownMenuContent>
     </DropdownMenu>
     <div class="ml-2 flex items-center justify-center gap-1">
-      <button variant="ghost" @click="settingStore.toggleEmptyItems()">
+      <button v-if="false" variant="ghost" @click="settingStore.toggleEmptyItems()">
         <svg
           v-if="settingStore.settings?.show_empty_items"
           xmlns="http://www.w3.org/2000/svg"
@@ -134,7 +134,7 @@ const onRemoveUser = async (email: string, isInvite = false) => {
       <FilterItemsInput></FilterItemsInput>
     </div>
     <div class="flex-grow"></div>
-    <div class="mr-2 mt-1.5 flex flex-row items-center gap-1">
+    <div class="mx-2 flex flex-row items-center justify-center gap-1">
       <InviteButton></InviteButton>
       <UserList
         v-if="
@@ -145,6 +145,7 @@ const onRemoveUser = async (email: string, isInvite = false) => {
         :email="invitedUser.to"
         @remove-user="onRemoveUser($event, true)"></UserList>
       <UserList
+        class="size-8"
         v-for="user of selectedList?.users"
         :avatar="user.avatar"
         :name="user.name"

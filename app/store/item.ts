@@ -37,7 +37,7 @@ export const useItemStore = defineStore('item', () => {
     if (!listStore.selectedList?.id) {
       return;
     }
-    const { data } = await client.from('items').select().eq('list_id', listStore.selectedList?.id);
+    const { data } = await client.from('items').select().gte('amount', 1).eq('list_id', listStore.selectedList?.id);
     state.inventoryItems = data;
   };
 
