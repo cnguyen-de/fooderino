@@ -7,8 +7,9 @@ const { messages, input, handleSubmit } = useChat();
 const settingsStore = useSettingsStore();
 await settingsStore.fetchSettings();
 const recipeStore = useRecipeStore();
+const useHasIngredients = ref(false);
 const generateRecipe = async () => {
-  await recipeStore.generateRecipe();
+  await recipeStore.generateRecipe(useHasIngredients.value);
 };
 </script>
 
@@ -38,15 +39,22 @@ const generateRecipe = async () => {
       </div>
       <div
         v-else
-        class="relative mx-auto flex w-full flex-col items-start justify-start gap-4 overflow-y-scroll text-white">
-        <Alert>
+        class="relative mx-auto flex w-full flex-col items-start justify-start gap-2 overflow-y-scroll text-white">
+        <Alert class="mb-2">
           <AlertTitle class="text-xl">🚧 AI functionality is under development</AlertTitle>
           <AlertDescription> Some functions are not working properly yet! </AlertDescription>
         </Alert>
-        <Button @click="generateRecipe">
-          <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
-          <span v-else class="animate-pulse">✨✨✨</span>
-        </Button>
+        <!-- <Input type="text" v-model="request" /> -->
+        <div class="flex flex-row">
+          <Button @click="generateRecipe">
+            <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
+            <span v-else class="animate-pulse">✨✨✨</span>
+          </Button>
+          <div class="flex items-center gap-x-2">
+            <Checkbox v-model="useHasIngredients" class="ml-4" id="useHasIngredients" />
+            <label class="text-sm text-gray-400" for="useHasIngredients">Only use ingredients I have</label>
+          </div>
+        </div>
 
         <GeneratedRecipeList></GeneratedRecipeList>
       </div>
