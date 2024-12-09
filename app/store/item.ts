@@ -21,6 +21,15 @@ export const useItemStore = defineStore('item', () => {
   const listStore = useListStore();
   const settingStore = useSettingsStore();
 
+  const fetchItems = async () => {
+    if (!listStore.selectedList) {
+      return;
+    }
+    const { data } = await client.from('items').select().eq('list_id', listStore.selectedList?.id);
+    state.inventoryItems = data.filter((item) => item.amount > 0);
+    state.purchasedItems = data.filter((item) => item.amount_to_purchase > 0);
+  };
+
   const fetchBuyItems = async () => {
     if (!listStore.selectedList) {
       return;
@@ -50,8 +59,7 @@ export const useItemStore = defineStore('item', () => {
         amount_to_purchase: 0
       })
       .eq('id', item.id);
-    await fetchInventoryItems();
-    await fetchBuyItems();
+    await fetchItems();
   };
 
   const addItemToBuy = async (item) => {
@@ -61,11 +69,18 @@ export const useItemStore = defineStore('item', () => {
         amount_to_purchase: item.amount_type === 'g' ? item.amount_to_purchase + 100 : item.amount_to_purchase + 1
       })
       .eq('id', item.id);
-    await fetchBuyItems();
-    await fetchInventoryItems();
+    await fetchItems();
   };
 
   const insertItem = async (data) => {
+    if (allItems.value.includes(data?.name)) {
+      const existingItem = state.inventoryItems.find((item) => item.name === data.name);
+      const amount = Number(existingItem?.amount) + Number(data.amount);
+      const amount_to_purchase =
+        Number(existingItem?.amount_to_purchase) + Number(data.amount_to_purchase ?? data.amountToPurchase);
+      await updateItem({ ...existingItem, amount, amount_to_purchase });
+      return;
+    }
     await client.from('items').insert({
       amount: data.amount,
       name: data.name,
@@ -77,8 +92,7 @@ export const useItemStore = defineStore('item', () => {
       user: user.value.email,
       list_id: listStore.selectedList?.id
     });
-    await fetchInventoryItems();
-    await fetchBuyItems();
+    await fetchItems();
   };
 
   const updateItem = async (data) => {
@@ -93,8 +107,7 @@ export const useItemStore = defineStore('item', () => {
       })
       .eq('id', data.id);
 
-    await fetchInventoryItems();
-    await fetchBuyItems();
+    await fetchItems();
   };
 
   const selectItem = (id: string) => {
@@ -143,8 +156,7 @@ export const useItemStore = defineStore('item', () => {
 
   const deleteItem = async (id: number) => {
     await client.from('items').delete().eq('id', id);
-    await fetchInventoryItems();
-    await fetchBuyItems();
+    await fetchItems();
   };
 
   const renameCategory = async (oldCategory: string, newCategory: string) => {

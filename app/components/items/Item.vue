@@ -29,6 +29,7 @@ const emit = defineEmits(['valueChanged']);
 
 const amountValue = ref(props.amountAsNumberInput ? props.amount : props.amount_to_purchase);
 const onValueUpdated = (value: number) => {
+  if (amountValue.value === value) return;
   amountValue.value = value;
   if (props.amountAsNumberInput) {
     emit('valueChanged', { ...props, amount: value });

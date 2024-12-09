@@ -93,7 +93,7 @@ const setName = (n: string) => {
     </DrawerTrigger>
     <DrawerContent class="mx-auto max-w-xl">
       <DrawerHeader>
-        <DrawerTitle>Add new item</DrawerTitle>
+        <DrawerTitle>Add item</DrawerTitle>
         <DrawerDescription></DrawerDescription>
       </DrawerHeader>
       <form class="space-y-2 p-4" @submit="onSubmit">
