@@ -12,7 +12,7 @@ const props = defineProps<{
 
 const formSchema = toTypedSchema(
   z.object({
-    name: z.string().min(2).max(50),
+    name: z.string().min(2).max(50).default(''),
     amountType: z.string().min(2).max(50).default('count'),
     amount: z
       .string()
@@ -50,6 +50,7 @@ watch(isDrawerOpen, (value) => {
 });
 const { value: location } = useField('location') as { value: string };
 const { value: store } = useField('store') as { value: string };
+let { value: name } = useField('name') as { value: string };
 const showAmount = computed(() => {
   return props.location !== undefined;
 });
@@ -61,6 +62,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 const showCats = ref(false);
 const showStores = ref(false);
+const showNames = ref(false);
 const setLocation = (category: string) => {
   form.setFieldValue('location', category, true);
   showCats.value = false;
@@ -68,6 +70,10 @@ const setLocation = (category: string) => {
 const setStore = (store: string) => {
   form.setFieldValue('store', store, true);
   showStores.value = false;
+};
+const setName = (n: string) => {
+  form.setFieldValue('name', n, true);
+  showNames.value = false;
 };
 </script>
 
@@ -91,20 +97,44 @@ const setStore = (store: string) => {
         <DrawerDescription></DrawerDescription>
       </DrawerHeader>
       <form class="space-y-2 p-4" @submit="onSubmit">
-        <FormField v-slot="{ componentField }" name="name">
+        <FormField name="name">
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
             <FormLabel>Name</FormLabel>
             <FormControl>
-              <Input type="text" placeholder="Name" v-bind="componentField" />
+              <Input
+                type="text"
+                placeholder="Item Name"
+                :modelValue="name"
+                @update:modelValue="($event) => (name = $event)"
+                @focus="showNames = true" />
             </FormControl>
+            <div
+              v-if="showNames"
+              class="absolute right-0 top-10 z-10 w-[calc(100%_-_72px)] rounded-b border border-t-0 bg-gray-900 p-2 text-gray-200">
+              <div class="flex max-h-20 flex-col gap-1 overflow-auto">
+                <div
+                  class="inline-block hover:bg-gray-500"
+                  v-for="name of itemStore.allItems
+                    .filter((n) => n?.toLowerCase().includes(name?.toLowerCase()))
+                    .slice(0, 10)"
+                  @click="setName(name)">
+                  {{ name }}
+                </div>
+              </div>
+            </div>
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ componentField }" name="location">
+        <FormField name="location">
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
-            <FormLabel>Category </FormLabel>
+            <FormLabel>Category</FormLabel>
             <FormControl>
-              <Input type="text" placeholder="Fridge / Cupboard" v-model="location" @focus="showCats = true" />
+              <Input
+                type="text"
+                placeholder="Fridge / Cupboard"
+                :modelValue="location"
+                @update:modelValue="($event) => (location = $event)"
+                @focus="showCats = true" />
             </FormControl>
             <div
               v-if="showCats"
@@ -112,9 +142,9 @@ const setStore = (store: string) => {
               <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
                   class="inline-block hover:bg-gray-500"
-                  v-for="category of itemStore.inventoryCategories.filter((cat) =>
-                    cat.toLowerCase().includes(location.toLowerCase())
-                  )"
+                  v-for="category of itemStore.inventoryCategories
+                    .filter((cat) => cat?.toLowerCase().includes(location?.toLowerCase()))
+                    .slice(0, 10)"
                   @click="setLocation(category)">
                   {{ category }}
                 </div>
@@ -144,16 +174,21 @@ const setStore = (store: string) => {
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
             <FormLabel>Store</FormLabel>
             <FormControl>
-              <Input type="text" placeholder="Where to buy item" v-model="store" @focus="showStores = true" />
+              <Input
+                type="text"
+                placeholder="Where to buy item"
+                :modelValue="store"
+                @update:modelValue="($event) => (store = $event)"
+                @focus="showStores = true" />
             </FormControl>
             <div
               v-if="showStores"
-              class="absolute top-9 w-full rounded-b border border-t-0 bg-background p-2 text-gray-200">
-              <div class="flex max-h-20 flex-col overflow-auto">
+              class="absolute right-0 top-10 z-10 w-[calc(100%_-_72px)] rounded-b border border-t-0 bg-gray-900 p-2 text-gray-200">
+              <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
                   class="inline-block hover:bg-gray-500"
                   v-for="category of itemStore.buyCategories.filter((cat) =>
-                    cat.toLowerCase().includes(store.toLowerCase())
+                    cat?.toLowerCase().includes(store?.toLowerCase())
                   )"
                   @click="setStore(category)">
                   {{ category }}

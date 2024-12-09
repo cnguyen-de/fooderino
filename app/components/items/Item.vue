@@ -79,9 +79,9 @@ const onInputClick = (state) => {
 
     <div class="flex-grow"></div>
     <NumberField
-      :step="amount_type === 'count' ? '1' : '100'"
+      :step="amount_type === 'count' ? 1 : 100"
       class="w-20"
-      :id="id"
+      :id="name.toString()"
       :default-value="amountValue"
       :model-value="amountValue"
       @update:model-value="onValueUpdated($event)"
