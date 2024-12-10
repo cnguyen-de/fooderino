@@ -6,6 +6,7 @@ definePageMeta({ layout: false });
 <template>
   <NuxtLayout name="app">
     <NuxtLayout name="recipe">
+      <AddRecipe></AddRecipe>
       <RecipeList></RecipeList>
     </NuxtLayout>
   </NuxtLayout>
