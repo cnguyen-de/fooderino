@@ -11,9 +11,7 @@ const logout = async () => {
   window.location.reload();
 };
 const settingsStore = useSettingsStore();
-const settings = await useAsyncData('lists', async () => {
-  return await settingsStore.fetchSettings();
-});
+settingsStore.fetchSettings();
 const formSchema = toTypedSchema(
   z.object({
     servings: z

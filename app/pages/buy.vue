@@ -3,9 +3,7 @@ import { useItemStore } from '~/store/item';
 import { ChevronRight } from 'lucide-vue-next';
 
 const itemStore = useItemStore();
-const { data } = await useAsyncData('items', async () => {
-  return await itemStore.fetchBuyItems();
-});
+itemStore.fetchBuyItems();
 
 const categories = computed(() => {
   const stores = itemStore?.purchasedItems?.map((item) => item.store.trim());

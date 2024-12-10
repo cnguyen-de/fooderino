@@ -4,19 +4,16 @@ import { useSettingsStore } from '~/store/settings';
 import { ChevronRight } from 'lucide-vue-next';
 
 const itemStore = useItemStore();
-const settingStore = useSettingsStore();
 const { getFilteredInventoryItems } = toRefs(itemStore);
-onMounted(() => {
-  itemStore.fetchInventoryItems();
-});
+itemStore.fetchInventoryItems();
 const categories = computed(() => itemStore.inventoryCategories);
-const items = computed(() => {
-  let items = itemStore.getFilteredInventoryItems;
-  if (!settingStore.settings?.show_empty_items) {
-    items = items.filter((item) => item.amount > 0);
-  }
-  return items;
-});
+// const items = computed(() => {
+//   let items = itemStore.getFilteredInventoryItems;
+//   if (!settingStore.settings?.show_empty_items) {
+//     items = items.filter((item) => item.amount > 0);
+//   }
+//   return items;
+// });
 const isEditCategoryOpen = ref(false);
 const selectedCategory = ref('');
 const selectedOldCategory = ref('');
