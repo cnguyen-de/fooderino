@@ -102,6 +102,13 @@ export default defineNuxtConfig({
         }
       ]
     },
+    workbox: {
+      //globPatterns: ['_nuxt/builds/**/*.json', '/_nuxt/**/*.vue', '_nuxt/**/*.css', '_nuxt/**/*.png', '_nuxt/**/*.svg']
+    },
+    injectManifest: {
+      globPatterns: ['**/*.{js,json,css,html,txt,svg,png,ico,webp,woff,woff2,ttf,eot,otf,wasm}'],
+      globIgnores: ['emojis/**', 'manifest**.webmanifest']
+    },
     devOptions: {
       enabled: true,
       type: 'module'

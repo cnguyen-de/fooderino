@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { useForm, useField } from 'vee-validate';
-import { toTypedSchema } from '@vee-validate/zod';
-import * as z from 'zod';
-
 import { useItemStore } from '~/store/item';
 const itemStore = useItemStore();
 const props = defineProps<{
@@ -10,69 +6,49 @@ const props = defineProps<{
   store?: string;
 }>();
 
-const formSchema = toTypedSchema(
-  z.object({
-    name: z.string().min(2).max(50).default(''),
-    amountType: z.string().min(2).max(50).default('count'),
-    amount: z
-      .string()
-      .min(1)
-      .max(50)
-      .default(props.location ? '1' : '0'),
-    amountToPurchase: z
-      .string()
-      .min(1)
-      .max(50)
-      .default(props.store ? '1' : '0'),
-    defaultAmount: z.string().min(1).max(50).default('0'),
-    store: z
-      .string()
-      .min(1)
-      .max(50)
-      .default(props.store ?? ''),
-    location: z
-      .string()
-      .min(1)
-      .max(50)
-      .default(props.location ?? '')
-  })
-);
-let form = useForm({
-  validationSchema: formSchema
+const form = ref({
+  name: '',
+  amountType: 'count',
+  amount: props.location ? '1' : '0',
+  amountToPurchase: props.store ? '1' : '0',
+  defaultAmount: '0',
+  store: props.store ?? '',
+  location: props.location ?? ''
 });
+
 const isDrawerOpen = ref(false);
 watch(isDrawerOpen, (value) => {
-  if (!value) {
-    form = useForm({
-      validationSchema: formSchema
-    });
+  if (value) {
+    form.value.name = '';
+    form.value.amount = props.location ? '1' : '0';
+    form.value.amountToPurchase = props.store ? '1' : '0';
+    form.value.defaultAmount = '0';
+    form.value.store = props.store ?? '';
+    form.value.location = props.location ?? '';
   }
 });
-const { value: location } = useField('location') as { value: string };
-const { value: store } = useField('store') as { value: string };
-let { value: name } = useField('name') as { value: string };
 const showAmount = computed(() => {
-  return props.location !== undefined;
+  return typeof props.location !== 'undefined';
 });
 const isOpen = ref(false);
-const onSubmit = form.handleSubmit(async (values) => {
-  await itemStore.insertItem(values);
+const onSubmit = async () => {
+  await itemStore.insertItem(form.value);
   isDrawerOpen.value = false;
-});
+};
 
 const showCats = ref(false);
 const showStores = ref(false);
 const showNames = ref(false);
 const setLocation = (category: string) => {
-  form.setFieldValue('location', category, true);
+  form.value.location = category;
   showCats.value = false;
 };
 const setStore = (store: string) => {
-  form.setFieldValue('store', store, true);
+  form.value.store = store;
   showStores.value = false;
 };
 const setName = (n: string) => {
-  form.setFieldValue('name', n, true);
+  form.value.name = n;
   showNames.value = false;
 };
 </script>
@@ -104,8 +80,8 @@ const setName = (n: string) => {
               <Input
                 type="text"
                 placeholder="Item Name"
-                :modelValue="name"
-                @update:modelValue="($event) => (name = $event)"
+                :modelValue="form.name"
+                @update:modelValue="($event) => (form.name = $event)"
                 @focus="showNames = true" />
             </FormControl>
             <div
@@ -115,7 +91,7 @@ const setName = (n: string) => {
                 <div
                   class="inline-block hover:bg-gray-500"
                   v-for="name of itemStore.allItems
-                    .filter((n) => n?.toLowerCase().includes(name?.toLowerCase()))
+                    .filter((n) => n?.toLowerCase().includes(form.name?.toLowerCase()))
                     .slice(0, 10)"
                   @click="setName(name)">
                   {{ name }}
@@ -153,19 +129,27 @@ const setName = (n: string) => {
           </FormItem>
         </FormField>
 
-        <FormField v-if="showAmount" v-slot="{ componentField }" name="amount">
+        <FormField v-if="showAmount" name="amount">
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
             <FormLabel>Amount</FormLabel>
             <FormControl>
-              <Input type="text" placeholder="Amount of item you have" v-bind="componentField" />
+              <Input
+                type="text"
+                placeholder="Amount of item you have"
+                :modelValue="form.amount"
+                @update:modelValue="($event) => (form.amount = $event)" />
             </FormControl>
           </FormItem>
         </FormField>
-        <FormField v-else v-slot="{ componentField }" name="amountToPurchase">
+        <FormField v-else name="amountToPurchase">
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
             <FormLabel>Purchase Amount</FormLabel>
             <FormControl>
-              <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
+              <Input
+                type="text"
+                placeholder="Amount to purchase"
+                :modelValue="form.amountToPurchase"
+                @update:modelValue="($event) => (form.amountToPurchase = $event)" />
             </FormControl>
           </FormItem>
         </FormField>
@@ -177,8 +161,8 @@ const setName = (n: string) => {
               <Input
                 type="text"
                 placeholder="Where to buy item"
-                :modelValue="store"
-                @update:modelValue="($event) => (store = $event)"
+                :modelValue="form.store"
+                @update:modelValue="($event) => (form.store = $event)"
                 @focus="showStores = true" />
             </FormControl>
             <div
@@ -188,7 +172,7 @@ const setName = (n: string) => {
                 <div
                   class="inline-block hover:bg-gray-500"
                   v-for="category of itemStore.buyCategories.filter((cat) =>
-                    cat?.toLowerCase().includes(store?.toLowerCase())
+                    cat?.toLowerCase().includes(form.store?.toLowerCase())
                   )"
                   @click="setStore(category)">
                   {{ category }}
@@ -222,7 +206,11 @@ const setName = (n: string) => {
                 <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
                   <FormLabel>Purchase Amount</FormLabel>
                   <FormControl>
-                    <Input type="text" placeholder="Amount to purchase" v-bind="componentField" />
+                    <Input
+                      type="text"
+                      placeholder="Amount to purchase"
+                      :modelValue="form.amountToPurchase"
+                      @update:modelValue="($event) => (form.amountToPurchase = $event)" />
                   </FormControl>
                 </FormItem>
               </FormField>
@@ -230,7 +218,11 @@ const setName = (n: string) => {
                 <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
                   <FormLabel>Amount</FormLabel>
                   <FormControl>
-                    <Input type="text" placeholder="Amount of item you have" v-bind="componentField" />
+                    <Input
+                      type="text"
+                      placeholder="Amount of item you have"
+                      :modelValue="form.amount"
+                      @update:modelValue="($event) => (form.amount = $event)" />
                   </FormControl>
                 </FormItem>
               </FormField>
@@ -245,7 +237,8 @@ const setName = (n: string) => {
                     <Input
                       type="text"
                       placeholder="Amount of items should always be in Inventory"
-                      v-bind="componentField" />
+                      :modelValue="form.defaultAmount"
+                      @update:modelValue="($event) => (form.defaultAmount = $event)" />
                   </FormControl>
                 </FormItem>
               </FormField>
@@ -254,7 +247,7 @@ const setName = (n: string) => {
                 <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
                   <FormLabel>Amount Type</FormLabel>
 
-                  <Select v-bind="componentField">
+                  <Select :modelValue="form.amountType" @update:modelValue="($event) => (form.amountType = $event)">
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Amount Type" />

@@ -28,6 +28,12 @@ const props = withDefaults(defineProps<ItemProps>(), {
 const emit = defineEmits(['valueChanged']);
 
 const amountValue = ref(props.amountAsNumberInput ? props.amount : props.amount_to_purchase);
+watch(
+  () => props.amount,
+  (value) => {
+    amountValue.value = value;
+  }
+);
 const onValueUpdated = (value: number) => {
   if (amountValue.value === value) return;
   amountValue.value = value;

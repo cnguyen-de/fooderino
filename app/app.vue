@@ -10,12 +10,8 @@ const colorMode = useColorMode();
 const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)');
 colorMode.value = isPreferredDark ? 'dark' : 'light';
 
-await useAsyncData('lists', async () => {
-  return await listStore.fetchLists();
-});
-await useAsyncData('userSettings', async () => {
-  return await settingStore.fetchSettings();
-});
+await listStore.fetchLists();
+await settingStore.fetchSettings();
 </script>
 
 <template>

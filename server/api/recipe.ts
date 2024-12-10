@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   const userAllergies = userSettings.allergies ?? 'no allergies';
   const userServings = userSettings.servings ?? '1';
   const userFavCuisines = userSettings.cuisines ?? 'no preferences';
-  const useHasIngredients = reqQuery.useHasIngredients === 'true' ?? false;
+  const useHasIngredients = reqQuery?.useHasIngredients === 'true' || false;
   let userHasIngredients = '';
   if (useHasIngredients) {
     const listId = reqQuery.listId ?? null;

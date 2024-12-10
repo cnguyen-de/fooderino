@@ -4,6 +4,7 @@ import { useSettingsStore } from '~/store/settings';
 import { ChevronRight } from 'lucide-vue-next';
 const itemStore = useItemStore();
 const settingStore = useSettingsStore();
+const { getFilteredInventoryItems } = toRefs(itemStore);
 onMounted(() => {
   itemStore.fetchInventoryItems();
 });
@@ -15,7 +16,6 @@ const items = computed(() => {
   }
   return items;
 });
-
 const isEditCategoryOpen = ref(false);
 const selectedCategory = ref('');
 const selectedOldCategory = ref('');
@@ -61,7 +61,7 @@ const editCategory = async () => {
             <CollapsibleContent>
               <InventoryList
                 :items="
-                  items
+                  getFilteredInventoryItems
                     ?.filter((item) => item.location === category)
                     .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
                 "></InventoryList>
