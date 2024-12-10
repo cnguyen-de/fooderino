@@ -1,7 +1,7 @@
 <template>
   <div class="relative h-full w-full">
     <div
-      class="absolute inset-0 -z-10 h-full w-full bg-[url('https://images.unsplash.com/photo-1444731961956-751ed90465a5?q=80&w=2574&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')] bg-cover bg-center blur"></div>
+      class="absolute inset-0 -z-10 h-full w-full bg-[url('https://images.unsplash.com/photo-1444731961956-751ed90465a5?q=80&w=1080&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')] bg-cover bg-center blur"></div>
 
     <div class="relative mx-auto flex h-screen max-w-xl flex-col bg-gray-950/90 backdrop-blur-lg">
       <div

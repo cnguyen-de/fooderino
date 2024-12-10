@@ -6,7 +6,6 @@ export default defineNuxtRouteMiddleware((to, from) => {
   }
   const navigateToAppRoutes = ['/', '/login', '/confirm'];
   if (navigateToAppRoutes.includes(to.path) && user.value) {
-    console.log('User is logged in, redirecting to /inventory');
     return navigateTo('/inventory');
   }
 });

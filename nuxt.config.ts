@@ -89,13 +89,13 @@ export default defineNuxtConfig({
       ],
       screenshots: [
         {
-          src: '/screenshot-handset.png',
+          src: '/screenshot-handset.jpg',
           sizes: '1082x2402',
           type: 'image/png',
           form_factor: 'narrow'
         },
         {
-          src: '/screenshot-wide.png',
+          src: '/screenshot-wide.jpg',
           sizes: '3840x2160',
           type: 'image/png',
           form_factor: 'wide'
