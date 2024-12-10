@@ -25,7 +25,7 @@ const isLargeScreen = useMediaQuery('(min-width: 1024px)');
         </p>
 
         <div class="space-y-4 md:space-x-4 md:space-y-0">
-          <NuxtLink class="group/arrow w-5/6 font-bold md:w-1/4" to="/inventory">
+          <NuxtLink class="group/arrow w-5/6 font-bold md:w-1/4" to="/login">
             <Button variant="outline" class="bg-white hover:bg-gray-300">
               <span
                 class="bg-gradient-to-r from-red-600 to-yellow-500 bg-clip-text font-bold tracking-wide text-transparent">

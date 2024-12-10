@@ -2,6 +2,7 @@
 import { useItemStore } from '~/store/item';
 import { useSettingsStore } from '~/store/settings';
 import { ChevronRight } from 'lucide-vue-next';
+
 const itemStore = useItemStore();
 const settingStore = useSettingsStore();
 const { getFilteredInventoryItems } = toRefs(itemStore);

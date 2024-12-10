@@ -6,8 +6,8 @@ import { useForm } from 'vee-validate';
 import { toast } from 'vue-sonner';
 
 const supabase = useSupabaseClient();
-const logout = () => {
-  supabase.auth.signOut();
+const logout = async () => {
+  await supabase.auth.signOut();
   window.location.reload();
 };
 const settingsStore = useSettingsStore();

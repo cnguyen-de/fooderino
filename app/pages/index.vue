@@ -13,18 +13,6 @@ import Pricing from '~/components/landing-page/Pricing.vue';
 import Contact from '~/components/landing-page/Contact.vue';
 import FAQ from '~/components/landing-page/FAQ.vue';
 import Footer from '~/components/landing-page/Footer.vue';
-
-const user = useSupabaseUser();
-
-watch(
-  user?.value,
-  () => {
-    if (user.value?.id) {
-      navigateTo('/inventory');
-    }
-  },
-  { immediate: true }
-);
 </script>
 
 <template>
