@@ -27,7 +27,7 @@ const saveChanges = async () => {
       item = { ...item, location: locationRef.value };
     }
   }
-  if (defaultAmountRef.value !== '') {
+  if (defaultAmountRef.value !== props.item.default_amount) {
     item = { ...item, default_amount: defaultAmountRef.value };
   }
   await itemStore.updateItem(item);
@@ -54,8 +54,8 @@ const saveChanges = async () => {
       <DrawerHeader>
         <DrawerTitle> {{ locationRef }} | {{ item.name }}</DrawerTitle>
       </DrawerHeader>
-      <DrawerFooter>
-        <div class="flex flex-row items-center gap-2" @change="isDirty = true">
+      <DrawerFooter @change="isDirty = true">
+        <div class="flex flex-row items-center gap-2">
           <label for="defaultAmount" class="whitespace-nowrap">Default Amount</label>
           <Input id="defaultAmount" v-model="defaultAmountRef" name="defaultAmount" />
         </div>

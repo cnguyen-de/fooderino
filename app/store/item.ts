@@ -101,6 +101,7 @@ export const useItemStore = defineStore('item', () => {
       .update({
         amount: data.amount,
         amount_to_purchase: data.amount_to_purchase,
+        default_amount: data.default_amount,
         name: data.name,
         store: data.store?.trim(),
         location: data.location?.trim()
