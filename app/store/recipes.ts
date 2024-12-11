@@ -1,6 +1,7 @@
 import type { Recipe } from '~~/types/Recipe';
 import { useItemStore } from './item';
 import { useListStore } from './list';
+import recipe from '~~/server/api/recipe';
 
 interface State {
   recipes: Recipe[];
@@ -45,6 +46,15 @@ export const useRecipeStore = defineStore('recipes', () => {
     state.recipes = data;
   };
 
+  const deleteRecipe = async (recipe: Recipe) => {
+    const recipes = [...state.recipes];
+    const r = recipes.find((r) => r.name === recipe.name);
+    if (!r) return;
+    recipes.splice(recipes.indexOf(r), 1);
+    state.recipes = [...recipes];
+    await supabase.from('recipes').delete().eq('name', recipe);
+  };
+
   const savedRecipes = computed(() => state.recipes?.filter((r) => r.saved));
   const generatedRecipes = computed(() => state.recipes?.filter((r) => !r.saved));
 
@@ -68,6 +78,7 @@ export const useRecipeStore = defineStore('recipes', () => {
     generateRecipe,
     insertRecipe,
     fetchRecipes,
+    deleteRecipe,
 
     // Getters
     savedRecipes,

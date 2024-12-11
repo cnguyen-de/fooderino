@@ -34,7 +34,7 @@ const onSaveRecipe = (recipe) => {
     v-for="recipe of recipeStore.savedRecipes"
     @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy"
-    @generate-another-recipe="recipeStore.generateRecipe()"></RecipeCard>
+    @delete="recipeStore.deleteRecipe(recipe)"></RecipeCard>
 </template>
 
 <style scoped></style>
