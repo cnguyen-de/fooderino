@@ -8,13 +8,15 @@ interface State {
   purchasedItems: Item[];
   selectedItems: string[];
   filterInput: string;
+  allItems: string[];
 }
 export const useItemStore = defineStore('item', () => {
   const state = reactive<State>({
     inventoryItems: [],
     purchasedItems: [],
     selectedItems: [],
-    filterInput: ''
+    filterInput: '',
+    allItems: []
   });
   const client = useSupabaseClient();
   const user = useSupabaseUser();
@@ -28,6 +30,7 @@ export const useItemStore = defineStore('item', () => {
     const { data } = await client.from('items').select().eq('list_id', listStore.selectedList?.id);
     state.inventoryItems = data.filter((item) => item.amount > 0);
     state.purchasedItems = data.filter((item) => item.amount_to_purchase > 0);
+    state.allItems = data.map((item) => item.name);
   };
 
   const fetchBuyItems = async () => {
@@ -73,7 +76,7 @@ export const useItemStore = defineStore('item', () => {
   };
 
   const insertItem = async (data) => {
-    if (allItems.value.includes(data?.name)) {
+    if (state.allItems.includes(data?.name)) {
       const existingItem = state.inventoryItems.find((item) => item.name === data.name);
       const amount = Number(existingItem?.amount) + Number(data.amount);
       const amount_to_purchase =
@@ -168,10 +171,6 @@ export const useItemStore = defineStore('item', () => {
     await fetchInventoryItems();
   };
 
-  const allItems = computed(() => {
-    return [...state.inventoryItems, ...state.purchasedItems].map((item) => item.name);
-  });
-
   return {
     ...toRefs(state),
 
@@ -193,7 +192,6 @@ export const useItemStore = defineStore('item', () => {
     isItemSelected,
     getFilteredInventoryItems,
     inventoryCategories,
-    buyCategories,
-    allItems
+    buyCategories
   };
 });

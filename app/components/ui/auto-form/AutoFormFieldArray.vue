@@ -55,7 +55,7 @@ provide(FieldContextKey, fieldContext);
       {{ fieldName }}
     </p>
     <slot v-bind="props">
-      <FormItem>
+      <FormItem class="space-y-2">
         <template v-for="(field, index) of fields" :key="field.key">
           <div class="flex flex-row items-end gap-2">
             <AutoFormField
