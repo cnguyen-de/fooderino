@@ -52,7 +52,7 @@ export const useRecipeStore = defineStore('recipes', () => {
     if (!r) return;
     recipes.splice(recipes.indexOf(r), 1);
     state.recipes = [...recipes];
-    await supabase.from('recipes').delete().eq('name', recipe);
+    await supabase.from('recipes').delete().eq('name', recipe.name);
   };
 
   const savedRecipes = computed(() => state.recipes?.filter((r) => r.saved));
