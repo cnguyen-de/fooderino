@@ -108,8 +108,8 @@ const setName = (n: string) => {
               <Input
                 type="text"
                 placeholder="Fridge / Cupboard"
-                :modelValue="location"
-                @update:modelValue="($event) => (location = $event)"
+                :modelValue="form.location"
+                @update:modelValue="($event) => (form.location = $event)"
                 @focus="showCats = true" />
             </FormControl>
             <div
@@ -119,7 +119,7 @@ const setName = (n: string) => {
                 <div
                   class="inline-block hover:bg-gray-500"
                   v-for="category of itemStore.inventoryCategories
-                    .filter((cat) => cat?.toLowerCase().includes(location?.toLowerCase()))
+                    .filter((cat) => cat?.toLowerCase().includes(form.location?.toLowerCase()))
                     .slice(0, 10)"
                   @click="setLocation(category)">
                   {{ category }}
