@@ -5,7 +5,7 @@ import {
   TabletSmartphone,
   BadgeCheck,
   Goal,
-  PictureInPicture,
+  Brain,
   MousePointerClick,
   Newspaper
 } from 'lucide-vue-next';
@@ -19,51 +19,37 @@ interface FeaturesProps {
 const featureList: FeaturesProps[] = [
   {
     icon: 'tabletSmartphone',
-    title: 'Mobile Friendly',
-    description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. A odio velit cum aliquam, consectetur.'
+    title: 'Mobile First',
+    description: 'Fooderino is designed with mobile first approach, while still looking great on desktops.'
   },
   {
     icon: 'badgeCheck',
-    title: 'Social Proof',
-    description: 'Lorem ipsum dolor sit amet consectetur. Natus consectetur, odio ea accusamus aperiam.'
+    title: 'Easy to Use',
+    description: 'Inventory management is boring, so we made it as easy as possible to use.'
   },
   {
     icon: 'goal',
-    title: 'Targeted Content',
-    description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. odio ea accusamus aperiam.'
+    title: 'Nutrition Goals',
+    description: 'Recipes are suggested based on your nutrition goals and dietary restrictions.'
   },
   {
-    icon: 'pictureInPicture',
-    title: 'Strong Visuals',
-    description: 'Lorem elit. A odio velit cum aliquam. Natus consectetur dolores, odio ea accusamus aperiam.'
+    icon: 'brain',
+    title: 'GenAI',
+    description:
+      'Our recipes include not only classic dishes but also AI-powered suggestions based on your available ingredients.'
   },
   {
     icon: 'mousePointerClick',
-    title: 'Clear CTA',
-    description: 'Lorem ipsum dolor sit amet consectetur adipisicing. odio ea accusamus consectetur.'
-  },
-  {
-    icon: 'newspaper',
-    title: 'Clear Headline',
-    description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. A odio velit cum aliquam. Natus consectetur.'
+    title: 'Recurring Purchase',
+    description: 'Subscriptions and Items can be automatically added to your shopping list.'
   }
 ];
 
-const iconMap: Record<
-  string,
-  | typeof TabletSmartphone
-  | typeof BadgeCheck
-  | typeof Goal
-  | typeof PictureInPicture
-  | typeof Paintbrush
-  | typeof MousePointerClick
-  | typeof MessageCircle
-  | typeof Newspaper
-> = {
+const iconMap = {
   tabletSmartphone: TabletSmartphone,
   badgeCheck: BadgeCheck,
   goal: Goal,
-  pictureInPicture: PictureInPicture,
+  brain: Brain,
   paintbrush: Paintbrush,
   mousePointerClick: MousePointerClick,
   messageCircle: MessageCircle,
@@ -78,8 +64,7 @@ const iconMap: Record<
     <h2 class="mb-4 text-center text-3xl font-bold md:text-4xl">What Makes Us Different</h2>
 
     <h3 class="mx-auto mb-8 text-center text-xl text-muted-foreground md:w-1/2">
-      Lorem ipsum dolor, sit amet consectetur adipisicing elit. Voluptatem fugiat, odit similique quasi sint reiciendis
-      quidem iure veritatis optio facere tenetur.
+      Fooderino is designed to make your life easier. Here are some of the features that make us different.
     </h3>
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

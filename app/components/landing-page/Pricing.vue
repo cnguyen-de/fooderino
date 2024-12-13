@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { BadgeCheck } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 
 enum Plan {
   FREE = 0,
@@ -29,7 +30,7 @@ const plans: PlanProps[] = [
     price: 0,
     description: 'Free forever.',
     buttonText: 'Start For Free',
-    benefitList: ['1 List', '3 Invited Members', 'AI Assistance', '10 Recipes Suggestions per Month', 'Feature Request']
+    benefitList: ['1 List', '2 Shared Members', 'AI Assistance', '10 Recipes Suggestions per Month', 'Feature Request']
   },
   {
     id: 1,
@@ -42,7 +43,7 @@ const plans: PlanProps[] = [
       'Unlimited Lists',
       'Unlimited Invites',
       'Extensive AI Assistance',
-      'Refined Control over Unlimited Recipes Suggestions',
+      'Refined Control over GenAI',
       'High Priority Support'
     ]
   },
@@ -57,7 +58,7 @@ const plans: PlanProps[] = [
       'Unlimited Lists',
       'Unlimited Invites',
       'Extensive AI Assistance',
-      'Refined Control over Unlimited Recipes Suggestions',
+      'Refined Control over GenAI',
       'High Priority Support'
     ]
   }
@@ -69,7 +70,9 @@ const handlePricingButton = (id: number) => {
     navigateTo('/signup');
   } else if (id === Plan.PRO) {
     //navigateTo('/payment');
+    toast('Coming soon');
   } else {
+    toast('Coming soon');
     // strip link buy once
   }
 };

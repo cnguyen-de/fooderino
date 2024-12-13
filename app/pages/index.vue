@@ -26,7 +26,7 @@ import Footer from '~/components/landing-page/Footer.vue';
     <Usage />
     <Services />
     <Techstack />
-    <Testimonials />
+    <!-- <Testimonials /> -->
     <Pricing />
     <Contact />
     <!--

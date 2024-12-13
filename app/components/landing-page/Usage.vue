@@ -10,25 +10,26 @@ interface BenefitsProps {
 const benefitList: BenefitsProps[] = [
   {
     icon: 'blocks',
-    title: 'Build Brand Trust',
+    title: 'Ingredient Management',
     description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. A odio velit cum aliquam. Natus consectetur dolores.'
+      'Have you ever wondered while shopping if you still have tomatoes at home? Fooderino helps you keep track of your ingredients.'
   },
   {
     icon: 'lineChart',
-    title: 'More Leads',
-    description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. A odio velit cum aliquam, natus consectetur.'
+    title: 'Shopping List',
+    description:
+      'Easily add ingredients to shopping manually or let Fooderino automatically manages based on the recipes or your inventory.'
   },
   {
     icon: 'wallet',
-    title: 'Higher Conversions',
-    description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Natus consectetur. A odio velit cum aliquam'
+    title: 'Dynamic Recipes',
+    description:
+      'You can manually add recipes or let Fooderino suggest recipes based on your preferences and available ingredients.'
   },
   {
     icon: 'sparkle',
-    title: 'Test Marketing Ideas',
-    description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. A odio velit cum aliquam. Natus consectetur dolores.'
+    title: 'Shopping',
+    description: 'Planning your meals and shopping has never been easier with Fooderino.'
   }
 ];
 
@@ -46,15 +47,14 @@ const iconMap: Record<
 </script>
 
 <template>
-  <section id="benefits" class="container py-24 sm:py-32">
+  <section id="usage" class="container py-24 sm:py-32">
     <div class="grid place-items-center lg:grid-cols-2 lg:gap-24">
       <div>
         <h2 class="mb-2 text-lg tracking-wider text-primary">Usage</h2>
 
         <h2 class="mb-4 text-3xl font-bold md:text-4xl">How to use Fooderino</h2>
         <p class="mb-8 text-xl text-muted-foreground">
-          Lorem ipsum dolor sit amet consectetur, adipisicing elit. Non ducimus reprehenderit architecto rerum similique
-          facere odit deleniti necessitatibus quo quae.
+          Whether utilizing all the features or just a few, Fooderino is designed to make your life easier.
         </p>
       </div>
 

@@ -12,35 +12,37 @@ interface ServiceProps {
 
 const serviceList: ServiceProps[] = [
   {
-    title: 'Custom Domain Integration',
-    description: 'Lorem ipsum dolor sit, amet consectetur adipisicing elit adipisicing.',
+    title: 'Favorite Cuisines',
+    description: 'Recipes are suggested based on your favorite cuisines.',
     pro: 0
   },
   {
-    title: 'Social Media Integrations',
-    description: 'Lorem ipsum dolor sit, amet consectetur adipisicing elit. Molestiae, dicta.',
+    title: 'Allergies and Restrictions',
+    description:
+      'Your dietary restrictions and allergies are taken into account and recipes are suggested accordingly.',
     pro: 0
   },
   {
-    title: 'Email Marketing Integrations',
-    description: 'Lorem dolor sit amet adipisicing.',
+    title: 'Using only available ingredients',
+    description:
+      "Feeling hungry and don't know what to cook? Fooderino suggests recipes based on your available ingredients.",
     pro: 0
   },
   {
-    title: 'SEO Optimization',
-    description: 'Lorem ipsum dolor sit amet consectetur.',
+    title: 'Custom requests',
+    description: 'You can request a custom recipe and Fooderino will generate a recipe based on your request.',
     pro: 1
   }
 ];
 </script>
 
 <template>
-  <section id="services" class="container py-24 sm:py-32">
-    <h2 class="mb-2 text-center text-lg tracking-wider text-primary">Services</h2>
+  <section id="recipes" class="container py-24 sm:py-32">
+    <h2 class="mb-2 text-center text-lg tracking-wider text-primary">Recipes</h2>
 
-    <h2 class="mb-4 text-center text-3xl font-bold md:text-4xl">Grow Your Business</h2>
+    <h2 class="mb-4 text-center text-3xl font-bold md:text-4xl">Diversify your meals with GenAI Recipes</h2>
     <h3 class="mx-auto mb-8 text-center text-xl text-muted-foreground md:w-1/2">
-      From marketing and sales to operations and strategy, we have the expertise to help you achieve your goals.
+      Recipe generation is powered by the latest GPT model with the knowledge of your preferences
     </h3>
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
 
