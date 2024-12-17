@@ -8,7 +8,7 @@ interface State {
   purchasedItems: Item[];
   selectedItems: string[];
   filterInput: string;
-  allItems: string[];
+  allItems: Item[];
 }
 export const useItemStore = defineStore('item', () => {
   const state = reactive<State>({
@@ -30,7 +30,7 @@ export const useItemStore = defineStore('item', () => {
     const { data } = await client.from('items').select().eq('list_id', listStore.selectedList?.id);
     state.inventoryItems = data.filter((item) => item.amount > 0);
     state.purchasedItems = data.filter((item) => item.amount_to_purchase > 0);
-    state.allItems = data.map((item) => item.name);
+    state.allItems = data;
   };
 
   const fetchBuyItems = async () => {
@@ -76,12 +76,9 @@ export const useItemStore = defineStore('item', () => {
   };
 
   const insertItem = async (data) => {
-    if (state.allItems.includes(data?.name)) {
-      const existingItem = state.inventoryItems.find((item) => item.name === data.name);
-      const amount = Number(existingItem?.amount) + Number(data.amount);
-      const amount_to_purchase =
-        Number(existingItem?.amount_to_purchase) + Number(data.amount_to_purchase ?? data.amountToPurchase);
-      await updateItem({ ...existingItem, amount, amount_to_purchase });
+    if (allItemNames.value.includes(data?.name)) {
+      const existingItem = state.allItems.find((item) => item.name === data.name);
+      await updateItem({ ...existingItem, ...data });
       return;
     }
     await client.from('items').insert({
@@ -168,13 +165,18 @@ export const useItemStore = defineStore('item', () => {
     for (const item of items) {
       await client.from('items').update({ location: newCategory }).eq('id', item.id);
     }
-    await fetchInventoryItems();
+    await fetchItems();
   };
+
+  const allItemNames = computed(() => {
+    return state.allItems.map((item) => item.name);
+  });
 
   return {
     ...toRefs(state),
 
     //Actions
+    fetchItems,
     fetchBuyItems,
     fetchInventoryItems,
     addItemToInventory,
@@ -192,6 +194,7 @@ export const useItemStore = defineStore('item', () => {
     isItemSelected,
     getFilteredInventoryItems,
     inventoryCategories,
-    buyCategories
+    buyCategories,
+    allItemNames
   };
 });

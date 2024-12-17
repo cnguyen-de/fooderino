@@ -26,8 +26,7 @@ export const useListStore = defineStore('list', () => {
   const setSelectedList = async (list: List) => {
     state.selectedList = list;
     const itemStore = useItemStore();
-    await itemStore.fetchInventoryItems();
-    await itemStore.fetchBuyItems();
+    await itemStore.fetchItems();
     await inviteStore.getReceivedInvites();
     await inviteStore.getSentInvites();
   };

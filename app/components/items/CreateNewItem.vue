@@ -50,6 +50,12 @@ const setStore = (store: string) => {
 const setName = (n: string) => {
   form.value.name = n;
   showNames.value = false;
+  const existingItem = itemStore.allItems.find((item) => item.name === n);
+  form.value.amount = existingItem?.amount ?? '0';
+  form.value.defaultAmount = existingItem?.defaultAmount ?? '0';
+  form.value.amountType = existingItem?.amountType ?? 'count';
+  form.value.store = existingItem?.store ?? '';
+  form.value.location = existingItem?.location ?? '';
 };
 </script>
 
@@ -90,7 +96,7 @@ const setName = (n: string) => {
               <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
                   class="inline-block hover:bg-gray-500"
-                  v-for="name of itemStore.allItems
+                  v-for="name of itemStore.allItemNames
                     .filter((n) => n?.toLowerCase().includes(form.name?.toLowerCase()))
                     .slice(0, 10)"
                   @click="setName(name)">

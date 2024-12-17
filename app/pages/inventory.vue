@@ -5,7 +5,7 @@ import { ChevronRight } from 'lucide-vue-next';
 
 const itemStore = useItemStore();
 const { getFilteredInventoryItems } = toRefs(itemStore);
-itemStore.fetchInventoryItems();
+itemStore.fetchItems();
 const categories = computed(() => itemStore.inventoryCategories);
 // const items = computed(() => {
 //   let items = itemStore.getFilteredInventoryItems;
