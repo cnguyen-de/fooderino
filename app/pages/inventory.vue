@@ -1,7 +1,7 @@
 <script setup>
 import { useItemStore } from '~/store/item';
-import { useSettingsStore } from '~/store/settings';
 import { ChevronRight } from 'lucide-vue-next';
+import { useStorage } from '@vueuse/core';
 
 const itemStore = useItemStore();
 const { getFilteredInventoryItems } = toRefs(itemStore);
@@ -26,13 +26,19 @@ const editCategory = async () => {
   await itemStore.renameCategory(selectedOldCategory.value, selectedCategory.value);
   isEditCategoryOpen.value = false;
 };
+const categoryOpenMap = useStorage('categoryOpenMap', {});
+
+const updateCategoryMap = (category, isOpen) => {
+  categoryOpenMap.value[category] = isOpen;
+  localStorage.setItem('categoryOpenMap', categoryOpenMap.toString());
+};
 </script>
 <template>
   <NuxtLayout name="app">
     <NuxtLayout name="list">
       <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
         <div v-for="category in categories" :key="category">
-          <Collapsible default-open>
+          <Collapsible :open="categoryOpenMap[category]" @update:open="updateCategoryMap(category, $event)">
             <div class="flex flex-row pr-4">
               <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
                 <h2 class="pl-4 font-bold text-white">{{ category }}</h2>
