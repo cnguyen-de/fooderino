@@ -2,8 +2,10 @@
 import { useItemStore } from '~/store/item';
 import { ChevronRight } from 'lucide-vue-next';
 import { useStorage } from '@vueuse/core';
+import { useListStore } from '~/store/list';
 
 const itemStore = useItemStore();
+const listStore = useListStore();
 const { getFilteredInventoryItems } = toRefs(itemStore);
 itemStore.fetchItems();
 const categories = computed(() => itemStore.inventoryCategories);
@@ -36,7 +38,9 @@ const updateCategoryMap = (category, isOpen) => {
 <template>
   <NuxtLayout name="app">
     <NuxtLayout name="list">
-      <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
+      <div
+        class="h-[calc(100%_-_7rem)] w-full overflow-auto"
+        :class="{ '!h-[calc(100%_-_17rem)]': !listStore.selectedList }">
         <div v-for="category in categories" :key="category">
           <Collapsible :open="categoryOpenMap[category]" @update:open="updateCategoryMap(category, $event)">
             <div class="flex flex-row pr-4">
@@ -73,8 +77,8 @@ const updateCategoryMap = (category, isOpen) => {
           </Collapsible>
         </div>
 
-        <div v-if="categories?.length === 0" class="p-2">
-          <CreateNewItem>Add an item to the list </CreateNewItem>
+        <div v-if="categories?.length === 0 && listStore.selectedList" class="p-2">
+          <CreateNewItem location="Fridge">Add an item to the list </CreateNewItem>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useListStore } from '~/store/list';
 const listname = ref('');
-const createNewList = async (listname) => {
+const createNewList = async (listname: string) => {
   await useListStore().createList(listname);
 };
 </script>
@@ -29,6 +29,6 @@ const createNewList = async (listname) => {
   <div class="mt-4">
     <Label>List Name</Label>
     <Input class="" placeholder="Grocery / Medicines" v-model="listname"></Input>
-    <Button class="mt-4" @click="createNewList(listname)">Create A List</Button>
+    <Button class="mt-4" @click="createNewList(listname)" :disabled="listname.length === 0">Create A List</Button>
   </div>
 </template>

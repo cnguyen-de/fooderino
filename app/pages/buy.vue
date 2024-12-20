@@ -2,7 +2,9 @@
 import { useItemStore } from '~/store/item';
 import { ChevronRight } from 'lucide-vue-next';
 import { useStorage } from '@vueuse/core';
+import { useListStore } from '~/store/list';
 const itemStore = useItemStore();
+const listStore = useListStore();
 itemStore.fetchBuyItems();
 
 const categories = computed(() => {
@@ -19,7 +21,9 @@ const updateStoreMap = (category, isOpen) => {
 <template>
   <NuxtLayout name="app">
     <NuxtLayout name="list">
-      <div class="h-[calc(100%_-_7rem)] w-full overflow-auto">
+      <div
+        class="h-[calc(100%_-_7rem)] w-full overflow-auto"
+        :class="{ '!h-[calc(100%_-_17rem)]': !listStore.selectedList }">
         <div v-for="category in categories" :key="category">
           <Collapsible :open="storeOpenMap[category]" @update:open="updateStoreMap(category, $event)">
             <div class="flex flex-row pr-4">
@@ -40,6 +44,9 @@ const updateStoreMap = (category, isOpen) => {
                 "></BuyList>
             </CollapsibleContent>
           </Collapsible>
+        </div>
+        <div v-if="categories?.length === 0 && listStore.selectedList" class="p-2">
+          <CreateNewItem store="Super market">Add an item to the buy list </CreateNewItem>
         </div>
       </div>
     </NuxtLayout>

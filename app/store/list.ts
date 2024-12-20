@@ -33,7 +33,7 @@ export const useListStore = defineStore('list', () => {
 
   const createList = async (name) => {
     await supabase.from('lists').insert({
-      name: name,
+      name,
       users: [
         {
           email: user.value?.email,

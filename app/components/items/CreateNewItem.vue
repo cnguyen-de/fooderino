@@ -91,7 +91,11 @@ const setName = (n: string) => {
                 @focus="showNames = true" />
             </FormControl>
             <div
-              v-if="showNames"
+              v-if="
+                showNames &&
+                itemStore.allItemNames.length > 0 &&
+                itemStore.allItemNames.some((n) => n?.toLowerCase().includes(form.name?.toLowerCase()))
+              "
               class="absolute right-0 top-10 z-10 w-[calc(100%_-_72px)] rounded-b border border-t-0 bg-gray-900 p-2 text-gray-200">
               <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
@@ -119,7 +123,11 @@ const setName = (n: string) => {
                 @focus="showCats = true" />
             </FormControl>
             <div
-              v-if="showCats"
+              v-if="
+                showCats &&
+                itemStore.inventoryCategories.length > 0 &&
+                itemStore.inventoryCategories.some((c) => c?.toLowerCase().includes(form.location?.toLowerCase()))
+              "
               class="absolute right-0 top-10 z-10 w-[calc(100%_-_72px)] rounded-b border border-t-0 bg-gray-900 p-2 text-gray-200">
               <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
@@ -172,7 +180,11 @@ const setName = (n: string) => {
                 @focus="showStores = true" />
             </FormControl>
             <div
-              v-if="showStores"
+              v-if="
+                showStores &&
+                itemStore.buyCategories.length > 0 &&
+                itemStore.buyCategories.some((c) => c?.toLowerCase().includes(form.store?.toLowerCase()))
+              "
               class="absolute right-0 top-10 z-10 w-[calc(100%_-_72px)] rounded-b border border-t-0 bg-gray-900 p-2 text-gray-200">
               <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
