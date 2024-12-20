@@ -78,6 +78,9 @@ export const useItemStore = defineStore('item', () => {
   const insertItem = async (data) => {
     if (allItemNames.value.includes(data?.name)) {
       const existingItem = state.allItems.find((item) => item.name === data.name);
+      existingItem.amount_to_purchase = data.amountToPurchase ?? data.amount_to_purchase;
+      existingItem.default_amount = data.defaultAmount;
+      existingItem.amount_type = data.amountType;
       await updateItem({ ...existingItem, ...data });
       return;
     }
