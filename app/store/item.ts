@@ -153,6 +153,12 @@ export const useItemStore = defineStore('item', () => {
     return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
   });
 
+  // TODO allCategories (even from items that aren't in inventory -> show as dropdown)
+  const allCategories = computed(() => {
+    const cat = state.allItems.map((item) => item.location.trim());
+    return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
+  });
+
   const buyCategories = computed(() => {
     const cat = state.purchasedItems.map((item) => item.store.trim());
     return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
@@ -198,6 +204,7 @@ export const useItemStore = defineStore('item', () => {
     getFilteredInventoryItems,
     inventoryCategories,
     buyCategories,
-    allItemNames
+    allItemNames,
+    allCategories
   };
 });

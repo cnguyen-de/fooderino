@@ -5,7 +5,7 @@ import { useStorage } from '@vueuse/core';
 import { useListStore } from '~/store/list';
 const itemStore = useItemStore();
 const listStore = useListStore();
-itemStore.fetchBuyItems();
+itemStore.fetchItems();
 
 const categories = computed(() => {
   const stores = itemStore?.purchasedItems?.map((item) => item.store.trim());

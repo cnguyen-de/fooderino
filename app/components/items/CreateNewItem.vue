@@ -125,14 +125,14 @@ const setName = (n: string) => {
             <div
               v-if="
                 showCats &&
-                itemStore.inventoryCategories.length > 0 &&
-                itemStore.inventoryCategories.some((c) => c?.toLowerCase().includes(form.location?.toLowerCase()))
+                itemStore.allCategories.length > 0 &&
+                itemStore.allCategories.some((c) => c?.toLowerCase().includes(form.location?.toLowerCase()))
               "
               class="absolute right-0 top-10 z-10 w-[calc(100%_-_72px)] rounded-b border border-t-0 bg-gray-900 p-2 text-gray-200">
               <div class="flex max-h-20 flex-col gap-1 overflow-auto">
                 <div
                   class="inline-block hover:bg-gray-500"
-                  v-for="category of itemStore.inventoryCategories
+                  v-for="category of itemStore.allCategories
                     .filter((cat) => cat?.toLowerCase().includes(form.location?.toLowerCase()))
                     .slice(0, 10)"
                   @click="setLocation(category)">
