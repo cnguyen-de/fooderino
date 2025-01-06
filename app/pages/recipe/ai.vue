@@ -50,7 +50,7 @@ const generateRecipe = async () => {
             <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
             <span v-else class="animate-pulse">✨✨✨</span>
           </Button>
-          <div class="flex items-center gap-x-2">
+          <div class="flex items-center gap-x-2" v-if="!useNoInventoryMode()">
             <Checkbox v-model="useHasIngredients" class="ml-4" id="useHasIngredients" />
             <label class="text-sm text-gray-400" for="useHasIngredients">Only use ingredients I have</label>
           </div>
