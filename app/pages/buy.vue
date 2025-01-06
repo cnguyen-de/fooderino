@@ -8,7 +8,10 @@ const listStore = useListStore();
 itemStore.fetchItems();
 
 const categories = computed(() => {
-  const stores = itemStore?.purchasedItems?.map((item) => item.store.trim());
+  let stores = itemStore?.purchasedItems?.map((item) => item.store.trim());
+  if (showAllLists.value) {
+    stores = itemStore?.buyItemsFromAllLists?.map((item) => item.store.trim());
+  }
   return [...new Set(stores)].sort((a, b) => a.localeCompare(b));
 });
 const storeOpenMap = useStorage('storeOpenMap', {});
@@ -17,6 +20,21 @@ const updateStoreMap = (category, isOpen) => {
   storeOpenMap.value[category] = isOpen;
   localStorage.setItem('storeOpenMap', storeOpenMap.toString());
 };
+
+const showAllLists = ref(itemStore.showBuyItemsFromAllLists);
+const toggleAllLists = async () => {
+  showAllLists.value = !showAllLists.value;
+  itemStore.showBuyItemsFromAllLists = showAllLists.value;
+  if (showAllLists.value) {
+    await itemStore.fetchBuyItemsFromAllLists();
+  }
+};
+const buyItems = computed(() => {
+  if (showAllLists.value) {
+    return itemStore.buyItemsFromAllLists;
+  }
+  return itemStore.purchasedItems;
+});
 </script>
 <template>
   <NuxtLayout name="app">
@@ -24,6 +42,12 @@ const updateStoreMap = (category, isOpen) => {
       <div
         class="h-[calc(100%_-_7rem)] w-full overflow-auto"
         :class="{ '!h-[calc(100%_-_17rem)]': !listStore.selectedList }">
+        <section>
+          <div class="flex flex-row gap-2 px-4">
+            <div class="">Show all lists</div>
+            <Switch :value="showAllLists" @update:checked="toggleAllLists"></Switch>
+          </div>
+        </section>
         <div v-for="category in categories" :key="category">
           <Collapsible :open="storeOpenMap[category]" @update:open="updateStoreMap(category, $event)">
             <div class="flex flex-row pr-4">
@@ -38,7 +62,7 @@ const updateStoreMap = (category, isOpen) => {
             <CollapsibleContent>
               <BuyList
                 :items="
-                  itemStore?.purchasedItems
+                  buyItems
                     ?.filter((item) => item.store === category)
                     .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
                 "></BuyList>

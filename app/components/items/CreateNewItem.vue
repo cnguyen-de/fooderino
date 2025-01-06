@@ -51,7 +51,9 @@ const setName = (n: string) => {
   form.value.name = n;
   showNames.value = false;
   const existingItem = itemStore.allItems.find((item) => item.name === n);
-  form.value.amount = existingItem?.amount ?? '0';
+  form.value.amount = existingItem?.amount > 0 ? existingItem.amount : props.location ? 1 : 0;
+  form.value.amountToPurchase =
+    existingItem?.amount_to_purchase > 0 ? existingItem?.amount_to_purchase : props.store ? '1' : '0';
   form.value.defaultAmount = existingItem?.defaultAmount ?? '0';
   form.value.amountType = existingItem?.amountType ?? 'count';
   form.value.store = existingItem?.store ?? '';

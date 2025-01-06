@@ -9,6 +9,8 @@ interface State {
   selectedItems: string[];
   filterInput: string;
   allItems: Item[];
+  showBuyItemsFromAllLists: boolean;
+  buyItemsFromAllLists: Item[];
 }
 export const useItemStore = defineStore('item', () => {
   const state = reactive<State>({
@@ -16,7 +18,9 @@ export const useItemStore = defineStore('item', () => {
     purchasedItems: [],
     selectedItems: [],
     filterInput: '',
-    allItems: []
+    allItems: [],
+    showBuyItemsFromAllLists: false,
+    buyItemsFromAllLists: []
   });
   const client = useSupabaseClient();
   const user = useSupabaseUser();
@@ -24,6 +28,9 @@ export const useItemStore = defineStore('item', () => {
   const settingStore = useSettingsStore();
 
   const fetchItems = async () => {
+    if (state.showBuyItemsFromAllLists) {
+      await fetchBuyItemsFromAllLists();
+    }
     if (!listStore.selectedList) {
       return;
     }
@@ -43,6 +50,14 @@ export const useItemStore = defineStore('item', () => {
       .gte('amount_to_purchase', 1)
       .eq('list_id', listStore.selectedList?.id);
     state.purchasedItems = data;
+  };
+
+  const fetchBuyItemsFromAllLists = async () => {
+    const allLists = listStore.lists;
+    const lists = allLists.map((list) => list.id);
+    const query = lists.map((list) => `list_id.eq.${list}`).join(',');
+    const { data } = await client.from('items').select().gte('amount_to_purchase', 1).or(query);
+    state.buyItemsFromAllLists = data;
   };
 
   const fetchInventoryItems = async () => {
@@ -191,6 +206,7 @@ export const useItemStore = defineStore('item', () => {
     //Actions
     fetchItems,
     fetchBuyItems,
+    fetchBuyItemsFromAllLists,
     fetchInventoryItems,
     addItemToInventory,
     addItemToBuy,
