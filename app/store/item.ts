@@ -54,7 +54,11 @@ export const useItemStore = defineStore('item', () => {
   };
 
   const addItemToInventory = async (item) => {
-    const newAmount = item.amount + item.amount_to_purchase;
+    let newAmount = 0;
+    if (!useNoInventoryMode()) {
+      newAmount = item.amount + item.amount_to_purchase;
+    }
+
     const { data } = await client
       .from('items')
       .update({

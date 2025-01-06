@@ -26,10 +26,18 @@ export const useSettingsStore = defineStore('settings', () => {
       await updateSettings(newSettings);
     }
   };
+
+  const toggleNoInventoryMode = async (value) => {
+    if (state.settings) {
+      const newSettings = { ...state.settings, no_inventory: value ? value : !state.settings.no_inventory };
+      await updateSettings(newSettings);
+    }
+  };
   return {
     ...toRefs(state),
     fetchSettings,
     updateSettings,
-    toggleEmptyItems
+    toggleEmptyItems,
+    toggleNoInventoryMode
   };
 });

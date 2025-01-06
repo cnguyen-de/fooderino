@@ -2,7 +2,7 @@
 
 <template>
   <div class="flex h-full flex-row items-center justify-between border-t border-solid border-gray-500/50 p-2">
-    <FooterLink link="/inventory">
+    <FooterLink link="/inventory" v-if="!useNoInventoryMode()">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"

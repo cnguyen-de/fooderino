@@ -38,12 +38,25 @@ const onSubmit = form.handleSubmit(async (values) => {
   await settingsStore.updateSettings(values);
   toast('Successfully saved settings');
 });
+
+const noInventoryMode = ref(settingsStore.settings?.no_inventory);
+const updateNoInventoryMode = async (checked: boolean) => {
+  noInventoryMode.value = checked;
+  await settingsStore.toggleNoInventoryMode(checked);
+};
 </script>
 <template>
   <NuxtLayout name="app">
     <div class="flex h-[calc(100%_-_4rem)] flex-col justify-center p-4">
       <h1 class="text-2xl font-bold">User Settings</h1>
       <p class="text-gray-500">Manage your account settings</p>
+      <section class="flex flex-row justify-between gap-2 pt-4">
+        <div class="">
+          <h3 class="text-lg">No inventory mode</h3>
+          <p class="text-gray-500">Use the app as a checklist for shopping only</p>
+        </div>
+        <Switch :checked="noInventoryMode" @update:checked="updateNoInventoryMode($event)"></Switch>
+      </section>
       <div class="my-4 border-b border-solid border-gray-500/50"></div>
       <form class="" @submit="onSubmit">
         <h2 class="mt-3 text-xl font-bold">Recipe Generation Preferences</h2>

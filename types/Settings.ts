@@ -4,4 +4,5 @@ export interface Settings {
   allergies: string;
   cuisines: string;
   show_empty_items: boolean;
+  no_inventory: boolean;
 }
