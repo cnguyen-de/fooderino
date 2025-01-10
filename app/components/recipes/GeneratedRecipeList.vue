@@ -23,6 +23,11 @@ const onSaveRecipe = (recipe) => {
     console.log('what do, remove recipe?');
   }
 };
+
+const onDeleteRecipe = (recipe) => {
+  toast(`Deleted ${recipe?.name}`);
+  recipeStore.deleteRecipe(recipe);
+};
 </script>
 
 <template>
@@ -30,8 +35,8 @@ const onSaveRecipe = (recipe) => {
     :recipe="recipe"
     v-for="recipe of recipeStore.generatedRecipes"
     @save-recipe="onSaveRecipe($event)"
-    @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy"
-    @generate-another-recipe="recipeStore.generateRecipe()"></RecipeCard>
+    @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
+    @delete="onDeleteRecipe($event)"></RecipeCard>
 </template>
 
 <style scoped></style>

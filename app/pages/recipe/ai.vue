@@ -37,22 +37,27 @@ const generateRecipe = async () => {
           </AlertDescription>
         </Alert>
       </div>
-      <div
-        v-else
-        class="relative mx-auto flex w-full flex-col items-start justify-start gap-2 overflow-y-scroll text-white">
+      <div v-else class="relative mx-auto flex w-full flex-col items-start justify-start gap-2 text-white">
         <Alert class="mb-2">
           <AlertTitle class="text-xl">🚧 AI functionality is under development</AlertTitle>
           <AlertDescription> Some functions are not working properly yet! </AlertDescription>
         </Alert>
         <!-- <Input type="text" v-model="request" /> -->
-        <div class="flex flex-row">
-          <Button @click="generateRecipe">
-            <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
-            <span v-else class="animate-pulse">✨✨✨</span>
-          </Button>
+        <div class="mb-2 flex w-full flex-row">
+          <div>
+            <Button @click="generateRecipe">
+              <span v-if="!recipeStore.generating">Generate recipe 🪄</span>
+              <span v-else class="animate-pulse">✨✨✨</span>
+            </Button>
+          </div>
+          <div class="grow"></div>
           <div class="flex items-center gap-x-2" v-if="!useNoInventoryMode()">
-            <Checkbox v-model="useHasIngredients" class="ml-4" id="useHasIngredients" />
             <label class="text-sm text-gray-400" for="useHasIngredients">Only use ingredients I have</label>
+            <Checkbox
+              :checked="useHasIngredients"
+              @update:checked="useHasIngredients = !useHasIngredients"
+              class="size-6 rounded-full"
+              id="useHasIngredients" />
           </div>
         </div>
 

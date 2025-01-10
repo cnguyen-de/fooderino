@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
   if (useHasIngredients) {
     const listId = reqQuery.listId ?? null;
     if (!listId) throw new Error('Missing listId');
-    const inventoryItems = await client.from('items').select('name').eq('list_id', listId);
+    const inventoryItems = await client.from('items').select('name').gte('amount', 1).eq('list_id', listId);
     userHasIngredients = inventoryItems.data?.map((item) => item?.name).join(', ') ?? '';
   }
 
@@ -49,8 +49,9 @@ export default defineEventHandler(async (event) => {
   const messages = [];
   messages.push({
     role: 'system',
-    content: `You are a chef and will be suggesting well known recipes for ${userServings} servings. ${useHasIngredients ? 'Suggest a recipe that uses the following ingredients' + userHasIngredients : ''} The user likes ${userFavCuisines} and already have the following recipes ${userKnownRecipes} and do not suggest ingredients in the recipe that are part of user's allergies ${userAllergies}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name that should be the same as the input ingredients if there is any", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false, "instructions": "instructions to cook the dish, short and in markdown list format"}`
+    content: `You are a chef and will be suggesting well known recipes for ${userServings} servings. ${useHasIngredients ? 'Suggest a recipe that only consisted of some of the following ingredients: ' + userHasIngredients : ''} The user likes ${userFavCuisines} cuisines, already have the following recipes: ${userKnownRecipes} and do not suggest ingredients in the recipe that are part of user's allergies: ${userAllergies}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name that should be the same as the input ingredients if there is any", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false, "instructions": "instructions to cook the dish, short and in markdown list format"}`
   });
+  console.log(messages);
   const result = await generateText({
     model: openai('gpt-4o-mini'),
     messages
