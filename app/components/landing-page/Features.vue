@@ -25,7 +25,8 @@ const featureList: FeaturesProps[] = [
   {
     icon: 'badgeCheck',
     title: 'Easy to Use',
-    description: 'Inventory management is boring, so we made it as easy as possible to use.'
+    description:
+      'Inventory management is boring, so we made it as easy as possible to use and optionally shopping mode only.'
   },
   {
     icon: 'goal',
@@ -36,12 +37,13 @@ const featureList: FeaturesProps[] = [
     icon: 'brain',
     title: 'GenAI',
     description:
-      'Our recipes include not only classic dishes but also AI-powered suggestions based on your available ingredients.'
+      'Our recipes include not only classic dishes but also AI-powered suggestions based on your available ingredients. It also understand multiple languages, meaning you can have ingredients in german, english and french and it will still recognize and use the existing ingredients for new reccipes.'
   },
   {
     icon: 'mousePointerClick',
     title: 'Recurring Purchase',
-    description: 'Subscriptions and Items can be automatically added to your shopping list.'
+    description:
+      "Ingredients can be automatically added to your shopping list based on the default amount setting so you'll always have enough when needed."
   }
 ];
 
