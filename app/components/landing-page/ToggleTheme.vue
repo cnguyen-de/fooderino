@@ -1,23 +1,25 @@
 <script setup lang="ts">
-import { useColorMode } from '@vueuse/core';
-const mode = useColorMode();
+import { useColorMode, useMediaQuery } from '@vueuse/core';
+import { useStorage } from '@vueuse/core';
 import { Moon, Sun } from 'lucide-vue-next';
+
+const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)');
+const userColor = useStorage('userColor', `${isPreferredDark} ? 'dark' : 'light'`);
+const mode = useColorMode();
+const toggleTheme = () => {
+  mode.value = mode.value === 'dark' ? 'light' : 'dark';
+  userColor.value = mode.value;
+};
 </script>
 
 <template>
-  <Button
-    @click="mode = mode === 'dark' ? 'light' : 'dark'"
-    size="sm"
-    variant="ghost"
-    class="w-full justify-start hover:bg-gray-500/20">
-    <div v-if="mode == 'light'" class="flex gap-2">
+  <Button @click="toggleTheme" size="sm" variant="ghost" class="w-full justify-start hover:bg-gray-500/20">
+    <div v-if="mode == 'dark'" class="flex gap-2">
       <Moon class="size-5" />
-      <span class="block lg:hidden"> Dark </span>
     </div>
 
-    <div v-else="mode == 'dark'" class="flex gap-2">
+    <div v-else="mode == 'light'" class="flex gap-2">
       <Sun class="size-5" />
-      <span class="block lg:hidden">Light</span>
     </div>
 
     <span class="sr-only">Toggle theme</span>

@@ -2,7 +2,6 @@
 import { ref } from 'vue';
 import { Menu } from 'lucide-vue-next';
 import ToggleTheme from '~/components/landing-page/ToggleTheme.vue';
-import { useColorMode } from '@vueuse/core';
 
 interface RouteProps {
   href: string;
@@ -33,7 +32,6 @@ const routeList: RouteProps[] = [
 ];
 
 const isOpen = ref<boolean>(false);
-const mode = useColorMode();
 </script>
 
 <template>

@@ -1,7 +1,7 @@
 <script setup lang="ts"></script>
 
 <template>
-  <div class="flex flex-row justify-center px-4">
+  <div class="flex flex-row justify-center">
     <FooterLink link="/recipe">
       <div class="flex flex-row py-2">
         <span> Saved Recipes </span>
@@ -14,7 +14,7 @@
     </FooterLink>
   </div>
   <div
-    class="relative mx-auto flex h-[calc(100%_-_6.5rem)] w-full flex-col items-start justify-start gap-4 overflow-y-scroll p-4 text-white">
+    class="relative mx-auto flex h-[calc(100%_-_6.5rem)] w-full flex-col items-start justify-start gap-4 overflow-y-scroll p-4">
     <slot />
   </div>
 </template>

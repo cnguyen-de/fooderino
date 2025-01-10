@@ -12,7 +12,7 @@ const recipeStore = useRecipeStore(); // probably use a util instead
 </script>
 
 <template>
-  <Card v-if="recipe" class="w-full bg-background/30">
+  <Card v-if="recipe" class="w-full bg-background/40">
     <Collapsible v-model:open="isOpen">
       <CollapsibleTrigger>
         <CardHeader>
@@ -29,7 +29,9 @@ const recipeStore = useRecipeStore(); // probably use a util instead
               <li
                 v-for="ingredient of recipe?.ingredients"
                 :key="ingredient.name"
-                :class="recipeStore.hasIngredients(ingredient.name) ? 'text-green-500' : 'text-gray-200'">
+                :class="
+                  recipeStore.hasIngredients(ingredient.name) ? 'font-semibold text-green-800 dark:text-green-500' : ''
+                ">
                 <span>{{ ingredient.name }}</span>
                 <span v-if="recipeStore.hasIngredients(ingredient.name)" class="ml-1 inline-block h-4"
                   ><svg

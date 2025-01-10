@@ -45,20 +45,20 @@ const updateCategoryMap = (category, isOpen) => {
           <Collapsible :open="categoryOpenMap[category]" @update:open="updateCategoryMap(category, $event)">
             <div class="flex flex-row pr-4">
               <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
-                <h2 class="pl-4 font-bold text-white">{{ category }}</h2>
+                <h2 class="pl-4 font-bold">{{ category }}</h2>
                 <ChevronRight
                   class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               </CollapsibleTrigger>
               <CreateNewItem :location="category"></CreateNewItem>
               <span class="flex-grow"></span>
-              <button class="text-gray-300/50" @click.prevent="openEditCategoryDrawer(category)">
+              <button class="text-gray-700 dark:text-gray-300" @click.prevent="openEditCategoryDrawer(category)">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke-width="1.5"
                   stroke="currentColor"
-                  class="size-6">
+                  class="size-5">
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -86,11 +86,12 @@ const updateCategoryMap = (category, isOpen) => {
       <Drawer v-model:open="isEditCategoryOpen" @onOpenChange="isEditCategoryOpen = $event">
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle class="pb-4">Edit Category</DrawerTitle>
-            <DrawerDescription>
-              <Input type="text" v-model="selectedCategory"></Input>
-            </DrawerDescription>
+            <DrawerTitle> Rename category </DrawerTitle>
+            <DrawerDescription> This action will affects all items under this category </DrawerDescription>
           </DrawerHeader>
+          <div class="px-4">
+            <Input class="" type="text" v-model="selectedCategory"></Input>
+          </div>
           <DrawerFooter>
             <div class="flex flex-row justify-between">
               <DrawerClose>

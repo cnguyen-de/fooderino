@@ -36,7 +36,7 @@ const generateRecipe = async () => {
           <AlertDescription> Custom requests, personalized recipes, and more! Cooming soon! </AlertDescription>
         </Alert>
       </div>
-      <div class="relative mx-auto flex w-full flex-col items-start justify-start gap-2 text-white">
+      <div class="relative mx-auto flex w-full flex-col items-start justify-start gap-2">
         <Input
           v-if="settingsStore?.settings?.ai"
           type="text"
@@ -49,7 +49,9 @@ const generateRecipe = async () => {
           </Button>
           <div class="grow"></div>
           <div class="flex items-center gap-x-2" v-if="!useNoInventoryMode()">
-            <label class="text-sm text-gray-400" for="useHasIngredients">Only use ingredients I have</label>
+            <Label class="text-sm text-gray-700 dark:text-gray-200" for="useHasIngredients"
+              >Only use ingredients I have</Label
+            >
             <Checkbox
               :checked="useHasIngredients"
               @update:checked="useHasIngredients = !useHasIngredients"

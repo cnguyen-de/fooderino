@@ -63,8 +63,8 @@ const onInputClick = (state) => {
 
 <template>
   <div
-    class="border-px flex flex-row items-center rounded-full border border-gray-500/30 bg-gray-700/20 pl-4 pr-2 text-gray-200">
-    <div v-if="showAmount && !useNoInventoryMode()" class="mr-5 flex items-center justify-center text-gray-400/50">
+    class="border-px flex flex-row items-center rounded-xl border border-border bg-gray-200/70 pl-4 pr-2 dark:bg-gray-700/20">
+    <div v-if="showAmount && !useNoInventoryMode()" class="mr-5 flex items-center justify-center">
       <span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -79,12 +79,14 @@ const onInputClick = (state) => {
             d="M8.242 5.992h12m-12 6.003H20.24m-12 5.999h12M4.117 7.495v-3.75H2.99m1.125 3.75H2.99m1.125 0H5.24m-1.92 2.577a1.125 1.125 0 1 1 1.591 1.59l-1.83 1.83h2.16M2.99 15.745h1.125a1.125 1.125 0 0 1 0 2.25H3.74m0-.002h.375a1.125 1.125 0 0 1 0 2.25H2.99" />
         </svg>
       </span>
-      {{ amount }}
+      <p class="opacity-50">
+        {{ amount }}
+      </p>
     </div>
     <Input
       v-model="itemName"
       :id="id"
-      class="-ml-4 w-1/2 rounded-full border-none bg-transparent pl-4 text-lg focus-visible:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-0" />
+      class="-ml-4 w-1/2 rounded-full border-none bg-transparent pl-4 text-lg focus-visible:bg-gray-100/50 focus-visible:outline-none focus-visible:ring-0 dark:focus-visible:bg-gray-700/50" />
 
     <div class="flex-grow"></div>
     <EditItem :item="item" :is-buy-list="showAmount"></EditItem>
@@ -103,10 +105,10 @@ const onInputClick = (state) => {
           @focusin="onInputClick(false)"
           @focusout="onInputClick(true)" />
         <NumberFieldDecrement
-          class="rounded-full px-1 text-gray-300/50 peer-focus:text-gray-200/50"
+          class="rounded-full px-1 text-gray-800/50 peer-focus:text-gray-900/50 dark:text-gray-300/50 dark:peer-focus:text-gray-200/50"
           :disabled="isInputNotPressed" />
         <NumberFieldIncrement
-          class="rounded-full px-1 text-gray-300/50 peer-focus:text-gray-200/50"
+          class="rounded-full px-1 text-gray-800/50 peer-focus:text-gray-900/50 dark:text-gray-300/50 dark:peer-focus:text-gray-200/50"
           :disabled="isInputNotPressed" />
       </NumberFieldContent>
     </NumberField>

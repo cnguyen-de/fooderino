@@ -13,8 +13,8 @@ const props = defineProps<Props>();
 
 <template>
   <button
-    class="flex flex-row items-center gap-0.5 rounded-full p-1 font-thin text-gray-100/50 hover:text-white"
-    :class="{ '!font-normal text-green-300/70': item.amount_to_purchase > 0 }"
+    class="flex flex-row items-center gap-0.5 rounded-full p-1 font-thin text-gray-800/70 hover:text-black dark:text-gray-100/50 dark:hover:text-white"
+    :class="{ '!font-normal text-green-700/70 dark:text-green-300/70': item.amount_to_purchase > 0 }"
     @click="addToBuy(props?.item)">
     <svg
       xmlns="http://www.w3.org/2000/svg"

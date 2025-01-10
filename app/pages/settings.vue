@@ -4,6 +4,7 @@ import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useForm } from 'vee-validate';
 import { toast } from 'vue-sonner';
+import ToggleTheme from '../components/landing-page/ToggleTheme.vue';
 
 const supabase = useSupabaseClient();
 const logout = async () => {
@@ -56,6 +57,12 @@ const updateNoInventoryMode = async (checked: boolean) => {
           <p class="text-gray-500">Use the app as a checklist for shopping only</p>
         </div>
         <Switch :checked="noInventoryMode" @update:checked="updateNoInventoryMode($event)"></Switch>
+      </section>
+      <section class="flex flex-row items-center justify-between gap-2 pt-4">
+        <h3 class="text-lg">Theme</h3>
+        <div class="size-11">
+          <ToggleTheme />
+        </div>
       </section>
       <div class="my-4 border-b border-solid border-gray-500/50"></div>
       <form class="" @submit="onSubmit">

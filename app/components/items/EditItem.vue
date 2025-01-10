@@ -36,7 +36,7 @@ const saveChanges = async () => {
 </script>
 <template>
   <Drawer v-model:open="isEditItemDrawerOpen" @onOpenChange="isEditItemDrawerOpen = $event">
-    <DrawerTrigger class="pr-2 text-gray-400">
+    <DrawerTrigger class="pr-2 text-gray-600 dark:text-gray-400">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
