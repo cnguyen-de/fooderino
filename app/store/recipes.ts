@@ -17,11 +17,12 @@ export const useRecipeStore = defineStore('recipes', () => {
     generating: false
   });
 
-  const generateRecipe = async (useHasIngredients: boolean) => {
+  const generateRecipe = async (useHasIngredients: boolean, request: string) => {
     state.generating = true;
     const { data } = await useFetch('/api/recipe', {
       query: {
         useHasIngredients,
+        request,
         listId: listStore.selectedList?.id
       }
     });

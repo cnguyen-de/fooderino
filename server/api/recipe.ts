@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
   const userServings = userSettings.servings ?? '1';
   const userFavCuisines = userSettings.cuisines ?? 'no preferences';
   const useHasIngredients = reqQuery?.useHasIngredients === 'true' || false;
+  const userCustomRequest = reqQuery?.request ?? '';
   let userHasIngredients = '';
   if (useHasIngredients) {
     const listId = reqQuery.listId ?? null;
@@ -49,7 +50,7 @@ export default defineEventHandler(async (event) => {
   const messages = [];
   messages.push({
     role: 'system',
-    content: `You are a chef and will be suggesting well known recipes for ${userServings} servings. ${useHasIngredients ? 'Suggest a recipe that only consisted of some of the following ingredients: ' + userHasIngredients : ''} The user likes ${userFavCuisines} cuisines, already have the following recipes: ${userKnownRecipes} and do not suggest ingredients in the recipe that are part of user's allergies: ${userAllergies}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name that should be the same as the input ingredients if there is any", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false, "instructions": "instructions to cook the dish, short and in markdown list format"}`
+    content: `You are a chef and will be suggesting well known recipes for ${userServings} servings. ${useHasIngredients ? 'Suggest a recipe that only consisted of some of the following ingredients: ' + userHasIngredients : ''}. The user likes ${userFavCuisines} cuisines and do not suggest ingredients in the recipe that are part of user's allergies: ${userAllergies}. Do not suggest a recipe that is too similar to the following recipes: ${userKnownRecipes} ${userCustomRequest ? '. Take the user\'s request into account: "' + userCustomRequest + '"' : ''}. Return the response in the following format: {"name": "Recipe Name", "description": "description of the dish in 1 sentence", "ingredients": [{"name": "Ingredient Name that should be the same as the input ingredients if there is any", "amount": "amount of units (integer value)", "amount_type": "count or gram"}], "saved": false, "instructions": "instructions to cook the dish, short and in markdown list format"}`
   });
   console.log(messages);
   const result = await generateText({
