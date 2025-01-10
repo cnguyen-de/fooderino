@@ -63,7 +63,7 @@ const onInputClick = (state) => {
 
 <template>
   <div
-    class="border-px flex flex-row items-center rounded-xl border border-border bg-gray-200/70 pl-4 pr-2 dark:bg-gray-700/20">
+    class="border-px flex flex-row items-center rounded-xl border border-border bg-gray-100/70 pl-4 pr-2 dark:bg-gray-700/20">
     <div v-if="showAmount && !useNoInventoryMode()" class="mr-5 flex items-center justify-center">
       <span>
         <svg
