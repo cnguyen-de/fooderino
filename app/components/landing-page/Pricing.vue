@@ -17,12 +17,13 @@ interface PlanProps {
   title: string;
   popular: PopularPlan;
   price: number;
+  oneTime: boolean;
   description: string;
   buttonText: string;
   benefitList?: string[];
 }
 
-const plans: PlanProps[] = [
+/* const plans: PlanProps[] = [
   {
     id: 0,
     title: 'Free',
@@ -62,10 +63,53 @@ const plans: PlanProps[] = [
       'High Priority Support'
     ]
   }
+]; */
+const plans: PlanProps[] = [
+  {
+    id: 0,
+    title: 'Free',
+    popular: 1,
+    price: 0,
+    oneTime: false,
+    description: 'Free during BETA period',
+    buttonText: 'Start For Free',
+    benefitList: ['Unlimited Lists', 'Unlimited Invites', 'Basic GenAI Features']
+  },
+  {
+    id: 1,
+    title: 'Pro',
+    popular: 0,
+    price: 2,
+    oneTime: false,
+    description: 'Unlock the full potential of Fooderino, with stronger AI models and custom control.',
+    buttonText: 'Cooming Soon™️',
+    benefitList: [
+      'Unlimited Lists',
+      'Unlimited Invites',
+      'Premium AI Models',
+      'Refined Control with Custom Inputs over GenAI',
+      'High Priority Support'
+    ]
+  },
+  {
+    id: 2,
+    title: 'Buy Once Use Forever',
+    popular: 0,
+    price: 20,
+    oneTime: true,
+    description: 'With all of Pro features, but you only pay once.',
+    buttonText: 'Cooming Soon™️',
+    benefitList: [
+      'Unlimited Lists',
+      'Unlimited Invites',
+      'Premium AI Models',
+      'Refined Control with Custom Inputs over GenAI',
+      'High Priority Support'
+    ]
+  }
 ];
-
 const handlePricingButton = (id: number) => {
-  console.log('Selected Plan:', plans[id].title);
+  console.log('Selected Plan:', plans[id]);
   if (id === Plan.FREE) {
     navigateTo('/signup');
   } else if (id === Plan.PRO) {
@@ -90,7 +134,7 @@ const handlePricingButton = (id: number) => {
 
     <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
       <Card
-        v-for="{ id, title, popular, price, description, buttonText, benefitList } in plans"
+        v-for="{ id, title, popular, oneTime, price, description, buttonText, benefitList } in plans"
         :key="title"
         class="flex flex-col"
         :class="{
@@ -106,7 +150,7 @@ const handlePricingButton = (id: number) => {
 
           <div>
             <span class="text-3xl font-bold">€{{ price }}</span>
-            <span class="text-muted-foreground"> /month</span>
+            <span v-if="!oneTime" class="text-muted-foreground"> /month</span>
           </div>
         </CardHeader>
 
