@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core';
+import type { Item } from '~~/types/Item';
 
 export type ItemProps = {
   id: number;
@@ -12,6 +13,7 @@ export type ItemProps = {
   disableSwipe?: boolean;
   amountAsNumberInput?: boolean;
   default_amount?: number;
+  item: Item;
 };
 const props = withDefaults(defineProps<ItemProps>(), {
   id: 0,
@@ -70,7 +72,7 @@ const onInputClick = (state) => {
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
-          class="size-6">
+          class="mr-0.5 size-4">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -85,6 +87,8 @@ const onInputClick = (state) => {
       class="-ml-4 w-1/2 rounded-full border-none bg-transparent pl-4 text-lg focus-visible:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-0" />
 
     <div class="flex-grow"></div>
+    <EditItem :item="item" :is-buy-list="showAmount"></EditItem>
+
     <NumberField
       :step="amount_type === 'count' ? 1 : 100"
       class="w-20"
@@ -99,10 +103,10 @@ const onInputClick = (state) => {
           @focusin="onInputClick(false)"
           @focusout="onInputClick(true)" />
         <NumberFieldDecrement
-          class="rounded-full px-1 text-gray-500/50 peer-focus:text-gray-200/50"
+          class="rounded-full px-1 text-gray-300/50 peer-focus:text-gray-200/50"
           :disabled="isInputNotPressed" />
         <NumberFieldIncrement
-          class="rounded-full px-1 text-gray-500/50 peer-focus:text-gray-200/50"
+          class="rounded-full px-1 text-gray-300/50 peer-focus:text-gray-200/50"
           :disabled="isInputNotPressed" />
       </NumberFieldContent>
     </NumberField>

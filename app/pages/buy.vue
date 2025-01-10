@@ -43,9 +43,9 @@ const buyItems = computed(() => {
         class="h-[calc(100%_-_7rem)] w-full overflow-auto"
         :class="{ '!h-[calc(100%_-_17rem)]': !listStore.selectedList }">
         <section>
-          <div class="flex flex-row gap-2 px-4">
-            <div class="">Show all lists</div>
-            <Switch :value="showAllLists" @update:checked="toggleAllLists"></Switch>
+          <div class="flex flex-row justify-center gap-2 px-4">
+            <label class="" for="shoppingMode">Shopping Mode</label>
+            <Switch :value="showAllLists" @update:checked="toggleAllLists" id="shoppingMode"></Switch>
           </div>
         </section>
         <div v-for="category in categories" :key="category">

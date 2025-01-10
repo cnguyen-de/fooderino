@@ -28,11 +28,11 @@ const onAddItemToInventory = async (item: ItemProps) => {
         :amount_to_purchase="item.amount_to_purchase"
         :default_amount="item.default_amount"
         :to-right="false"
+        :item="item"
         show-amount
         disable-swipe
         :amount-as-number-input="false"
         @value-changed="onValueChanged($event)">
-        <EditItem :item="item" is-buy-list></EditItem>
         <button
           class="flex size-7 items-center justify-center rounded-full hover:bg-green-400/10 hover:text-green-500"
           @click="onAddItemToInventory(item)">

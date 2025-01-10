@@ -32,10 +32,8 @@ const onItemAmountValueChanged = (item: Item) => {
         :to-right="true"
         :show-amount="false"
         :disable-swipe="true"
+        :item="item"
         @value-changed="onItemAmountValueChanged($event)">
-        <EditItem :item="item" :is-buy-list="false"></EditItem>
-
-        <span class="tabular-nums text-gray-400/50">{{ item.amount_to_purchase }}</span>
         <AddToBuy :item="item"></AddToBuy>
       </Item>
     </TransitionGroup>
