@@ -13,7 +13,7 @@ watch(
 );
 const isCurrentRoute = () => {
   if (props.includeChild) {
-    return currentRoute.value.includes(props.link);
+    return currentRoute.value?.includes(props.link);
   }
   return currentRoute.value === props.link;
 };

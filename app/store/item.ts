@@ -95,7 +95,7 @@ export const useItemStore = defineStore('item', () => {
   };
 
   const insertItem = async (data) => {
-    if (allItemNames.value.includes(data?.name)) {
+    if (allItemNames.value?.includes(data?.name)) {
       const existingItem = state.allItems.find((item) => item.name === data.name);
       existingItem.amount_to_purchase = data.amountToPurchase ?? data.amount_to_purchase;
       existingItem.default_amount = data.defaultAmount;
@@ -162,7 +162,7 @@ export const useItemStore = defineStore('item', () => {
     if (state.filterInput === '' && state.filterInput) {
       return state.inventoryItems;
     }
-    return state.inventoryItems?.filter((item) => item.name.toLowerCase().includes(state.filterInput.toLowerCase()));
+    return state.inventoryItems?.filter((item) => item.name.toLowerCase()?.includes(state.filterInput.toLowerCase()));
   });
 
   const inventoryCategories = computed(() => {
