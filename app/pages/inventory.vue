@@ -45,7 +45,7 @@ const updateCategoryMap = (category, isOpen) => {
           <Collapsible :open="categoryOpenMap[category]" @update:open="updateCategoryMap(category, $event)">
             <div class="flex flex-row pr-4">
               <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
-                <h2 class="pl-4 font-bold">{{ category }}</h2>
+                <h2 class="pl-4 text-lg font-bold">{{ category }}</h2>
                 <ChevronRight
                   class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               </CollapsibleTrigger>

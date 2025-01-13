@@ -48,66 +48,82 @@ const updateNoInventoryMode = async (checked: boolean) => {
 </script>
 <template>
   <NuxtLayout name="app">
-    <div class="flex h-[calc(100%_-_4rem)] flex-col justify-center p-4">
-      <h1 class="text-2xl font-bold">User Settings</h1>
-      <p class="text-gray-500">Manage your account settings</p>
-      <section class="flex flex-row justify-between gap-2 pt-4">
-        <div class="">
-          <h3 class="text-lg">No inventory mode</h3>
-          <p class="text-gray-500">Use the app as a checklist for shopping only</p>
+    <div class="relative h-full w-full">
+      <div class="h-[calc(100%_-_4rem)] w-full overflow-auto p-4">
+        <h1 class="mt-3 text-2xl font-bold">Account</h1>
+        <p class="text-gray-500">Manage your account settings</p>
+        <section class="flex flex-row justify-between gap-2 pt-4">
+          <div class="">
+            <h3 class="text-lg">No inventory mode</h3>
+            <p class="text-gray-500">Use the app as a checklist for shopping only</p>
+          </div>
+          <Switch :checked="noInventoryMode" @update:checked="updateNoInventoryMode($event)"></Switch>
+        </section>
+        <section class="flex flex-row items-center justify-between gap-2 pt-4">
+          <h3 class="text-lg">Theme</h3>
+          <div class="size-11">
+            <ToggleTheme />
+          </div>
+        </section>
+        <section class="flex flex-row items-center justify-between gap-2 pt-4">
+          <h3 class="text-lg">Account type</h3>
+          <div v-if="!settingsStore.settings.ai" class="rounded-md border border-solid border-gray-500/50 px-2 py-1">
+            <span class="text-gray-600 dark:text-gray-300">Free</span>
+          </div>
+          <div
+            v-else
+            class="rounded-md border border-solid bg-gradient-to-r from-red-300/50 to-yellow-300/50 px-2 py-1 dark:from-red-900/50 dark:to-yellow-700/50">
+            <span
+              class="bg-gradient-to-r from-red-700 to-yellow-600 bg-clip-text font-bold uppercase text-transparent dark:from-red-600 dark:to-yellow-300">
+              PRO
+            </span>
+          </div>
+        </section>
+        <div class="my-4 border-b border-solid border-gray-500/50"></div>
+        <form class="" @submit="onSubmit">
+          <h2 class="mt-3 text-2xl font-bold">User</h2>
+          <p class="text-gray-500">Set your preferences for recipe generation</p>
+
+          <h3 class="mt-4 text-lg">Servings</h3>
+          <p class="text-gray-500">Default servings for recipe generation</p>
+          <FormField v-slot="{ componentField }" name="servings">
+            <FormItem>
+              <FormControl>
+                <Input type="number" placeholder="Number of servings" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <h3 class="mt-4 text-lg">Allergies</h3>
+          <p class="text-gray-500">List your food allergies. Separate using comma (,)</p>
+          <FormField v-slot="{ componentField }" name="allergies">
+            <FormItem>
+              <FormControl>
+                <Input type="text" placeholder="Food allergies" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <h3 class="mt-4 text-lg">Favorite Cuisines</h3>
+          <p class="text-gray-500">Your favorite cuisines or food type. Separate using comma (,)</p>
+          <FormField v-slot="{ componentField }" name="cuisines">
+            <FormItem>
+              <FormControl>
+                <Input type="text" placeholder="Favorite cuisines" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <Button class="mt-4" type="submit" @click.prevent="onSubmit">Save changes</Button>
+        </form>
+
+        <div class="flex-grow"></div>
+        <div class="mb-2 w-full">
+          <Button variant="outline" class="mt-3 w-full text-red-500" @click="logout()">Log out</Button>
         </div>
-        <Switch :checked="noInventoryMode" @update:checked="updateNoInventoryMode($event)"></Switch>
-      </section>
-      <section class="flex flex-row items-center justify-between gap-2 pt-4">
-        <h3 class="text-lg">Theme</h3>
-        <div class="size-11">
-          <ToggleTheme />
-        </div>
-      </section>
-      <div class="my-4 border-b border-solid border-gray-500/50"></div>
-      <form class="" @submit="onSubmit">
-        <h2 class="mt-3 text-xl font-bold">Recipe Generation Preferences</h2>
-        <p class="text-gray-500">Set your preferences for recipe generation</p>
-
-        <h3 class="mt-4 text-lg">Servings</h3>
-        <p class="text-gray-500">Default servings for recipe generation</p>
-        <FormField v-slot="{ componentField }" name="servings">
-          <FormItem>
-            <FormControl>
-              <Input type="number" placeholder="Number of servings" v-bind="componentField" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <h3 class="mt-4 text-lg">Allergies</h3>
-        <p class="text-gray-500">List your food allergies. Separate using comma (,)</p>
-        <FormField v-slot="{ componentField }" name="allergies">
-          <FormItem>
-            <FormControl>
-              <Input type="text" placeholder="Food allergies" v-bind="componentField" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <h3 class="mt-4 text-lg">Favorite Cuisines</h3>
-        <p class="text-gray-500">Your favorite cuisines or food type. Separate using comma (,)</p>
-        <FormField v-slot="{ componentField }" name="cuisines">
-          <FormItem>
-            <FormControl>
-              <Input type="text" placeholder="Favorite cuisines" v-bind="componentField" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <Button class="mt-4" type="submit" @click.prevent="onSubmit">Save changes</Button>
-      </form>
-
-      <div class="flex-grow"></div>
-      <div class="mb-2 w-full">
-        <Button variant="outline" class="mt-3 w-full text-red-500" @click="logout()">Log out</Button>
       </div>
     </div>
   </NuxtLayout>

@@ -5,7 +5,7 @@
 
     <div class="relative mx-auto flex h-screen max-w-xl flex-col bg-gray-300/80 backdrop-blur-lg dark:bg-gray-950/90">
       <div
-        class="fixed flex h-12 w-full items-center justify-center border-b border-solid border-gray-300/50 bg-gray-200/50 dark:border-gray-600/50 dark:bg-transparent">
+        class="fixed flex h-12 w-full items-center justify-center border-b border-solid border-gray-300/50 bg-white/80 dark:border-gray-600/50 dark:bg-transparent">
         <span
           class="bg-gradient-to-r from-red-700 to-yellow-600 bg-clip-text text-lg font-extrabold tracking-widest text-transparent dark:from-red-600 dark:to-yellow-300">
           FOODERINO
