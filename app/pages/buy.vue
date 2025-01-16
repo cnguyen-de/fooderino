@@ -31,9 +31,9 @@ const toggleAllLists = async () => {
 };
 const buyItems = computed(() => {
   if (showAllLists.value) {
-    return itemStore.buyItemsFromAllLists;
+    return itemStore.getFilteredAllBuyItems;
   }
-  return itemStore.purchasedItems;
+  return itemStore.getFilteredShoppingItems;
 });
 </script>
 <template>

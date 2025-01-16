@@ -165,6 +165,22 @@ export const useItemStore = defineStore('item', () => {
     return state.inventoryItems?.filter((item) => item.name.toLowerCase()?.includes(state.filterInput.toLowerCase()));
   });
 
+  const getFilteredShoppingItems = computed(() => {
+    if (state.filterInput === '' && state.filterInput) {
+      return state.purchasedItems;
+    }
+    return state.purchasedItems?.filter((item) => item.name.toLowerCase()?.includes(state.filterInput.toLowerCase()));
+  });
+
+  const getFilteredAllBuyItems = computed(() => {
+    if (state.filterInput === '' && state.filterInput) {
+      return state.buyItemsFromAllLists;
+    }
+    return state.buyItemsFromAllLists?.filter((item) =>
+      item.name.toLowerCase()?.includes(state.filterInput.toLowerCase())
+    );
+  });
+
   const inventoryCategories = computed(() => {
     const cat = getFilteredInventoryItems.value
       ?.filter((item) => (settingStore.settings?.show_empty_items ? true : item.amount > 0))
@@ -222,6 +238,8 @@ export const useItemStore = defineStore('item', () => {
     //Getters
     isItemSelected,
     getFilteredInventoryItems,
+    getFilteredShoppingItems,
+    getFilteredAllBuyItems,
     inventoryCategories,
     buyCategories,
     allItemNames,
