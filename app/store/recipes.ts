@@ -31,7 +31,6 @@ export const useRecipeStore = defineStore('recipes', () => {
     state.recipes?.unshift(data.value);
     state.generating = false;
   };
-
   const insertRecipe = async (recipe: Recipe) => {
     const recipes = [...state.recipes];
     const r = recipes.find((r) => r.name === recipe.name);
@@ -40,6 +39,10 @@ export const useRecipeStore = defineStore('recipes', () => {
     }
     state.recipes = [...recipes];
     const { data } = await supabase.from('recipes').insert({ ...recipe, id: user.value?.id });
+  };
+  const updateRecipe = async (recipe: Recipe) => {
+    const { data } = await supabase.from('recipes').update({ saved: true }).eq('index', recipe.index);
+    await fetchRecipes();
   };
 
   const fetchRecipes = async () => {
@@ -77,7 +80,7 @@ export const useRecipeStore = defineStore('recipes', () => {
   return {
     ...toRefs(state),
     generateRecipe,
-    insertRecipe,
+    updateRecipe,
     fetchRecipes,
     deleteRecipe,
 

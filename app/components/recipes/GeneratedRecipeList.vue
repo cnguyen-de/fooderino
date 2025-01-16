@@ -18,7 +18,7 @@ const onAddRecipeIngredientsToBuy = (recipe) => {
 
 const onSaveRecipe = (recipe) => {
   if (!recipe.saved) {
-    recipeStore.insertRecipe(recipe);
+    recipeStore.updateRecipe(recipe);
   } else {
     console.log('what do, remove recipe?');
   }

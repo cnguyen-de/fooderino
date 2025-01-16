@@ -1,4 +1,7 @@
 export interface Recipe {
+  index: number;
+  /** User ID which created the recipe */
+  id: string;
   name: string;
   description: string;
   ingredients: Ingredient[];
