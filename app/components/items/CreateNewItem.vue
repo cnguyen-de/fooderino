@@ -36,20 +36,17 @@ const onSubmit = async () => {
   isDrawerOpen.value = false;
 };
 
-const showCats = ref(false);
-const showStores = ref(false);
-const showNames = ref(false);
 const setLocation = (category: string) => {
   form.value.location = category;
-  showCats.value = false;
+  toggleSuggestions('location');
 };
 const setStore = (store: string) => {
   form.value.store = store;
-  showStores.value = false;
+  toggleSuggestions('store');
 };
 const setName = (n: string) => {
   form.value.name = n;
-  showNames.value = false;
+  toggleSuggestions('name');
   const existingItem = itemStore.allItems.find((item) => item.name === n);
   form.value.amount = existingItem?.amount > 0 ? existingItem.amount : props.location ? 1 : 0;
   form.value.amountToPurchase =
@@ -58,6 +55,31 @@ const setName = (n: string) => {
   form.value.amountType = existingItem?.amountType ?? 'count';
   form.value.store = existingItem?.store ?? '';
   form.value.location = existingItem?.location ?? '';
+};
+const showSuggestionsMap = ref({
+  name: false,
+  location: false,
+  store: false
+});
+
+const toggleSuggestions = (field: string) => {
+  showSuggestionsMap.value[field] = !showSuggestionsMap.value[field];
+  if (field === 'name') {
+    showSuggestionsMap.value.location = false;
+    showSuggestionsMap.value.store = false;
+  } else if (field === 'location') {
+    showSuggestionsMap.value.name = false;
+    showSuggestionsMap.value.store = false;
+  } else if (field === 'store') {
+    showSuggestionsMap.value.name = false;
+    showSuggestionsMap.value.location = false;
+  }
+};
+const clickOutside = () => {
+  // set all key of showSuggestionsMap to false
+  Object.keys(showSuggestionsMap.value).forEach((key) => {
+    showSuggestionsMap.value[key] = false;
+  });
 };
 </script>
 
@@ -76,7 +98,7 @@ const setName = (n: string) => {
       </svg>
     </DrawerTrigger>
     <DrawerContent class="mx-auto max-w-xl">
-      <DrawerHeader>
+      <DrawerHeader @click="clickOutside()">
         <DrawerTitle>Add item</DrawerTitle>
         <DrawerDescription></DrawerDescription>
       </DrawerHeader>
@@ -90,11 +112,12 @@ const setName = (n: string) => {
                 placeholder="Item Name"
                 :modelValue="form.name"
                 @update:modelValue="($event) => (form.name = $event)"
-                @focus="showNames = true" />
+                @focus="toggleSuggestions('name')" />
             </FormControl>
             <div
               v-if="
-                showNames &&
+                showSuggestionsMap['name'] &&
+                form['name']?.length > 0 &&
                 itemStore.allItemNames.length > 0 &&
                 itemStore.allItemNames.some((n) => n?.toLowerCase().includes(form.name?.toLowerCase()))
               "
@@ -122,11 +145,12 @@ const setName = (n: string) => {
                 placeholder="Fridge / Cupboard"
                 :modelValue="form.location"
                 @update:modelValue="($event) => (form.location = $event)"
-                @focus="showCats = true" />
+                @focusin="toggleSuggestions('location')" />
             </FormControl>
             <div
               v-if="
-                showCats &&
+                showSuggestionsMap['location'] &&
+                form['location']?.length > 0 &&
                 itemStore.allCategories.length > 0 &&
                 itemStore.allCategories.some((c) => c?.toLowerCase().includes(form.location?.toLowerCase()))
               "
@@ -149,23 +173,42 @@ const setName = (n: string) => {
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
             <FormLabel>Amount</FormLabel>
             <FormControl>
-              <Input
-                type="text"
+              <NumberField
+                :step="form.amountType === 'count' ? 1 : 100"
+                class="w-20 place-self-start"
                 placeholder="Amount of item you have"
+                :default-value="form.amount"
                 :modelValue="form.amount"
-                @update:modelValue="($event) => (form.amount = $event)" />
+                @update:modelValue="($event) => (form.amount = $event)"
+                :min="0">
+                <NumberFieldContent>
+                  <NumberFieldInput class="peer border-none text-base" />
+                  <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
+                  <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                </NumberFieldContent>
+              </NumberField>
             </FormControl>
           </FormItem>
         </FormField>
+
         <FormField v-else name="amountToPurchase">
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
-            <FormLabel>Purchase Amount</FormLabel>
+            <FormLabel>Shopping Amount</FormLabel>
             <FormControl>
-              <Input
-                type="text"
-                placeholder="Amount to purchase"
+              <NumberField
+                :step="form.amountType === 'count' ? 1 : 100"
+                class="w-20 place-self-start"
+                placeholder="Shopping amount"
+                :default-value="form.amountToPurchase"
                 :modelValue="form.amountToPurchase"
-                @update:modelValue="($event) => (form.amountToPurchase = $event)" />
+                @update:modelValue="($event) => (form.amountToPurchase = $event)"
+                :min="0">
+                <NumberFieldContent>
+                  <NumberFieldInput class="peer border-none text-base" />
+                  <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
+                  <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                </NumberFieldContent>
+              </NumberField>
             </FormControl>
           </FormItem>
         </FormField>
@@ -179,11 +222,12 @@ const setName = (n: string) => {
                 placeholder="Where to buy item"
                 :modelValue="form.store"
                 @update:modelValue="($event) => (form.store = $event)"
-                @focus="showStores = true" />
+                @focus="toggleSuggestions('store')" />
             </FormControl>
             <div
               v-if="
-                showStores &&
+                showSuggestionsMap['store'] &&
+                form['store']?.length > 0 &&
                 itemStore.buyCategories.length > 0 &&
                 itemStore.buyCategories.some((c) => c?.toLowerCase().includes(form.store?.toLowerCase()))
               "
@@ -224,13 +268,22 @@ const setName = (n: string) => {
             <div class="flex flex-col gap-2">
               <FormField v-if="showAmount" v-slot="{ componentField }" name="amountToPurchase">
                 <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
-                  <FormLabel>Purchase Amount</FormLabel>
+                  <FormLabel>Shopping Amount</FormLabel>
                   <FormControl>
-                    <Input
-                      type="text"
-                      placeholder="Amount to purchase"
+                    <NumberField
+                      :step="form.amountType === 'count' ? 1 : 100"
+                      class="w-20 place-self-start"
+                      placeholder="Shopping amount"
+                      :default-value="form.amountToPurchase"
                       :modelValue="form.amountToPurchase"
-                      @update:modelValue="($event) => (form.amountToPurchase = $event)" />
+                      @update:modelValue="($event) => (form.amountToPurchase = $event)"
+                      :min="0">
+                      <NumberFieldContent>
+                        <NumberFieldInput class="peer border-none text-base" />
+                        <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
+                        <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                      </NumberFieldContent>
+                    </NumberField>
                   </FormControl>
                 </FormItem>
               </FormField>
@@ -238,11 +291,20 @@ const setName = (n: string) => {
                 <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
                   <FormLabel>Amount</FormLabel>
                   <FormControl>
-                    <Input
-                      type="text"
+                    <NumberField
+                      :step="form.amountType === 'count' ? 1 : 100"
+                      class="w-20 place-self-start"
                       placeholder="Amount of item you have"
+                      :default-value="form.amount"
                       :modelValue="form.amount"
-                      @update:modelValue="($event) => (form.amount = $event)" />
+                      @update:modelValue="($event) => (form.amount = $event)"
+                      :min="0">
+                      <NumberFieldContent>
+                        <NumberFieldInput class="peer border-none text-base" />
+                        <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
+                        <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                      </NumberFieldContent>
+                    </NumberField>
                   </FormControl>
                 </FormItem>
               </FormField>
@@ -251,7 +313,7 @@ const setName = (n: string) => {
                 <FormItem class="relative mb-4 grid grid-cols-[64px_1fr] place-items-center gap-2">
                   <FormLabel>Default Amount</FormLabel>
                   <FormDescription class="absolute top-10">
-                    Automatically add to purchase list after the amount is lower than
+                    Auto. add to shoping list when amount is below this
                   </FormDescription>
                   <FormControl>
                     <Input
@@ -286,7 +348,7 @@ const setName = (n: string) => {
           </CollapsibleContent>
         </Collapsible>
       </form>
-      <DrawerFooter>
+      <DrawerFooter @click="clickOutside()">
         <div class="flex flex-row justify-between">
           <DrawerClose>
             <Button variant="ghost" class="text-red-500">Cancel</Button>
