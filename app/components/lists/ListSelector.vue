@@ -82,7 +82,7 @@ const onRenameList = async () => {
   <div v-if="selectedList?.name" class="flex flex-row items-center py-1">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button class="relative border-none bg-transparent p-0 pl-2 text-2xl" variant="outline">
+        <Button class="relative border-none bg-transparent p-0 px-2 text-2xl" variant="outline">
           {{ selectedList?.name }} ▾
           <span
             v-if="inviteStore.receivedInvites?.length > 0"
@@ -123,6 +123,8 @@ const onRenameList = async () => {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+    <div class="flex-grow"></div>
+
     <div class="flex items-center justify-center">
       <button v-if="false" variant="ghost" @click="settingStore.toggleEmptyItems()">
         <svg
