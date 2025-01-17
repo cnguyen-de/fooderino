@@ -5,12 +5,15 @@ import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useForm } from 'vee-validate';
 import { useInviteStore } from '~/store/invites';
-import UserList from '~/components/lists/UserList.vue';
 import { toast } from 'vue-sonner';
+import { ShoppingBasket } from 'lucide-vue-next';
+import { useStorage } from '@vueuse/core';
+import { useItemStore } from '~/store/item';
 
 const listStore = useListStore();
-const { selectedList, lists } = toRefs(listStore);
+const itemStore = useItemStore();
 const settingStore = useSettingsStore();
+const { selectedList, lists } = toRefs(listStore);
 const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(1).max(50)
@@ -45,22 +48,22 @@ const acceptInvite = async (accept) => {
   toast('Successfully joined list');
   isAcceptInviteDrawerOpen.value = false;
 };
-const onRemoveUser = async (email: string, isInvite = false) => {
-  if (isInvite) {
-    await inviteStore.removeInvite(email);
-  } else {
-    await listStore.removeUser(email);
-  }
 
-  toast('Successfully removed user', email);
+const isShoppingMode = ref(itemStore.showBuyItemsFromAllLists);
+const toggleAllLists = async () => {
+  isShoppingMode.value = !isShoppingMode.value;
+  itemStore.showBuyItemsFromAllLists = isShoppingMode.value;
+  if (isShoppingMode.value) {
+    await itemStore.fetchBuyItemsFromAllLists();
+  }
 };
 </script>
 
 <template>
-  <div v-if="selectedList?.name" class="flex flex-row justify-between">
+  <div v-if="selectedList?.name" class="flex flex-row items-center py-1">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button class="relative my-2 ml-2 border-none bg-transparent px-0 text-2xl" variant="outline">
+        <Button class="relative border-none bg-transparent p-0 pl-2 text-2xl" variant="outline">
           {{ selectedList?.name }} ▾
           <span
             v-if="inviteStore.receivedInvites?.length > 0"
@@ -101,7 +104,7 @@ const onRemoveUser = async (email: string, isInvite = false) => {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
-    <div class="ml-2 flex items-center justify-center gap-1">
+    <div class="flex items-center justify-center">
       <button v-if="false" variant="ghost" @click="settingStore.toggleEmptyItems()">
         <svg
           v-if="settingStore.settings?.show_empty_items"
@@ -131,9 +134,15 @@ const onRemoveUser = async (email: string, isInvite = false) => {
             d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
         </svg>
       </button>
-      <FilterItemsInput></FilterItemsInput>
+      <FilterItemsInput class="mx-1"></FilterItemsInput>
     </div>
     <div class="flex-grow"></div>
+    <Toggle class="px-2" :pressed="isShoppingMode" @update:pressed="toggleAllLists">
+      <ShoppingBasket
+        :class="[isShoppingMode ? 'text-orange-700 dark:text-orange-300' : 'text-gray-600']"></ShoppingBasket>
+    </Toggle>
+    <ListMenu></ListMenu>
+    <!-- 
     <div class="mx-2 flex flex-row items-center justify-center gap-1">
       <InviteButton></InviteButton>
       <UserList
@@ -154,7 +163,7 @@ const onRemoveUser = async (email: string, isInvite = false) => {
         :key="user.email"
         @remove-user="onRemoveUser($event)">
       </UserList>
-    </div>
+    </div> -->
 
     <Drawer v-model:open="isCreateListDrawerOpen" @onOpenChange="isCreateListDrawerOpen = $event">
       <DrawerContent>

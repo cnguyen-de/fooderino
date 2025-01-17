@@ -6,10 +6,10 @@ import { useListStore } from '~/store/list';
 const itemStore = useItemStore();
 const listStore = useListStore();
 itemStore.fetchItems();
-
+const { showBuyItemsFromAllLists } = toRefs(itemStore);
 const categories = computed(() => {
   let stores = itemStore?.purchasedItems?.map((item) => item.store.trim());
-  if (showAllLists.value) {
+  if (showBuyItemsFromAllLists.value) {
     stores = itemStore?.buyItemsFromAllLists?.map((item) => item.store.trim());
   }
   return [...new Set(stores)].sort((a, b) => a.localeCompare(b));
@@ -21,16 +21,9 @@ const updateStoreMap = (category, isOpen) => {
   localStorage.setItem('storeOpenMap', storeOpenMap.toString());
 };
 
-const showAllLists = ref(itemStore.showBuyItemsFromAllLists);
-const toggleAllLists = async () => {
-  showAllLists.value = !showAllLists.value;
-  itemStore.showBuyItemsFromAllLists = showAllLists.value;
-  if (showAllLists.value) {
-    await itemStore.fetchBuyItemsFromAllLists();
-  }
-};
 const buyItems = computed(() => {
-  if (showAllLists.value) {
+  console.log(showBuyItemsFromAllLists);
+  if (showBuyItemsFromAllLists.value) {
     return itemStore.getFilteredAllBuyItems;
   }
   return itemStore.getFilteredShoppingItems;
@@ -42,12 +35,6 @@ const buyItems = computed(() => {
       <div
         class="h-[calc(100%_-_7rem)] w-full overflow-auto"
         :class="{ '!h-[calc(100%_-_17rem)]': !listStore.selectedList }">
-        <section>
-          <div class="flex flex-row justify-center gap-2 px-4">
-            <label class="" for="shoppingMode">Shopping Mode</label>
-            <Switch :value="showAllLists" @update:checked="toggleAllLists" id="shoppingMode"></Switch>
-          </div>
-        </section>
         <div v-for="category in categories" :key="category">
           <Collapsible :open="storeOpenMap[category]" @update:open="updateStoreMap(category, $event)">
             <div class="flex flex-row pr-4">
