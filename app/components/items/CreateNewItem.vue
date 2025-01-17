@@ -313,7 +313,7 @@ const clickOutside = () => {
                 <FormItem class="relative mb-4 grid grid-cols-[64px_1fr] place-items-center gap-2">
                   <FormLabel>Default Amount</FormLabel>
                   <FormDescription class="absolute top-10">
-                    Auto. add to shoping list when amount is below this
+                    Auto. add to shopping list when amount is below this
                   </FormDescription>
                   <FormControl>
                     <Input

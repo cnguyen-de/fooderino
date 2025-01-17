@@ -76,7 +76,7 @@ const updateCategoryMap = (category, isOpen) => {
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle> Rename category </DrawerTitle>
-            <DrawerDescription> This action will affects all items under this category </DrawerDescription>
+            <DrawerDescription> This action will affect all items under this category </DrawerDescription>
           </DrawerHeader>
           <div class="px-4">
             <Input class="" type="text" v-model="selectedCategory"></Input>
