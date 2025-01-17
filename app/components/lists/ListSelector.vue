@@ -9,10 +9,12 @@ import { toast } from 'vue-sonner';
 import { ShoppingBasket } from 'lucide-vue-next';
 import { useStorage } from '@vueuse/core';
 import { useItemStore } from '~/store/item';
+import { useDrawerStore } from '~/store/drawers';
 
 const listStore = useListStore();
 const itemStore = useItemStore();
 const settingStore = useSettingsStore();
+const drawerStore = useDrawerStore();
 const { selectedList, lists } = toRefs(listStore);
 const formSchema = toTypedSchema(
   z.object({
@@ -56,6 +58,13 @@ const toggleAllLists = async () => {
   if (isShoppingMode.value) {
     await itemStore.fetchBuyItemsFromAllLists();
   }
+};
+
+const inviteEmail = ref('');
+const onSubmitInvite = async () => {
+  await inviteStore.sendInvite(inviteEmail.value, selectedList.value.id);
+  drawerStore.isInviteDrawerOpen = false;
+  inviteEmail.value = '';
 };
 </script>
 
@@ -165,6 +174,7 @@ const toggleAllLists = async () => {
       </UserList>
     </div> -->
 
+    <!-- Create List Drawer -->
     <Drawer v-model:open="isCreateListDrawerOpen" @onOpenChange="isCreateListDrawerOpen = $event">
       <DrawerContent>
         <DrawerHeader>
@@ -192,6 +202,8 @@ const toggleAllLists = async () => {
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+
+    <!-- Accept Invite Drawer -->
     <Drawer v-model:open="isAcceptInviteDrawerOpen" @onOpenChange="isAcceptInviteDrawerOpen = $event">
       <DrawerContent>
         <DrawerHeader>
@@ -208,6 +220,36 @@ const toggleAllLists = async () => {
             </DrawerClose>
             <DrawerClose>
               <Button type="submit" @click.prevent="acceptInvite(true)">Accept</Button>
+            </DrawerClose>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
+
+    <!-- Invite Drawer -->
+    <Drawer v-model:open="drawerStore.isInviteDrawerOpen" @onOpenChange="drawerStore.isInviteDrawerOpen = $event">
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Invite someone to join the {{ selectedList?.name }} list</DrawerTitle>
+          <DrawerDescription>The invited person will be able to see and edit the list</DrawerDescription>
+        </DrawerHeader>
+        <form class="space-y-2 p-4" @submit="onSubmitInvite">
+          <FormField name="invite-email">
+            <FormItem>
+              <FormControl>
+                <Input type="text" name="invite-email" placeholder="Email" v-model="inviteEmail" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+        <DrawerFooter>
+          <div class="flex flex-row justify-between">
+            <DrawerClose>
+              <Button class="text-red-500" variant="ghost"> Cancel </Button>
+            </DrawerClose>
+            <DrawerClose>
+              <Button type="submit" @click.prevent="onSubmitInvite">Submit</Button>
             </DrawerClose>
           </div>
         </DrawerFooter>
