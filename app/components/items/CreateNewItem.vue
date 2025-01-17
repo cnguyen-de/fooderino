@@ -109,7 +109,8 @@ const clickOutside = () => {
             <FormControl>
               <Input
                 type="text"
-                placeholder="Item Name"
+                placeholder="Item name"
+                name="Item name"
                 :modelValue="form.name"
                 @update:modelValue="($event) => (form.name = $event)"
                 @focus="toggleSuggestions('name')" />
@@ -142,7 +143,8 @@ const clickOutside = () => {
             <FormControl>
               <Input
                 type="text"
-                placeholder="Fridge / Cupboard"
+                name="Item Location"
+                placeholder="Item location at home, E.G Fridge"
                 :modelValue="form.location"
                 @update:modelValue="($event) => (form.location = $event)"
                 @focusin="toggleSuggestions('location')" />
@@ -219,7 +221,8 @@ const clickOutside = () => {
             <FormControl>
               <Input
                 type="text"
-                placeholder="Where to buy item"
+                name="Item Store"
+                placeholder="Where to buy item, E.G Supermarket"
                 :modelValue="form.store"
                 @update:modelValue="($event) => (form.store = $event)"
                 @focus="toggleSuggestions('store')" />
