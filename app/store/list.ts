@@ -47,6 +47,12 @@ export const useListStore = defineStore('list', () => {
     await fetchLists();
   };
 
+  const renameList = async (name: string) => {
+    await supabase.from('lists').update({ name }).eq('id', state.selectedList.id);
+    await fetchLists();
+    state.selectedList.name = name;
+  };
+
   const deleteList = async (id: string) => {
     await supabase.from('lists').delete().eq('id', id);
     await fetchLists();
@@ -68,6 +74,7 @@ export const useListStore = defineStore('list', () => {
     ...toRefs(state),
     fetchLists,
     createList,
+    renameList,
     deleteList,
     setSelectedList,
     removeUser

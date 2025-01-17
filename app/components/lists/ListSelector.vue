@@ -68,8 +68,13 @@ const onSubmitInvite = async () => {
 };
 
 const onDeleteListConfirm = async () => {
-  console.log('delete list', selectedList.value);
   await listStore.deleteList(selectedList.value.id);
+};
+
+const newListName = ref('');
+const onRenameList = async () => {
+  await listStore.renameList(newListName.value);
+  newListName.value = '';
 };
 </script>
 
@@ -262,22 +267,32 @@ const onDeleteListConfirm = async () => {
     </Drawer>
 
     <!-- Rename List Drawer -->
-    <Drawer v-model:open="isAcceptInviteDrawerOpen" @onOpenChange="isAcceptInviteDrawerOpen = $event">
+    <Drawer
+      v-model:open="drawerStore.isRenameListDrawerOpen"
+      @onOpenChange="drawerStore.isRenameListDrawerOpen = $event">
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>List Invitation</DrawerTitle>
-          <DrawerDescription
-            >{{ inviteStore.selectedInvite?.from }} has invited you to join their list. Do you accept the
-            invitation?</DrawerDescription
-          >
+          <DrawerTitle>Rename {{ selectedList.name }} list</DrawerTitle>
         </DrawerHeader>
+        <form class="space-y-2 p-4" @submit="onSubmitInvite">
+          <FormField name="list-rename">
+            <FormItem>
+              <FormControl>
+                <Input type="text" name="list-rename" :placeholder="selectedList.name" v-model="newListName" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
         <DrawerFooter>
           <div class="flex flex-row justify-between">
             <DrawerClose>
-              <Button class="text-red-500" variant="ghost" @click="acceptInvite(false)">Deny</Button>
+              <Button class="text-red-500" variant="ghost" @click="drawerStore.isRenameListDrawerOpen = false">
+                Cancel
+              </Button>
             </DrawerClose>
             <DrawerClose>
-              <Button type="submit" @click.prevent="acceptInvite(true)">Accept</Button>
+              <Button type="submit" @click.prevent="onRenameList">Accept</Button>
             </DrawerClose>
           </div>
         </DrawerFooter>
