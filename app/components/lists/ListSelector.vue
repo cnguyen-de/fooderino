@@ -60,7 +60,7 @@ const onRemoveUser = async (email: string, isInvite = false) => {
   <div v-if="selectedList?.name" class="flex flex-row justify-between">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button class="relative mb-2 border-none bg-transparent px-2 text-2xl" variant="outline">
+        <Button class="relative my-2 ml-2 border-none bg-transparent px-0 text-2xl" variant="outline">
           {{ selectedList?.name }} ▾
           <span
             v-if="inviteStore.receivedInvites?.length > 0"

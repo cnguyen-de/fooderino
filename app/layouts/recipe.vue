@@ -2,12 +2,12 @@
 
 <template>
   <div class="flex flex-row justify-center">
-    <FooterLink link="/recipe">
+    <FooterLink link="/recipe" alt-design>
       <div class="flex flex-row py-2">
         <span> Saved Recipes </span>
       </div>
     </FooterLink>
-    <FooterLink link="/recipe/ai">
+    <FooterLink link="/recipe/ai" alt-design>
       <div class="flex flex-row p-2">
         <span>🪄 GenAI Recipes</span>
       </div>

@@ -56,8 +56,8 @@ const buyItems = computed(() => {
                 <ChevronRight
                   class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               </CollapsibleTrigger>
-              <CreateNewItem :store="category"></CreateNewItem>
               <span class="flex-grow"></span>
+              <CreateNewItem :store="category"></CreateNewItem>
             </div>
             <CollapsibleContent>
               <BuyList

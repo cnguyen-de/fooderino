@@ -16,7 +16,7 @@ watchDebounced(
 <template>
   <div class="relative">
     <Input
-      class="right-0 h-8 w-full rounded !border-0 bg-gray-300/50 pl-7 text-gray-700 transition-all focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 dark:bg-gray-700/50 dark:text-gray-300"
+      class="right-0 h-8 w-full rounded !border-0 bg-gray-100/30 pl-7 text-gray-700 transition-all focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 dark:bg-gray-700/30 dark:text-gray-300"
       placeholder="Find items"
       v-model="input">
     </Input>

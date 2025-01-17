@@ -1,6 +1,7 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{ link: string; includeChild?: boolean }>(), {
-  includeChild: false
+const props = withDefaults(defineProps<{ link: string; includeChild?: boolean; altDesign?: boolean }>(), {
+  includeChild: false,
+  altDesign: false
 });
 const router = useRouter();
 const currentRoute = ref();
@@ -20,9 +21,17 @@ const isCurrentRoute = () => {
 </script>
 
 <template>
-  <div
+  <NuxtLink
     class="flex h-full w-full items-center justify-center rounded-md"
-    :class="{ 'bg-white dark:bg-gray-600/50': isCurrentRoute() }">
-    <NuxtLink class="font-bold text-gray-700 dark:text-gray-300" :to="link"><slot></slot></NuxtLink>
-  </div>
+    :class="{
+      'bg-white dark:bg-gray-600/50': isCurrentRoute() && !props.altDesign,
+      'rounded-none border-t-2 !border-red-500 font-bold !text-black dark:!text-white':
+        isCurrentRoute() && props.altDesign,
+      'rounded-none bg-white/80 dark:bg-gray-700/50': !isCurrentRoute() && props.altDesign
+    }"
+    :to="link">
+    <div class="text-gray-700 dark:text-gray-300">
+      <slot></slot>
+    </div>
+  </NuxtLink>
 </template>
