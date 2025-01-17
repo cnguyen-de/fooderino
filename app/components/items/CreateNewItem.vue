@@ -179,6 +179,7 @@ const clickOutside = () => {
                 :step="form.amountType === 'count' ? 1 : 100"
                 class="w-20 place-self-start"
                 placeholder="Amount of item you have"
+                name="Item amount"
                 :default-value="form.amount"
                 :modelValue="form.amount"
                 @update:modelValue="($event) => (form.amount = $event)"
@@ -201,6 +202,7 @@ const clickOutside = () => {
                 :step="form.amountType === 'count' ? 1 : 100"
                 class="w-20 place-self-start"
                 placeholder="Shopping amount"
+                name="Shopping amount"
                 :default-value="form.amountToPurchase"
                 :modelValue="form.amountToPurchase"
                 @update:modelValue="($event) => (form.amountToPurchase = $event)"
@@ -277,6 +279,7 @@ const clickOutside = () => {
                       :step="form.amountType === 'count' ? 1 : 100"
                       class="w-20 place-self-start"
                       placeholder="Shopping amount"
+                      name="Shopping amount"
                       :default-value="form.amountToPurchase"
                       :modelValue="form.amountToPurchase"
                       @update:modelValue="($event) => (form.amountToPurchase = $event)"
@@ -298,6 +301,7 @@ const clickOutside = () => {
                       :step="form.amountType === 'count' ? 1 : 100"
                       class="w-20 place-self-start"
                       placeholder="Amount of item you have"
+                      name="Item amount"
                       :default-value="form.amount"
                       :modelValue="form.amount"
                       @update:modelValue="($event) => (form.amount = $event)"
@@ -322,6 +326,7 @@ const clickOutside = () => {
                     <Input
                       type="text"
                       placeholder="Amount of items should always be in Inventory"
+                      name="Default Amount"
                       :modelValue="form.defaultAmount"
                       @update:modelValue="($event) => (form.defaultAmount = $event)" />
                   </FormControl>

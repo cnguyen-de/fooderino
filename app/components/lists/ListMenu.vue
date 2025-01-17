@@ -22,8 +22,8 @@ const onRemoveUser = async (email: string, isInvite = false) => {
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button class="relative border-none bg-transparent px-1" variant="ghost">
-        <EllipsisVertical></EllipsisVertical>
+      <Button class="relative h-9 border-none bg-transparent p-1" variant="ghost">
+        <EllipsisVertical class="size-5"></EllipsisVertical>
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
