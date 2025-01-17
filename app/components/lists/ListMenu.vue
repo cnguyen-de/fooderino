@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { EllipsisVertical, Pencil, Trash } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
+import { useDrawerStore } from '~/store/drawers';
 import { useInviteStore } from '~/store/invites';
 import { useListStore } from '~/store/list';
 
+const drawerStore = useDrawerStore();
 const listStore = useListStore();
 const inviteStore = useInviteStore();
 const { selectedList } = toRefs(listStore);
@@ -50,18 +52,18 @@ const onRemoveUser = async (email: string, isInvite = false) => {
         </UserList>
       </div>
       <DropdownMenuItem>
-        <InviteButton> Invite</InviteButton>
+        <InviteButton>Invite</InviteButton>
       </DropdownMenuItem>
 
       <DropdownMenuSeparator />
       <DropdownMenuItem>
-        <button class="flex items-center justify-center gap-2">
+        <button class="flex items-center justify-center gap-2" @click="drawerStore.isRenameListDrawerOpen = true">
           <Pencil class="size-5"></Pencil>
           Rename
         </button>
       </DropdownMenuItem>
       <DropdownMenuItem class="text-red-500">
-        <button class="flex items-center justify-center gap-2">
+        <button class="flex items-center justify-center gap-2" @click="drawerStore.isDeleteListDrawerOpen = true">
           <Trash class="size-5"></Trash>
           Delete
         </button>

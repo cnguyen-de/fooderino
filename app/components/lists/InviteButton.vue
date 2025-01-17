@@ -1,32 +1,5 @@
 <script setup lang="ts">
-import { useListStore } from '~/store/list';
-import { toTypedSchema } from '@vee-validate/zod';
-import * as z from 'zod';
-import { useForm } from 'vee-validate';
-import { AlertCircle } from 'lucide-vue-next';
-import { useInviteStore } from '~/store/invites';
-import { toast } from 'vue-sonner';
 import { useDrawerStore } from '~/store/drawers';
-
-const listStore = useListStore();
-const { selectedList } = toRefs(listStore);
-const formSchema = toTypedSchema(
-  z.object({
-    email: z.string().min(1).max(50)
-  })
-);
-const form = useForm({
-  validationSchema: formSchema
-});
-
-const inviteStore = useInviteStore();
-const isDrawerOpen = ref(false);
-const onSubmit = form.handleSubmit(async (values) => {
-  //send invite
-  //add feedback that invite was successfully sent
-  await inviteStore.sendInvite(values.email, selectedList.value.id);
-  isDrawerOpen.value = false;
-});
 
 const drawerStore = useDrawerStore();
 </script>
@@ -50,5 +23,3 @@ const drawerStore = useDrawerStore();
     <slot></slot>
   </button>
 </template>
-
-<style scoped></style>

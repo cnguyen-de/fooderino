@@ -22,7 +22,6 @@ const updateStoreMap = (category, isOpen) => {
 };
 
 const buyItems = computed(() => {
-  console.log(showBuyItemsFromAllLists);
   if (showBuyItemsFromAllLists.value) {
     return itemStore.getFilteredAllBuyItems;
   }

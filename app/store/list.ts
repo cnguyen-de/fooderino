@@ -18,7 +18,7 @@ export const useListStore = defineStore('list', () => {
   const fetchLists = async () => {
     const { data } = await useFetch('/api/list');
     state.lists = data?.value?.lists;
-    if (!state.selectedList) {
+    if (!state.selectedList || !state.lists.some((list) => list.id === state.selectedList?.id)) {
       setSelectedList(data?.value?.lists[0]);
     }
   };
@@ -31,7 +31,7 @@ export const useListStore = defineStore('list', () => {
     await inviteStore.getSentInvites();
   };
 
-  const createList = async (name) => {
+  const createList = async (name: string) => {
     await supabase.from('lists').insert({
       name,
       users: [
@@ -44,6 +44,11 @@ export const useListStore = defineStore('list', () => {
       ],
       admin: user.value?.id
     });
+    await fetchLists();
+  };
+
+  const deleteList = async (id: string) => {
+    await supabase.from('lists').delete().eq('id', id);
     await fetchLists();
   };
 
@@ -63,6 +68,7 @@ export const useListStore = defineStore('list', () => {
     ...toRefs(state),
     fetchLists,
     createList,
+    deleteList,
     setSelectedList,
     removeUser
   };
