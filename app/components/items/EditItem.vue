@@ -55,12 +55,14 @@ const saveChanges = async () => {
         <DrawerTitle> {{ locationRef }} | {{ item.name }}</DrawerTitle>
       </DrawerHeader>
       <DrawerFooter @change="isDirty = true">
-        <div class="flex flex-row items-center gap-2">
+        <div class="flex flex-row items-center gap-4">
           <label for="defaultAmount" class="whitespace-nowrap">Default Amount</label>
           <Input id="defaultAmount" v-model="defaultAmountRef" name="defaultAmount" />
         </div>
-        <div class="flex flex-row items-center gap-2">
-          <label for="defaultAmount" class="whitespace-nowrap">Category</label>
+        <div class="flex flex-row items-center gap-4">
+          <label for="defaultAmount" class="whitespace-nowrap">
+            {{ props.isBuyList ? 'Store' : 'Category' }}
+          </label>
 
           <Input v-model="locationRef" placeholder="New Value" />
         </div>
