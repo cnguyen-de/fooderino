@@ -5,7 +5,7 @@ import { useSettingsStore } from './settings';
 
 interface State {
   inventoryItems: Item[];
-  purchasedItems: Item[];
+  buyItems: Item[];
   selectedItems: string[];
   filterInput: string;
   allItems: Item[];
@@ -15,7 +15,7 @@ interface State {
 export const useItemStore = defineStore('item', () => {
   const state = reactive<State>({
     inventoryItems: [],
-    purchasedItems: [],
+    buyItems: [],
     selectedItems: [],
     filterInput: '',
     allItems: [],
@@ -36,7 +36,7 @@ export const useItemStore = defineStore('item', () => {
     }
     const { data } = await client.from('items').select().eq('list_id', listStore.selectedList?.id);
     state.inventoryItems = data.filter((item) => item.amount > 0);
-    state.purchasedItems = data.filter((item) => item.amount_to_purchase > 0);
+    state.buyItems = data.filter((item) => item.amount_to_purchase > 0);
     state.allItems = data;
   };
 
@@ -49,7 +49,7 @@ export const useItemStore = defineStore('item', () => {
       .select()
       .gte('amount_to_purchase', 1)
       .eq('list_id', listStore.selectedList?.id);
-    state.purchasedItems = data;
+    state.buyItems = data;
   };
 
   const fetchBuyItemsFromAllLists = async () => {
@@ -167,9 +167,9 @@ export const useItemStore = defineStore('item', () => {
 
   const getFilteredShoppingItems = computed(() => {
     if (state.filterInput === '' && state.filterInput) {
-      return state.purchasedItems;
+      return state.buyItems;
     }
-    return state.purchasedItems?.filter((item) => item.name.toLowerCase()?.includes(state.filterInput.toLowerCase()));
+    return state.buyItems?.filter((item) => item.name.toLowerCase()?.includes(state.filterInput.toLowerCase()));
   });
 
   const getFilteredAllBuyItems = computed(() => {
@@ -195,7 +195,7 @@ export const useItemStore = defineStore('item', () => {
   });
 
   const buyCategories = computed(() => {
-    const cat = state.purchasedItems.map((item) => item.store.trim());
+    const cat = state.buyItems.map((item) => item.store.trim());
     return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
   });
 
@@ -208,6 +208,14 @@ export const useItemStore = defineStore('item', () => {
     const items = state.inventoryItems.filter((item) => item.location === oldCategory);
     for (const item of items) {
       await client.from('items').update({ location: newCategory }).eq('id', item.id);
+    }
+    await fetchItems();
+  };
+
+  const renameStore = async (oldStore: string, newStore: string) => {
+    const items = state.buyItems.filter((item) => item.store === oldStore);
+    for (const item of items) {
+      await client.from('items').update({ store: newStore }).eq('id', item.id);
     }
     await fetchItems();
   };
@@ -233,6 +241,7 @@ export const useItemStore = defineStore('item', () => {
     deselectAllItems,
     setFilterInput,
     renameCategory,
+    renameStore,
     deleteItem,
 
     //Getters

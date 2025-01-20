@@ -7,6 +7,7 @@ import { toast } from 'vue-sonner';
 import ToggleTheme from '../components/landing-page/ToggleTheme.vue';
 
 const supabase = useSupabaseClient();
+const user = useSupabaseUser();
 const logout = async () => {
   await supabase.auth.signOut();
   window.location.reload();
@@ -32,6 +33,7 @@ const formSchema = toTypedSchema(
       .default(settingsStore.settings?.cuisines ?? '')
   })
 );
+console.log(user.value);
 const form = useForm({
   validationSchema: formSchema
 });
@@ -50,23 +52,25 @@ const updateNoInventoryMode = async (checked: boolean) => {
   <NuxtLayout name="app">
     <div class="relative h-full w-full">
       <div class="h-[calc(100%_-_4rem)] w-full overflow-auto p-4">
-        <h1 class="mt-3 text-2xl font-bold">Account</h1>
-        <p class="text-gray-500">Manage your account settings</p>
+        <h1 class="mt-2 text-2xl font-bold">Account</h1>
         <section class="flex flex-row justify-between gap-2 pt-4">
           <div class="">
-            <h3 class="text-lg">No inventory mode</h3>
-            <p class="text-gray-500">Use the app as a checklist for shopping only</p>
+            <h3 class="text-lg">{{ user?.user_metadata?.name }}</h3>
+            <p class="text-gray-500">{{ user?.email }}</p>
           </div>
-          <Switch :checked="noInventoryMode" @update:checked="updateNoInventoryMode($event)"></Switch>
-        </section>
-        <section class="flex flex-row items-center justify-between gap-2 pt-4">
-          <h3 class="text-lg">Theme</h3>
-          <div class="size-11">
-            <ToggleTheme />
-          </div>
+          <Avatar class="size-12">
+            <AvatarImage :src="user?.user_metadata.picture" alt="@radix-vue" />
+            <AvatarFallback>{{
+              user?.user_metadata.name
+                ?.split(' ')
+                .map((n) => n[0])
+                .join('')
+            }}</AvatarFallback>
+          </Avatar>
         </section>
         <section class="flex flex-row items-center justify-between gap-2 pt-4">
           <h3 class="text-lg">Account type</h3>
+          <p v-if="!settingsStore.settings.ai"><button>Upgrade to PRO</button></p>
           <div v-if="!settingsStore.settings.ai" class="rounded-md border border-solid border-gray-500/50 px-2 py-1">
             <span class="text-gray-600 dark:text-gray-300">Free</span>
           </div>
@@ -79,7 +83,28 @@ const updateNoInventoryMode = async (checked: boolean) => {
             </span>
           </div>
         </section>
-        <div class="my-4 border-b border-solid border-gray-500/50"></div>
+        <div class="mb-2 flex flex-row justify-end">
+          <Button variant="outline" class="mt-3 text-red-500" @click="logout()">Log out</Button>
+        </div>
+
+        <Separator class="my-4" />
+        <h1 class="mt-3 text-2xl font-bold">Settings</h1>
+        <p class="text-gray-500">Manage your app settings</p>
+        <section class="flex flex-row justify-between gap-2 pt-4">
+          <div class="">
+            <h3 class="text-lg">No inventory mode</h3>
+            <p class="text-gray-500">Use as a checklist for shopping only</p>
+          </div>
+          <Switch :checked="noInventoryMode" @update:checked="updateNoInventoryMode($event)"></Switch>
+        </section>
+        <section class="flex flex-row items-center justify-between gap-2 pt-4">
+          <h3 class="text-lg">Theme</h3>
+          <div class="size-11">
+            <ToggleTheme />
+          </div>
+        </section>
+
+        <Separator class="my-4" />
         <form class="" @submit="onSubmit">
           <h2 class="mt-3 text-2xl font-bold">User</h2>
           <p class="text-gray-500">Set your preferences for recipe generation</p>
@@ -119,11 +144,6 @@ const updateNoInventoryMode = async (checked: boolean) => {
 
           <Button class="mt-4" type="submit" @click.prevent="onSubmit">Save changes</Button>
         </form>
-
-        <div class="flex-grow"></div>
-        <div class="mb-2 w-full">
-          <Button variant="outline" class="mt-3 w-full text-red-500" @click="logout()">Log out</Button>
-        </div>
       </div>
     </div>
   </NuxtLayout>

@@ -186,8 +186,8 @@ const clickOutside = () => {
                 :min="0">
                 <NumberFieldContent>
                   <NumberFieldInput class="peer border-none text-base" />
-                  <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
-                  <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                  <NumberFieldDecrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
+                  <NumberFieldIncrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
                 </NumberFieldContent>
               </NumberField>
             </FormControl>
@@ -209,8 +209,8 @@ const clickOutside = () => {
                 :min="0">
                 <NumberFieldContent>
                   <NumberFieldInput class="peer border-none text-base" />
-                  <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
-                  <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                  <NumberFieldDecrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
+                  <NumberFieldIncrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
                 </NumberFieldContent>
               </NumberField>
             </FormControl>
@@ -286,8 +286,8 @@ const clickOutside = () => {
                       :min="0">
                       <NumberFieldContent>
                         <NumberFieldInput class="peer border-none text-base" />
-                        <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
-                        <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                        <NumberFieldDecrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
+                        <NumberFieldIncrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
                       </NumberFieldContent>
                     </NumberField>
                   </FormControl>
@@ -308,8 +308,8 @@ const clickOutside = () => {
                       :min="0">
                       <NumberFieldContent>
                         <NumberFieldInput class="peer border-none text-base" />
-                        <NumberFieldDecrement class="rounded-full px-1 text-gray-800/50" />
-                        <NumberFieldIncrement class="rounded-full px-1 text-gray-800/50" />
+                        <NumberFieldDecrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
+                        <NumberFieldIncrement class="rounded-full px-1 text-gray-800 dark:text-gray-200" />
                       </NumberFieldContent>
                     </NumberField>
                   </FormControl>

@@ -25,9 +25,8 @@ const isCurrentRoute = () => {
     class="flex h-full w-full items-center justify-center rounded-md text-gray-700 dark:text-gray-300"
     :class="{
       'bg-white dark:bg-gray-600/50': isCurrentRoute() && !props.altDesign,
-      'rounded-none border-t-2 !border-red-500 font-bold !text-black dark:!text-white':
-        isCurrentRoute() && props.altDesign,
-      'rounded-none bg-white/80 !text-gray-500 dark:bg-gray-700/50': !isCurrentRoute() && props.altDesign
+      'bg-gradient-to-r from-red-600/70 to-yellow-600/70 font-bold !text-orange-100':
+        isCurrentRoute() && props.altDesign
     }"
     :to="link">
     <slot></slot>

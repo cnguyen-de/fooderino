@@ -13,7 +13,7 @@ const shortName = computed(
     props.name
       ?.split(' ')
       .map((n) => n[0])
-      .join('.') ?? props.email[0]
+      .join('') ?? props.email[0]
 );
 
 const removeUser = (email: string) => {

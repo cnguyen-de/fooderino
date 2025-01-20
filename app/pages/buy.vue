@@ -1,6 +1,6 @@
 <script setup>
 import { useItemStore } from '~/store/item';
-import { ChevronRight } from 'lucide-vue-next';
+import { ChevronRight, Pencil } from 'lucide-vue-next';
 import { useStorage } from '@vueuse/core';
 import { useListStore } from '~/store/list';
 const itemStore = useItemStore();
@@ -8,7 +8,7 @@ const listStore = useListStore();
 itemStore.fetchItems();
 const { showBuyItemsFromAllLists } = toRefs(itemStore);
 const categories = computed(() => {
-  let stores = itemStore?.purchasedItems?.map((item) => item.store.trim());
+  let stores = itemStore?.buyItems?.map((item) => item.store.trim());
   if (showBuyItemsFromAllLists.value) {
     stores = itemStore?.buyItemsFromAllLists?.map((item) => item.store.trim());
   }
@@ -21,12 +21,25 @@ const updateStoreMap = (category, isOpen) => {
   localStorage.setItem('storeOpenMap', storeOpenMap.toString());
 };
 
-const buyItems = computed(() => {
+const shoppingItems = computed(() => {
   if (showBuyItemsFromAllLists.value) {
     return itemStore.getFilteredAllBuyItems;
   }
   return itemStore.getFilteredShoppingItems;
 });
+
+const isRenameStoreOpen = ref(false);
+const selectedStore = ref('');
+const selectedOldStore = ref('');
+const openRenameStoreDrawer = (store) => {
+  isRenameStoreOpen.value = true;
+  selectedStore.value = store;
+  selectedOldStore.value = store;
+};
+const renameStore = async () => {
+  await itemStore.renameStore(selectedOldStore.value, selectedStore.value);
+  isRenameStoreOpen.value = false;
+};
 </script>
 <template>
   <NuxtLayout name="app">
@@ -42,13 +55,16 @@ const buyItems = computed(() => {
                 <ChevronRight
                   class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               </CollapsibleTrigger>
+              <button class="text-gray-700 dark:text-gray-300" @click.prevent="openRenameStoreDrawer(category)">
+                <Pencil class="mx-2 size-4 opacity-80"></Pencil>
+              </button>
               <span class="flex-grow"></span>
               <CreateNewItem :store="category"></CreateNewItem>
             </div>
             <CollapsibleContent>
               <BuyList
                 :items="
-                  buyItems
+                  shoppingItems
                     ?.filter((item) => item.store === category)
                     .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
                 "></BuyList>
@@ -59,6 +75,29 @@ const buyItems = computed(() => {
           <CreateNewItem store="Super market">Add an item to the buy list </CreateNewItem>
         </div>
       </div>
+
+      <!-- Rename store category-->
+      <Drawer v-model:open="isRenameStoreOpen" @onOpenChange="isRenameStoreOpen = $event">
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle> Rename store </DrawerTitle>
+            <DrawerDescription> This action will affect all items in this store </DrawerDescription>
+          </DrawerHeader>
+          <div class="px-4">
+            <Input class="" type="text" v-model="selectedStore"></Input>
+          </div>
+          <DrawerFooter>
+            <div class="flex flex-row justify-between">
+              <DrawerClose>
+                <Button class="text-red-500" variant="ghost">Close</Button>
+              </DrawerClose>
+              <DrawerClose>
+                <Button type="submit" @click.prevent="renameStore">Rename</Button>
+              </DrawerClose>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </NuxtLayout>
   </NuxtLayout>
 </template>

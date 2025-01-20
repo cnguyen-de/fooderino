@@ -79,7 +79,7 @@ const onRenameList = async () => {
 </script>
 
 <template>
-  <div v-if="selectedList?.name" class="flex flex-row items-center py-1">
+  <div v-if="selectedList?.name" class="flex flex-row items-center p-1">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
         <Button class="relative border-none bg-transparent p-0 px-2 text-2xl" variant="outline">

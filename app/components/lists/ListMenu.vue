@@ -24,14 +24,14 @@ const onRemoveUser = async (email: string, isInvite = false) => {
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button class="relative h-9 border-none bg-transparent p-1" variant="ghost">
+      <Button class="relative h-9 border-none bg-transparent p-2" variant="ghost">
         <EllipsisVertical class="size-5"></EllipsisVertical>
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuLabel> {{ selectedList.name }}</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <div class="flex flex-row items-center gap-1 px-2">
+      <div class="flex flex-row items-center gap-1 px-2 pt-2">
         <UserList
           v-if="
             inviteStore.sentInvites?.length > 0 &&
