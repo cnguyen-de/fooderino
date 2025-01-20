@@ -10,7 +10,7 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits(['saveRecipe', 'addRecipeIngredientsToBuy', 'delete']);
 const isOpen = ref(!props.recipe?.saved);
-
+const user = useSupabaseUser();
 const recipeStore = useRecipeStore(); // probably use a util instead
 const shareRecipe = () => {
   navigator.clipboard.writeText(`https://fooderino.vercel.app/recipe/${props.recipe.index}`);
@@ -73,7 +73,7 @@ const shareRecipe = () => {
           <Button variant="outline" class="text-red-700" @click="emit('saveRecipe', props.recipe)">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              :fill="recipe.saved ? 'currentColor' : 'none'"
+              :fill="recipe.saved && recipe.id === user.id ? 'currentColor' : 'none'"
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"

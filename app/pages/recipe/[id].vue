@@ -45,7 +45,6 @@ const onAddRecipeIngredientsToBuy = async (recipe: Recipe) => {
           @save-recipe="onSaveRecipe($event)"
           @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
           hide-delete></RecipeCard>
-
         <div v-else>
           <p>Recipe not found</p>
         </div>
