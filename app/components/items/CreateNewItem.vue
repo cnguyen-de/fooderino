@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useItemStore } from '~/store/item';
+import { useSettingsStore } from '~/store/settings';
 const itemStore = useItemStore();
 const props = defineProps<{
   location?: string;
@@ -85,7 +86,7 @@ const clickOutside = () => {
 
 <template>
   <Drawer class="" v-model:open="isDrawerOpen">
-    <DrawerTrigger class="flex flex-row items-center">
+    <DrawerTrigger class="flex flex-row items-center gap-2">
       <slot></slot>
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -137,7 +138,7 @@ const clickOutside = () => {
           </FormItem>
         </FormField>
 
-        <FormField name="location">
+        <FormField name="location" v-if="!useSettingsStore().settings?.no_inventory">
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
             <FormLabel>Category</FormLabel>
             <FormControl>
