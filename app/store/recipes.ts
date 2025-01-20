@@ -6,6 +6,7 @@ import recipe from '~~/server/api/recipe';
 interface State {
   recipes: Recipe[];
   generating: boolean;
+  recipeMap: Record<string, Recipe>;
 }
 export const useRecipeStore = defineStore('recipes', () => {
   const supabase = useSupabaseClient();
@@ -14,7 +15,8 @@ export const useRecipeStore = defineStore('recipes', () => {
   const listStore = useListStore();
   const state = reactive<State>({
     recipes: [],
-    generating: false
+    generating: false,
+    recipeMap: {}
   });
 
   const generateRecipe = async (useHasIngredients: boolean, request: string) => {
@@ -50,6 +52,11 @@ export const useRecipeStore = defineStore('recipes', () => {
     state.recipes = data;
   };
 
+  const fetchRecipeById = async (index: string) => {
+    const { data } = await supabase.from('recipes').select().eq('index', index);
+    state.recipeMap[index] = data;
+  };
+
   const deleteRecipe = async (recipe: Recipe) => {
     const recipes = [...state.recipes];
     const r = recipes.find((r) => r.name === recipe.name);
@@ -81,8 +88,10 @@ export const useRecipeStore = defineStore('recipes', () => {
     ...toRefs(state),
     generateRecipe,
     updateRecipe,
+    insertRecipe,
     fetchRecipes,
     deleteRecipe,
+    fetchRecipeById,
 
     // Getters
     savedRecipes,

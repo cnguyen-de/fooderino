@@ -6,7 +6,6 @@ const recipeStore = useRecipeStore();
 const itemStore = useItemStore();
 recipeStore.fetchRecipes();
 
-// TODO
 const onAddRecipeIngredientsToBuy = (recipe) => {
   recipe.ingredients.forEach((ingredient) => {
     if (recipeStore.hasIngredients(ingredient.name)) {
@@ -39,7 +38,8 @@ const onDeleteRecipe = (recipe) => {
     v-for="recipe of recipeStore.savedRecipes"
     @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
-    @delete="onDeleteRecipe($event)"></RecipeCard>
+    @delete="onDeleteRecipe($event)"
+    :hide-delete="false"></RecipeCard>
 </template>
 
 <style scoped></style>

@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import type { Recipe } from '~~/types/Recipe';
 import { useRecipeStore } from '~/store/recipes';
-import { ShoppingCart } from 'lucide-vue-next';
+import { Share2, ShoppingCart } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 interface Props {
   recipe: Recipe;
+  hideDelete: boolean;
 }
 const props = defineProps<Props>();
 const emit = defineEmits(['saveRecipe', 'addRecipeIngredientsToBuy', 'delete']);
 const isOpen = ref(!props.recipe?.saved);
 
 const recipeStore = useRecipeStore(); // probably use a util instead
+const shareRecipe = () => {
+  navigator.clipboard.writeText(`https://fooderino.vercel.app/recipe/${props.recipe.index}`);
+  toast('Copied link to recipe, share by pasting it to a friend');
+};
 </script>
 
 <template>
@@ -81,8 +87,11 @@ const recipeStore = useRecipeStore(); // probably use a util instead
           <Button variant="outline" @click="emit('addRecipeIngredientsToBuy', props.recipe)">
             <ShoppingCart></ShoppingCart>
           </Button>
+          <Button variant="outline" @click="shareRecipe">
+            <Share2></Share2>
+          </Button>
         </div>
-        <Button variant="ghost" class="text-red-500" @click="emit('delete', props.recipe)"
+        <Button v-if="!hideDelete" variant="ghost" class="text-red-500" @click="emit('delete', props.recipe)"
           ><svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
