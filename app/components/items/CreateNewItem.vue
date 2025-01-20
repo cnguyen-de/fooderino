@@ -100,7 +100,7 @@ const clickOutside = () => {
     </DrawerTrigger>
     <DrawerContent class="mx-auto max-w-xl">
       <DrawerHeader @click="clickOutside()">
-        <DrawerTitle>Add item</DrawerTitle>
+        <DrawerTitle>Add item to {{ store ? store : location }}</DrawerTitle>
         <DrawerDescription></DrawerDescription>
       </DrawerHeader>
       <form class="space-y-2 p-4" @submit="onSubmit">

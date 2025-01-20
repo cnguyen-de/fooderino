@@ -73,7 +73,7 @@ const renameStore = async () => {
         </div>
         <div
           class="border-px m-4 flex flex-row items-center rounded-xl border border-dashed !border-gray-500/50 bg-gray-100/70 p-2 px-4 dark:bg-gray-700/20">
-          <CreateNewItem class="w-full" location="">Add a new store to the list</CreateNewItem>
+          <CreateNewItem class="w-full" store="New Store">Add item to a new store to the list</CreateNewItem>
         </div>
       </div>
 
