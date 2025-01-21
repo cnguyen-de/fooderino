@@ -83,11 +83,12 @@ const updateNoInventoryMode = async (checked: boolean) => {
             </span>
           </div>
         </section>
-        <div class="mb-2 flex flex-row justify-end">
-          <Button variant="outline" class="mt-3 text-red-500" @click="logout()">Log out</Button>
+        <div class="mt-4 flex flex-row justify-end">
+          <Button variant="outline" class="text-red-500" @click="logout()">Log out</Button>
         </div>
 
-        <Separator class="my-4" />
+        <Separator class="my-8" />
+
         <h1 class="mt-3 text-2xl font-bold">Settings</h1>
         <p class="text-gray-500">Manage your app settings</p>
         <section class="flex flex-row justify-between gap-2 pt-4">
@@ -104,7 +105,8 @@ const updateNoInventoryMode = async (checked: boolean) => {
           </div>
         </section>
 
-        <Separator class="my-4" />
+        <Separator class="my-8" />
+
         <form class="" @submit="onSubmit">
           <h2 class="mt-3 text-2xl font-bold">User</h2>
           <p class="text-gray-500">Set your preferences for recipe generation</p>

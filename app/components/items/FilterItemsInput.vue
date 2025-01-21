@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core';
+import { SearchIcon, X } from 'lucide-vue-next';
 import { useItemStore } from '~/store/item';
 const close = ref(true);
 const itemStore = useItemStore();
@@ -12,38 +13,30 @@ watchDebounced(
   },
   { debounce: 300, maxWait: 500 }
 );
+
+const inputField = useTemplateRef('input-field');
+
+const focusInputField = () => {
+  inputField.value.focus();
+};
 </script>
 <template>
   <div class="relative">
-    <Input
-      class="right-0 h-9 w-full rounded-full !border-0 bg-gray-100/30 px-4 pr-7 text-gray-700 transition-all focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 dark:bg-gray-700/30 dark:text-gray-300"
+    <input
+      class="peer right-0 h-9 rounded-full !border-0  px-4 pr-7 text-gray-700 transition-all focus:w-full focus-visible:border-none focus-visible:outline-none focus-visible:ring-0  dark:text-gray-300 focus:bg-gray-100/30 focus:dark:bg-gray-700/30"
+      :class="[input.length !== 0 ? 'w-full bg-gray-100/30 dark:bg-gray-700/30' : 'w-10 bg-transparent']"
       placeholder="Find items"
+      ref="input-field"
       v-model="input">
-    </Input>
-    <span class="absolute right-3 top-2.5 text-gray-500/60" :class="[input.length !== 0 ? 'hidden' : 'block']">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-4">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-      </svg>
-    </span>
-    <button class="absolute right-3 top-2.5" :class="[input.length === 0 ? 'hidden' : 'block']" @click="input = ''">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-4">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-      </svg>
+    </input>
+    <button
+      class="absolute right-3 top-2 text-gray-700"
+      :class="[input.length !== 0 ? 'hidden' : 'block']"
+      @click="focusInputField">
+      <SearchIcon class="size-5"></SearchIcon>
+    </button>
+    <button class="absolute right-3 top-2.5 text-gray-700" :class="[input.length === 0 ? 'hidden' : 'block']" @click="input = ''">
+      <X class="size-4"></X>
     </button>
   </div>
 </template>

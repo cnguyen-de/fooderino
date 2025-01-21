@@ -123,8 +123,6 @@ const onRenameList = async () => {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
-    <div class="flex-grow"></div>
-
     <div class="flex items-center justify-center">
       <button v-if="false" variant="ghost" @click="settingStore.toggleEmptyItems()">
         <svg
