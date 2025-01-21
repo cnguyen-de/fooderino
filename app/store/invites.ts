@@ -29,7 +29,6 @@ export const useInviteStore = defineStore('invite', () => {
   const sendInvite = async (email: string, selectedListId: string) => {
     const { data } = await client.from('users').select('id, email').eq('email', email);
     if (!data || data.length === 0) {
-      console.log('User not found');
       toast('Failed to send invite', {
         description: `User with ${email} not found`
       });

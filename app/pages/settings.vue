@@ -33,7 +33,6 @@ const formSchema = toTypedSchema(
       .default(settingsStore.settings?.cuisines ?? '')
   })
 );
-console.log(user.value);
 const form = useForm({
   validationSchema: formSchema
 });
