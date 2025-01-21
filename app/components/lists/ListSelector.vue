@@ -156,7 +156,7 @@ const onRenameList = async () => {
       <FilterItemsInput class="mx-1"></FilterItemsInput>
     </div>
     <div class="flex-grow"></div>
-    <Toggle class="px-2" :pressed="isShoppingMode" @update:pressed="toggleAllLists">
+    <Toggle class="mr-1 px-2" :pressed="isShoppingMode" @update:pressed="toggleAllLists">
       <ShoppingBasket
         :class="[isShoppingMode ? 'text-orange-700 dark:text-orange-300' : 'text-gray-600']"></ShoppingBasket>
     </Toggle>
