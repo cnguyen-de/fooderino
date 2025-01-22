@@ -13,7 +13,7 @@ const isOpen = ref(!props.recipe?.saved);
 const user = useSupabaseUser();
 const recipeStore = useRecipeStore(); // probably use a util instead
 const shareRecipe = () => {
-  navigator.clipboard.writeText(`https://fooderino.vercel.app/recipe/${props.recipe.index}`);
+  navigator.clipboard.writeText(`https://fooderino.app/recipe/${props.recipe.index}`);
   toast('Copied link to recipe, share by pasting it to a friend');
 };
 </script>
