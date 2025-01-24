@@ -2,8 +2,10 @@
 import { useRecipeStore } from '~/store/recipes';
 import { useItemStore } from '~/store/item';
 import { toast } from 'vue-sonner';
+import { useListStore } from '~/store/list';
 const recipeStore = useRecipeStore();
 const itemStore = useItemStore();
+const listStore = useListStore();
 recipeStore.fetchRecipes();
 
 const onAddRecipeIngredientsToBuy = (recipe) => {
@@ -36,6 +38,7 @@ const onDeleteRecipe = (recipe) => {
   <RecipeCard
     :recipe="recipe"
     v-for="recipe of recipeStore.savedRecipes"
+    :hide-add-to-cart="!listStore.selectedList"
     @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
     @delete="onDeleteRecipe($event)"

@@ -20,12 +20,20 @@ export const useListStore = defineStore('list', () => {
     state.lists = data?.value?.lists;
     if (!state.selectedList || !state.lists.some((list) => list.id === state.selectedList?.id)) {
       setSelectedList(data?.value?.lists[0]);
+    } else {
+      setSelectedList(null);
     }
   };
 
-  const setSelectedList = async (list: List) => {
+  const setSelectedList = async (list: List | null) => {
     state.selectedList = list;
     const itemStore = useItemStore();
+    if (!list) {
+      itemStore.inventoryItems = [];
+      itemStore.buyItems = [];
+      itemStore.allItems = [];
+      itemStore.buyItemsFromAllLists = [];
+    }
     await itemStore.fetchItems();
     await inviteStore.getReceivedInvites();
     await inviteStore.getSentInvites();

@@ -33,11 +33,19 @@ export const useSettingsStore = defineStore('settings', () => {
       await updateSettings(newSettings);
     }
   };
+
+  const freeAICalls = computed(() => {
+    if (state.settings?.ai) {
+      return 999;
+    }
+    return state.settings?.free_ai_calls;
+  });
   return {
     ...toRefs(state),
     fetchSettings,
     updateSettings,
     toggleEmptyItems,
-    toggleNoInventoryMode
+    toggleNoInventoryMode,
+    freeAICalls
   };
 });

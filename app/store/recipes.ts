@@ -2,6 +2,8 @@ import type { Recipe } from '~~/types/Recipe';
 import { useItemStore } from './item';
 import { useListStore } from './list';
 import recipe from '~~/server/api/recipe';
+import { toast } from 'vue-sonner';
+import { useSettingsStore } from './settings';
 
 interface State {
   recipes: Recipe[];
@@ -13,6 +15,7 @@ export const useRecipeStore = defineStore('recipes', () => {
   const user = useSupabaseUser();
   const itemStore = useItemStore();
   const listStore = useListStore();
+  const settingStore = useSettingsStore();
   const state = reactive<State>({
     recipes: [],
     generating: false,
@@ -21,16 +24,23 @@ export const useRecipeStore = defineStore('recipes', () => {
 
   const generateRecipe = async (useHasIngredients: boolean, request: string) => {
     state.generating = true;
-    const { data } = await useFetch('/api/recipe', {
+    const { data, error } = await useFetch('/api/recipe', {
       query: {
         useHasIngredients,
         request,
         listId: listStore.selectedList?.id
+      },
+      onResponseError({ request, response, options }) {
+        toast(response._data?.message || 'Failed to generate recipe');
+        state.generating = false;
       }
     });
-    if (!data.value) return;
+    if (error.value) {
+      return;
+    }
     await insertRecipe(data.value);
     state.recipes?.unshift(data.value);
+    await settingStore.fetchSettings();
     state.generating = false;
   };
   const insertRecipe = async (recipe: Recipe) => {

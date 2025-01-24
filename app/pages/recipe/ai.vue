@@ -33,7 +33,10 @@ const generateRecipe = async () => {
           </svg>
 
           <AlertTitle class="text-xl">Unlock the full potential of AI</AlertTitle>
-          <AlertDescription> Custom requests, personalized recipes, and more! Cooming soon! </AlertDescription>
+          <AlertDescription>
+            <p>Custom requests, personalized recipes, and more! Coming soon!</p>
+            <p>Free Recipes Left: {{ settingsStore.freeAICalls }}</p>
+          </AlertDescription>
         </Alert>
       </div>
       <div class="relative mx-auto flex w-full flex-col items-start justify-start gap-2">

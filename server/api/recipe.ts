@@ -16,12 +16,15 @@ export default defineEventHandler(async (event) => {
   let userSettings: Settings = {};
   if (userInfos.data?.length > 0) {
     userSettings = userInfos.data[0];
-    if (userSettings?.ai) {
+    if (userSettings?.ai || (!userSettings?.ai && userSettings?.free_ai_calls > 0)) {
       hasAIRight = true;
     }
   }
   if (!hasAIRight) {
-    return { content: 'User does not have AI functionality' };
+    throw createError({
+      status: 401,
+      message: 'Your free AI generation has exceeded the limit. Please upgrade your account to generate more recipes.'
+    });
   }
 
   // Gather current user preferences
@@ -56,5 +59,12 @@ export default defineEventHandler(async (event) => {
     model: openai('gpt-4o-mini'),
     messages
   });
+  if (!userSettings?.ai) {
+    await client
+      .from('users')
+      .update({ free_ai_calls: userSettings?.free_ai_calls - 1 })
+      .eq('id', user.id);
+  }
+
   return JSON.parse(result.text);
 });

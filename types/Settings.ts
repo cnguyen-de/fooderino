@@ -5,4 +5,5 @@ export interface Settings {
   cuisines: string;
   show_empty_items: boolean;
   no_inventory: boolean;
+  free_ai_calls: number;
 }
