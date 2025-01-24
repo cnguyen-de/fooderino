@@ -46,6 +46,10 @@ const updateNoInventoryMode = async (checked: boolean) => {
   noInventoryMode.value = checked;
   await settingsStore.toggleNoInventoryMode(checked);
 };
+
+const upgradeToPro = async () => {
+  toast('Coming Soon ™️');
+};
 </script>
 <template>
   <NuxtLayout name="app">
@@ -68,8 +72,14 @@ const updateNoInventoryMode = async (checked: boolean) => {
           </Avatar>
         </section>
         <section class="flex flex-row items-center justify-between gap-2 pt-4">
-          <h3 class="text-lg">Account type</h3>
-          <p v-if="!settingsStore.settings.ai"><button>Upgrade to PRO</button></p>
+          <div>
+            <h3 class="text-lg">Account type</h3>
+            <p
+              v-if="!settingsStore.settings.ai"
+              class="bg-gradient-to-r from-red-600 to-yellow-700 bg-clip-text font-bold text-transparent dark:from-red-500 dark:to-yellow-400">
+              <button @click="upgradeToPro">Upgrade to PRO</button>
+            </p>
+          </div>
           <div v-if="!settingsStore.settings.ai" class="rounded-md border border-solid border-gray-500/50 px-2 py-1">
             <span class="text-gray-600 dark:text-gray-300">Free</span>
           </div>
