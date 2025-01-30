@@ -1,5 +1,6 @@
 import type { Command } from '~~/types/Command';
 import type { Item } from '~~/types/Item';
+import { useStorage } from '@vueuse/core';
 
 interface State {
   actions: Command[];
@@ -13,7 +14,14 @@ export const useActionStore = defineStore('actions', () => {
     currentActionIndex: -1,
     purchasedItems: []
   });
-
+  const purchasedItems = useStorage('purchasedItem', []);
+  state.purchasedItems = purchasedItems.value;
+  watch(
+    () => state.purchasedItems,
+    (value) => {
+      purchasedItems.value = value;
+    }
+  );
   const redoable = computed(() => {
     return state.currentActionIndex < state.actions.length - 1;
   });
