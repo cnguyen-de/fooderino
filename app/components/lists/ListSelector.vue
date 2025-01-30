@@ -156,10 +156,13 @@ const onRenameList = async () => {
       <FilterItemsInput class="mx-1"></FilterItemsInput>
     </div>
     <div class="flex-grow"></div>
-    <Toggle class="mr-1 px-2" :pressed="isShoppingMode" @update:pressed="toggleAllLists">
+    <Toggle v-if="false" class="mr-1 px-2" :pressed="isShoppingMode" @update:pressed="toggleAllLists">
       <ShoppingBasket
         :class="[isShoppingMode ? 'text-orange-700 dark:text-orange-300' : 'text-gray-600']"></ShoppingBasket>
     </Toggle>
+    <NuxtLink to="/shopping" class="mx-2">
+      <ShoppingBasket class="text-orange-700 dark:text-orange-300"></ShoppingBasket>
+    </NuxtLink>
     <ListMenu></ListMenu>
     <!-- 
     <div class="mx-2 flex flex-row items-center justify-center gap-1">

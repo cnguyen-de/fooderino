@@ -1,6 +1,7 @@
 import type { Command } from '~~/types/Command';
 import type { Item } from '~~/types/Item';
 import { useStorage } from '@vueuse/core';
+import { useItemStore } from './item';
 
 interface State {
   actions: Command[];
@@ -66,13 +67,36 @@ export const useActionStore = defineStore('actions', () => {
     state.currentActionIndex++;
   };
 
+  const clearPurchasedItems = () => {
+    state.purchasedItems = [];
+  };
+
+  const removePurchasedItemById = (id: number) => {
+    const index = state.purchasedItems.findIndex((item) => item.id === id);
+    if (index > -1) {
+      state.purchasedItems.splice(index, 1);
+    }
+  };
+
+  const confirmPurchasing = async () => {
+    const itemStore = useItemStore();
+    state.purchasedItems.forEach(async (item) => {
+      await itemStore.addItemToInventory(item);
+      removePurchasedItemById(item.id);
+    });
+    state.actions = [];
+    state.currentActionIndex = -1;
+  };
+
   return {
     ...toRefs(state),
     // Actions
     addAction,
     undo,
     redo,
-
+    clearPurchasedItems,
+    removePurchasedItemById,
+    confirmPurchasing,
     // Getters
     redoable,
     undoable

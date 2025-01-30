@@ -1,18 +1,17 @@
 <script setup>
 import { useItemStore } from '~/store/item';
-import { ChevronRight, Undo, Redo } from 'lucide-vue-next';
+import { ArrowLeft, ChevronRight, Undo, Redo, CircleCheck, ShoppingBasket } from 'lucide-vue-next';
 import { useStorage } from '@vueuse/core';
-import { useListStore } from '~/store/list';
 import { useActionStore } from '~/store/actions';
+
 const itemStore = useItemStore();
 const actionStore = useActionStore();
-const listStore = useListStore();
 itemStore.showBuyItemsFromAllLists = true;
 itemStore.fetchItems();
 const { showBuyItemsFromAllLists } = toRefs(itemStore);
 const categories = computed(() => {
   let stores = itemStore?.buyItemsFromAllLists
-    // ?.filter((item) => !actionStore.purchasedItems.some((i) => i.id === item.id))
+    ?.filter((item) => !actionStore.purchasedItems.some((i) => i.id === item.id))
     .map((item) => item.store.trim());
   return [...new Set(stores)].sort((a, b) => a.localeCompare(b));
 });
@@ -31,7 +30,6 @@ const shoppingItems = computed(() => {
 });
 
 const onAddItemToInventory = (item) => {
-  console.log('purchase item', item);
   const action = {
     type: 'purchase',
     payload: item
@@ -42,12 +40,19 @@ const onAddItemToInventory = (item) => {
 const onItemValueChanged = (item) => {
   itemStore.updateItem(item);
 };
+
+onUnmounted(() => {
+  itemStore.showBuyItemsFromAllLists = false;
+});
 </script>
 <template>
   <NuxtLayout name="app">
-    <div class="flex flex-row items-center justify-between">
-      <div class="w-20"></div>
-      <h1 class="px-2 text-center text-2xl font-bold">Shopping List</h1>
+    <div class="flex flex-row items-center px-2">
+      <NuxtLink to="/buy">
+        <Button variant="ghost"><ArrowLeft></ArrowLeft></Button>
+      </NuxtLink>
+      <h1 class="ml-2 text-xl font-bold">Shopping List</h1>
+      <span class="grow"></span>
       <div class="flex flex-row gap-2">
         <Button class="p-1 px-2" variant="ghost" :disabled="!actionStore.undoable" @click="actionStore.undo()">
           <Undo class="size-5"></Undo>
@@ -57,7 +62,7 @@ const onItemValueChanged = (item) => {
         </Button>
       </div>
     </div>
-    <div class="h-[calc(100%_-_8rem)] w-full overflow-auto">
+    <div class="h-[calc(100%_-_16rem)] w-full overflow-auto">
       <div v-for="category in categories" :key="category">
         <Collapsible :open="storeOpenMap[category]" @update:open="updateStoreMap(category, $event)">
           <div class="flex flex-row pr-4">
@@ -86,12 +91,50 @@ const onItemValueChanged = (item) => {
         </Collapsible>
       </div>
     </div>
-    <div class="fixed bottom-16 w-full rounded-t-2xl bg-black/30 p-4">
-      <h3>Purchased</h3>
-      <div v-for="item in actionStore.purchasedItems">
-        {{ item.name }} {{ item.amount_to_purchase }} -> {{ item.location }}
+    <div
+      v-if="actionStore.purchasedItems.length > 0"
+      class="fixed bottom-16 w-full rounded-t-2xl bg-white/50 p-4 pb-2 dark:bg-gray-400/10">
+      <div class="flex w-full flex-col gap-1">
+        <div class="flex flex-row items-center">
+          <h2 class="text-lg font-bold">
+            <ShoppingBasket class="mr-1 inline size-5"></ShoppingBasket> Shopping basket
+          </h2>
+          <div class="grow"></div>
+          <div class="size-6 rounded-full bg-gray-100 pt-[1px] text-center text-sm font-bold dark:bg-gray-700">
+            {{ actionStore.purchasedItems.length }}
+          </div>
+        </div>
+
+        <div v-for="item in actionStore.purchasedItems">
+          <div class="flex flex-row items-center gap-2">
+            <div class="grow rounded-lg bg-white px-3 py-1.5 dark:bg-gray-700/20">
+              {{ item.name }}
+            </div>
+            <NumberField
+              :step="1"
+              class="w-20 rounded-lg bg-white dark:bg-gray-700/20"
+              :id="item.name"
+              :default-value="item.amount_to_purchase"
+              :model-value="item.amount_to_purchase"
+              @update:model-value="item.amount_to_purchase = $event"
+              :min="0">
+              <NumberFieldContent>
+                <NumberFieldInput class="peer border-none text-base" />
+                <NumberFieldDecrement
+                  class="rounded-full px-1 text-gray-800/50 peer-focus:text-gray-900/50 dark:text-gray-300/50 dark:peer-focus:text-gray-200/50" />
+                <NumberFieldIncrement
+                  class="rounded-full px-1 text-gray-800/50 peer-focus:text-gray-900/50 dark:text-gray-300/50 dark:peer-focus:text-gray-200/50" />
+              </NumberFieldContent>
+            </NumberField>
+          </div>
+        </div>
       </div>
-      <div class="">Confirm</div>
+      <div class="mt-2 flex flex-row justify-between">
+        <Button variant="ghost" @click="actionStore.clearPurchasedItems()">Clear</Button>
+        <Button @click="actionStore.confirmPurchasing()"
+          >Confirm <CircleCheck class="ml-1 size-4"></CircleCheck
+        ></Button>
+      </div>
     </div>
   </NuxtLayout>
 </template>
