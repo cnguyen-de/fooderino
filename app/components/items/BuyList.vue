@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { useItemStore } from '~/store/item';
 import type { Item } from '~~/types/Item';
-const itemStore = useItemStore();
 
 type ListItemProps = {
   items: Item[];
 };
 defineProps<ListItemProps>();
+const emit = defineEmits(['itemValueChanged', 'addItemToInventory']);
 const onValueChanged = (item: Item) => {
-  itemStore.updateItem(item);
+  emit('itemValueChanged', item);
 };
-const onAddItemToInventory = async (item: ItemProps) => {
-  await itemStore.addItemToInventory(item);
+const onAddItemToInventory = async (item: Item) => {
+  emit('addItemToInventory', item);
 };
 </script>
 

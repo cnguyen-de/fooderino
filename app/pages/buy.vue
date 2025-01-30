@@ -67,7 +67,10 @@ const renameStore = async () => {
                   shoppingItems
                     ?.filter((item) => item.store === category)
                     .sort((a, b) => a.id - b.id || a.name.localeCompare(b?.name))
-                "></BuyList>
+                "
+                @item-value-changed="itemStore.updateItem($event)"
+                @add-item-to-inventory="itemStore.addItemToInventory($event)">
+              </BuyList>
             </CollapsibleContent>
           </Collapsible>
         </div>
