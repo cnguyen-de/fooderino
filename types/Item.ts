@@ -9,4 +9,5 @@ export interface Item {
   amount_to_purchase: number;
   createdAt: Date;
   user: string;
+  times_updated: number;
 }

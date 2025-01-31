@@ -3,6 +3,7 @@ import { watchDebounced } from '@vueuse/core';
 import { House } from 'lucide-vue-next';
 import type { Item } from '~~/types/Item';
 
+// @refactor this should accept item as an object instead -.-
 export type ItemProps = {
   id: number;
   name: string;
@@ -14,6 +15,7 @@ export type ItemProps = {
   disableSwipe?: boolean;
   amountAsNumberInput?: boolean;
   default_amount?: number;
+  times_updated?: number;
   item: Item;
 };
 const props = withDefaults(defineProps<ItemProps>(), {

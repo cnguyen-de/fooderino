@@ -78,7 +78,8 @@ export const useItemStore = defineStore('item', () => {
       .from('items')
       .update({
         amount: newAmount,
-        amount_to_purchase: 0
+        amount_to_purchase: 0,
+        times_updated: item.times_updated + 1
       })
       .eq('id', item.id);
     await fetchItems();
@@ -88,7 +89,8 @@ export const useItemStore = defineStore('item', () => {
     await client
       .from('items')
       .update({
-        amount_to_purchase: item.amount_type === 'g' ? item.amount_to_purchase + 100 : item.amount_to_purchase + 1
+        amount_to_purchase: item.amount_type === 'g' ? item.amount_to_purchase + 100 : item.amount_to_purchase + 1,
+        times_updated: item.times_updated + 1
       })
       .eq('id', item.id);
     await fetchItems();
@@ -100,6 +102,7 @@ export const useItemStore = defineStore('item', () => {
       existingItem.amount_to_purchase = data.amountToPurchase ?? data.amount_to_purchase;
       existingItem.default_amount = data.defaultAmount;
       existingItem.amount_type = data.amountType;
+      existingItem.times_updated = data.times_updated + 1;
       await updateItem({ ...existingItem, ...data });
       return;
     }
@@ -126,7 +129,8 @@ export const useItemStore = defineStore('item', () => {
         default_amount: data.default_amount,
         name: data.name,
         store: data.store?.trim(),
-        location: data.location?.trim()
+        location: data.location?.trim(),
+        times_updated: data.times_updated + 1
       })
       .eq('id', data.id);
 

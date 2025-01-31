@@ -28,6 +28,7 @@ const onAddItemToInventory = async (item: Item) => {
         :default_amount="item.default_amount"
         :to-right="false"
         :item="item"
+        :times_updated="item.times_updated"
         show-amount
         disable-swipe
         :amount-as-number-input="false"

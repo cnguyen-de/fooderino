@@ -33,6 +33,7 @@ const onItemAmountValueChanged = (item: Item) => {
         :show-amount="false"
         :disable-swipe="true"
         :item="item"
+        :times_updated="item.times_updated"
         @value-changed="onItemAmountValueChanged($event)">
         <AddToBuy :item="item"></AddToBuy>
       </Item>
