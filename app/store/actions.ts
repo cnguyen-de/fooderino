@@ -88,6 +88,11 @@ export const useActionStore = defineStore('actions', () => {
     state.currentActionIndex = -1;
   };
 
+  const purchasedItemsCount = computed(() => {
+    // Sum of all the amount_to_purchase values in the purchasedItems array
+    return state.purchasedItems.reduce((acc, item) => acc + item.amount_to_purchase, 0);
+  });
+
   return {
     ...toRefs(state),
     // Actions
@@ -99,6 +104,7 @@ export const useActionStore = defineStore('actions', () => {
     confirmPurchasing,
     // Getters
     redoable,
-    undoable
+    undoable,
+    purchasedItemsCount
   };
 });

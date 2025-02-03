@@ -100,8 +100,8 @@ onUnmounted(() => {
             <ShoppingBasket class="mr-1 inline size-5"></ShoppingBasket> Shopping basket
           </h2>
           <div class="grow"></div>
-          <div class="size-6 rounded-full bg-gray-100 pt-[1px] text-center text-sm font-bold dark:bg-gray-700">
-            {{ actionStore.purchasedItems.length }}
+          <div class="size-6 rounded-full bg-gray-100 pt-[2px] text-center text-sm font-bold dark:bg-gray-700">
+            {{ actionStore.purchasedItemsCount }}
           </div>
         </div>
 
