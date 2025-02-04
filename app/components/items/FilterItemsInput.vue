@@ -2,7 +2,6 @@
 import { watchDebounced } from '@vueuse/core';
 import { SearchIcon, X } from 'lucide-vue-next';
 import { useItemStore } from '~/store/item';
-const close = ref(true);
 const itemStore = useItemStore();
 const input = ref(itemStore.filterInput);
 

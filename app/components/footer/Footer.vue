@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { useItemStore } from '~/store/item';
 import { CookingPot, House, Settings, ShoppingCart } from 'lucide-vue-next';
-
-const itemStore = useItemStore();
 </script>
 
 <template>
@@ -13,7 +10,6 @@ const itemStore = useItemStore();
     <FooterLink link="/buy">
       <div class="flex flex-row">
         <ShoppingCart> </ShoppingCart>
-        <span v-if="itemStore.showBuyItemsFromAllLists" class="ml-2">ALL</span>
       </div>
     </FooterLink>
     <FooterLink link="/recipe" include-child>

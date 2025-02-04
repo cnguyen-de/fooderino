@@ -160,8 +160,12 @@ const onRenameList = async () => {
       <ShoppingBasket
         :class="[isShoppingMode ? 'text-orange-700 dark:text-orange-300' : 'text-gray-600']"></ShoppingBasket>
     </Toggle>
-    <NuxtLink to="/shopping" class="mx-2">
+    <NuxtLink to="/shopping" class="mx-2 flex flex-row gap-1 rounded-md border px-2 py-1 tracking-tighter">
       <ShoppingBasket class="text-orange-700 dark:text-orange-300"></ShoppingBasket>
+      <span
+        class="inline-block bg-gradient-to-r from-red-700 to-yellow-700 bg-clip-text text-transparent dark:from-red-400 dark:to-orange-300"
+        >Shopping</span
+      >
     </NuxtLink>
     <ListMenu></ListMenu>
     <!-- 
