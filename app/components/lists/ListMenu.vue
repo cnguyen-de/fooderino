@@ -30,6 +30,7 @@ const onRemoveUser = async (email: string, isInvite = false) => {
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuLabel> {{ selectedList.name }}</DropdownMenuLabel>
+      <DropdownMenuItem><NuxtLink to="/logs">Logs</NuxtLink></DropdownMenuItem>
       <DropdownMenuSeparator />
       <div class="flex flex-row items-center gap-1 px-2 pt-2">
         <UserList

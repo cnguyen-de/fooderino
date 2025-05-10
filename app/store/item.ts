@@ -2,6 +2,7 @@ import { BuyList } from './../../.nuxt/components.d';
 import { type Item } from '../../types/Item';
 import { useListStore } from './list';
 import { useSettingsStore } from './settings';
+import { useLogStore } from './logs';
 
 interface State {
   inventoryItems: Item[];
@@ -26,6 +27,7 @@ export const useItemStore = defineStore('item', () => {
   const user = useSupabaseUser();
   const listStore = useListStore();
   const settingStore = useSettingsStore();
+  const logStore = useLogStore();
 
   const fetchItems = async () => {
     if (state.showBuyItemsFromAllLists) {
@@ -83,7 +85,9 @@ export const useItemStore = defineStore('item', () => {
         last_updated: new Date().toISOString()
       })
       .eq('id', item.id);
+
     await fetchItems();
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, item.name);
   };
 
   const addItemToBuy = async (item) => {
@@ -95,6 +99,7 @@ export const useItemStore = defineStore('item', () => {
         last_updated: new Date().toISOString()
       })
       .eq('id', item.id);
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, item.name);
     await fetchItems();
   };
 
@@ -119,6 +124,7 @@ export const useItemStore = defineStore('item', () => {
       user: user.value.email,
       list_id: listStore.selectedList?.id
     });
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name);
     await fetchItems();
   };
 
@@ -136,7 +142,7 @@ export const useItemStore = defineStore('item', () => {
         last_updated: new Date().toISOString()
       })
       .eq('id', data.id);
-
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name);
     await fetchItems();
   };
 
@@ -195,7 +201,6 @@ export const useItemStore = defineStore('item', () => {
     return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
   });
 
-  // TODO allCategories (even from items that aren't in inventory -> show as dropdown)
   const allCategories = computed(() => {
     const cat = state.allItems.map((item) => item.location.trim());
     return [...new Set(cat)].sort((a, b) => a.localeCompare(b));
@@ -207,6 +212,8 @@ export const useItemStore = defineStore('item', () => {
   });
 
   const deleteItem = async (id: number) => {
+    const itemName = state.allItems.find((item) => item.id === id)?.name;
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, itemName);
     await client.from('items').delete().eq('id', id);
     await fetchItems();
   };
