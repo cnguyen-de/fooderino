@@ -64,7 +64,9 @@ onUnmounted(() => {
     </div>
     <div class="h-[calc(100%_-_16rem)] w-full overflow-auto">
       <div v-for="category in categories" :key="category">
-        <Collapsible :open="storeOpenMap[category]" @update:open="updateStoreMap(category, $event)">
+        <Collapsible
+          :open="storeOpenMap[category] || itemStore.filterInput.length > 0"
+          @update:open="updateStoreMap(category, $event)">
           <div class="flex flex-row pr-4">
             <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
               <h2 class="pl-4 pr-2 text-lg font-bold">{{ category }}</h2>

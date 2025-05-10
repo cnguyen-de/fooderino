@@ -42,7 +42,9 @@ const updateCategoryMap = (category, isOpen) => {
         class="h-[calc(100%_-_7rem)] w-full overflow-auto"
         :class="{ '!h-[calc(100%_-_17rem)]': !listStore.selectedList }">
         <div v-for="category in categories" :key="category">
-          <Collapsible :open="categoryOpenMap[category]" @update:open="updateCategoryMap(category, $event)">
+          <Collapsible
+            :open="categoryOpenMap[category] || itemStore.filterInput.length > 0"
+            @update:open="updateCategoryMap(category, $event)">
             <div class="flex flex-row pr-4">
               <CollapsibleTrigger class="group/collapsible flex flex-row py-2">
                 <h2 class="pl-4 text-lg font-bold">{{ category }}</h2>
