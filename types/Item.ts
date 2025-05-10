@@ -10,4 +10,5 @@ export interface Item {
   createdAt: Date;
   user: string;
   times_updated: number;
+  last_updated: Date;
 }

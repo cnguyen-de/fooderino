@@ -81,7 +81,7 @@ onUnmounted(() => {
                   ?.filter(
                     (item) => item.store === category && !actionStore.purchasedItems.some((i) => i.id === item.id)
                   )
-                  .sort((a, b) => b.times_updated - a.times_updated || a.name.localeCompare(b?.name))
+                  .sort((a, b) => b.last_updated - a.last_updated || a.name.localeCompare(b?.name))
               "
               @item-value-changed="onItemValueChanged($event)"
               @add-item-to-inventory="onAddItemToInventory($event)">

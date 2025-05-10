@@ -130,7 +130,8 @@ export const useItemStore = defineStore('item', () => {
         name: data.name,
         store: data.store?.trim(),
         location: data.location?.trim(),
-        times_updated: data.times_updated + 1
+        times_updated: data.times_updated + 1,
+        last_updated: new Date().toISOString()
       })
       .eq('id', data.id);
 
