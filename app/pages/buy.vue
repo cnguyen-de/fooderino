@@ -68,7 +68,9 @@ const renameStore = async () => {
                 :items="
                   shoppingItems
                     ?.filter((item) => item.store === category)
-                    .sort((a, b) => b.last_updated - a.last_updated || a.name.localeCompare(b?.name))
+                    .sort(
+                      (a, b) => new Date(b.last_updated) - new Date(a.last_updated) || a.name.localeCompare(b?.name)
+                    )
                 "
                 @item-value-changed="itemStore.updateItem($event)"
                 @add-item-to-inventory="itemStore.addItemToInventory($event)">

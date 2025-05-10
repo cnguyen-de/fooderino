@@ -62,7 +62,9 @@ const updateCategoryMap = (category, isOpen) => {
                 :items="
                   getFilteredInventoryItems
                     ?.filter((item) => item.location === category)
-                    .sort((a, b) => b.last_updated - a.last_updated || a.name.localeCompare(b?.name))
+                    .sort(
+                      (a, b) => new Date(b.last_updated) - new Date(a.last_updated) || a.name.localeCompare(b?.name)
+                    )
                 "></InventoryList>
             </CollapsibleContent>
           </Collapsible>
