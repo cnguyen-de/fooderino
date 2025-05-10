@@ -81,17 +81,18 @@ export const useRecipeStore = defineStore('recipes', () => {
 
   const hasIngredients = (ingredient: string) => {
     //check if ingredient is part of the inventoryItems array, ignore cases and accents in text
-    return itemStore.inventoryItems.some((item) =>
-      item.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .includes(
-          ingredient
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-        )
+    return itemStore.inventoryItems.some(
+      (item) =>
+        item.name
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .includes(
+            ingredient
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+          ) && item.amount > 0
     );
   };
   return {
