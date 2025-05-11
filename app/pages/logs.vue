@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import LogAction from '~/components/logs/LogAction.vue';
 import { useLogStore } from '~/store/logs';
 
 const logStore = useLogStore();
