@@ -21,11 +21,11 @@ export const useLogStore = defineStore('logs', () => {
     state.logs = data;
   };
 
-  const insertLog = async (list_id: string, user: string, item: string) => {
+  const insertLog = async (list_id: string, user: string, item: string, action: string, payload: string) => {
     if (!listStore.selectedList) {
       return;
     }
-    const { data } = await supabase.from('logs').insert({ list_id, user, item });
+    const { data } = await supabase.from('logs').insert({ list_id, user, item, action, payload });
     state.logs.unshift(data[0]);
   };
 

@@ -75,6 +75,13 @@ export const useItemStore = defineStore('item', () => {
     if (!useNoInventoryMode()) {
       newAmount = item.amount + item.amount_to_purchase;
     }
+    logStore.insertLog(
+      listStore.selectedList?.id,
+      user.value.email,
+      item.name,
+      'updated',
+      `${item.amount} → ${newAmount}`
+    );
 
     const { data } = await client
       .from('items')
@@ -87,7 +94,6 @@ export const useItemStore = defineStore('item', () => {
       .eq('id', item.id);
 
     await fetchItems();
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, item.name);
   };
 
   const addItemToBuy = async (item) => {
@@ -99,7 +105,6 @@ export const useItemStore = defineStore('item', () => {
         last_updated: new Date().toISOString()
       })
       .eq('id', item.id);
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, item.name);
     await fetchItems();
   };
 
@@ -124,11 +129,17 @@ export const useItemStore = defineStore('item', () => {
       user: user.value.email,
       list_id: listStore.selectedList?.id
     });
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name);
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name, 'created', '');
     await fetchItems();
   };
 
   const updateItem = async (data) => {
+    const item = state.allItems.find((item) => item.id === data.id);
+    let payload = '';
+    if (item?.amount !== data.amount) {
+      payload = `${item?.amount} → ${data.amount}`;
+    }
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name, 'updated', payload);
     const { data: updatedData, error } = await client
       .from('items')
       .update({
@@ -142,7 +153,7 @@ export const useItemStore = defineStore('item', () => {
         last_updated: new Date().toISOString()
       })
       .eq('id', data.id);
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name);
+
     await fetchItems();
   };
 
@@ -213,7 +224,7 @@ export const useItemStore = defineStore('item', () => {
 
   const deleteItem = async (id: number) => {
     const itemName = state.allItems.find((item) => item.id === id)?.name;
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, itemName);
+    logStore.insertLog(listStore.selectedList?.id, user.value.email, itemName, 'deleted', '');
     await client.from('items').delete().eq('id', id);
     await fetchItems();
   };
