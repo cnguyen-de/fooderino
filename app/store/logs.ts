@@ -17,7 +17,7 @@ export const useLogStore = defineStore('logs', () => {
       .select()
       .eq('list_id', listStore.selectedList?.id)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(30);
     state.logs = data;
   };
 
