@@ -83,10 +83,8 @@ const onRenameList = async () => {
   <div v-if="showLoading" class="flex h-20 items-center justify-center">
     <LoadingSpinner message="Loading lists..." />
   </div>
-  <div v-else-if="!selectedList?.name" class="p-4">
-    <NewList></NewList>
-  </div>
-  <div v-else class="flex flex-row items-center p-1">
+
+  <div v-else-if="selectedList?.name" class="flex flex-row items-center p-1">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
         <Button class="relative border-none bg-transparent p-0 px-2 text-2xl" variant="outline">
@@ -338,5 +336,9 @@ const onRenameList = async () => {
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+  </div>
+
+  <div v-else class="p-4">
+    <NewList></NewList>
   </div>
 </template>
