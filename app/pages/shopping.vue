@@ -62,7 +62,9 @@ onUnmounted(() => {
         </Button>
       </div>
     </div>
-    <div class="h-[calc(100%_-_16rem)] w-full overflow-auto">
+    <div
+      class="w-full overflow-auto transition-all duration-300"
+      :class="actionStore.purchasedItems.length > 0 ? 'h-[calc(100%-7rem-33vh)]' : 'h-[calc(100%-7rem)]'">
       <div v-for="category in categories" :key="category">
         <Collapsible
           :open="storeOpenMap[category] || itemStore.filterInput.length > 0"
@@ -95,19 +97,17 @@ onUnmounted(() => {
     </div>
     <div
       v-if="actionStore.purchasedItems.length > 0"
-      class="fixed bottom-16 w-full rounded-t-2xl bg-white/50 p-4 pb-2 dark:bg-gray-400/10">
-      <div class="flex w-full flex-col gap-1">
-        <div class="flex flex-row items-center">
-          <h2 class="text-lg font-bold">
-            <ShoppingBasket class="mr-1 inline size-5"></ShoppingBasket> Shopping basket
-          </h2>
-          <div class="grow"></div>
-          <div class="size-6 rounded-full bg-gray-100 pt-[2px] text-center text-sm font-bold dark:bg-gray-700">
-            {{ actionStore.purchasedItemsCount }}
-          </div>
+      class="fixed bottom-16 flex max-h-[33vh] w-full flex-col rounded-t-2xl bg-white/50 p-4 pb-2 dark:bg-gray-400/10">
+      <div class="mb-2 flex flex-row items-center">
+        <h2 class="text-lg font-bold"><ShoppingBasket class="mr-1 inline size-5"></ShoppingBasket> Shopping basket</h2>
+        <div class="grow"></div>
+        <div class="size-6 rounded-full bg-gray-100 pt-[2px] text-center text-sm font-bold dark:bg-gray-700">
+          {{ actionStore.purchasedItemsCount }}
         </div>
+      </div>
 
-        <div v-for="item in actionStore.purchasedItems">
+      <div class="mb-2 flex flex-1 flex-col gap-1 overflow-auto">
+        <div v-for="item in actionStore.purchasedItems" :key="item.id">
           <div class="flex flex-row items-center gap-2">
             <div class="grow rounded-lg bg-white px-3 py-1.5 dark:bg-gray-700/20">
               {{ item.name }}
@@ -131,7 +131,8 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-      <div class="mt-2 flex flex-row justify-between">
+
+      <div class="flex flex-row justify-between border-t border-gray-200/50 pt-2 dark:border-gray-700/50">
         <Button variant="ghost" @click="actionStore.clearPurchasedItems()">Clear</Button>
         <Button @click="actionStore.confirmPurchasing()"
           >Confirm <CircleCheck class="ml-1 size-4"></CircleCheck
