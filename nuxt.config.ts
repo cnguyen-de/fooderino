@@ -18,7 +18,22 @@ export default defineNuxtConfig({
     compatibilityVersion: 4
   },
   experimental: {
-    viewTransition: true
+    viewTransition: true,
+    payloadExtraction: false,
+    renderJsonPayloads: false
+  },
+  router: {
+    options: {
+      hashMode: false,
+      scrollBehaviorType: 'smooth'
+    }
+  },
+  app: {
+    head: {
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
+      charset: 'utf-8',
+      meta: [{ name: 'format-detection', content: 'telephone=no' }]
+    }
   },
   runtimeConfig: {
     openaiApiKey: process.env.OPENAI_API_KEY,
@@ -49,6 +64,7 @@ export default defineNuxtConfig({
     }
   },
   pwa: {
+    registerType: 'autoUpdate',
     manifest: {
       name: 'Fooderino',
       short_name: 'Fooderino',
@@ -104,15 +120,58 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      //globPatterns: ['_nuxt/builds/**/*.json', '/_nuxt/**/*.vue', '_nuxt/**/*.css', '_nuxt/**/*.png', '_nuxt/**/*.svg']
+      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,html,ico,svg,webp,woff,woff2}'],
+      globIgnores: ['**/node_modules/**', '**/emojis/**', '**/hero-*.png', '**/screenshot-*.jpg'],
+      maximumFileSizeToCacheInBytes: 3000000,
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'supabase-cache',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 5 // 5 minutes
+            },
+            networkTimeoutSeconds: 10
+          }
+        },
+        {
+          urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'google-fonts-cache',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+            }
+          }
+        },
+        {
+          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'image-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+            }
+          }
+        }
+      ]
     },
     injectManifest: {
-      globPatterns: ['**/*.{js,json,css,html,txt,svg,png,ico,webp,woff,woff2,ttf,eot,otf,wasm}'],
-      globIgnores: ['emojis/**', 'manifest**.webmanifest']
+      globPatterns: ['**/*.{js,css,html,ico,svg}'],
+      globIgnores: ['emojis/**', 'manifest**.webmanifest', '**/*.map', 'hero-*.png', 'screenshot-*.jpg']
     },
     devOptions: {
       enabled: true,
       type: 'module'
+    },
+    client: {
+      installPrompt: true,
+      periodicSyncForUpdates: 3600
     }
   }
 });
