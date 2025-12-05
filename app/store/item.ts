@@ -29,6 +29,9 @@ export const useItemStore = defineStore('item', () => {
   const settingStore = useSettingsStore();
   const logStore = useLogStore();
 
+  // Debounce timer for fetchItems
+  let fetchItemsTimer: NodeJS.Timeout | null = null;
+
   const fetchItems = async () => {
     if (state.showBuyItemsFromAllLists) {
       await fetchBuyItemsFromAllLists();
@@ -40,6 +43,19 @@ export const useItemStore = defineStore('item', () => {
     state.inventoryItems = data.filter((item) => item.amount > 0);
     state.buyItems = data.filter((item) => item.amount_to_purchase > 0);
     state.allItems = data;
+  };
+
+  const debouncedFetchItems = () => {
+    // Clear any existing timer
+    if (fetchItemsTimer) {
+      clearTimeout(fetchItemsTimer);
+    }
+
+    // Set a new timer to fetch items after 20 seconds
+    fetchItemsTimer = setTimeout(() => {
+      fetchItems();
+      fetchItemsTimer = null;
+    }, 5000);
   };
 
   const fetchBuyItems = async () => {
@@ -93,7 +109,7 @@ export const useItemStore = defineStore('item', () => {
       })
       .eq('id', item.id);
 
-    await fetchItems();
+    debouncedFetchItems();
   };
 
   const addItemToBuy = async (item) => {
@@ -105,7 +121,7 @@ export const useItemStore = defineStore('item', () => {
         last_updated: new Date().toISOString()
       })
       .eq('id', item.id);
-    await fetchItems();
+    debouncedFetchItems();
   };
 
   const insertItem = async (data) => {
@@ -130,7 +146,7 @@ export const useItemStore = defineStore('item', () => {
       list_id: listStore.selectedList?.id
     });
     logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name, 'created', '');
-    await fetchItems();
+    debouncedFetchItems();
   };
 
   const updateItem = async (data) => {
@@ -154,7 +170,7 @@ export const useItemStore = defineStore('item', () => {
       })
       .eq('id', data.id);
 
-    await fetchItems();
+    debouncedFetchItems();
   };
 
   const selectItem = (id: string) => {
@@ -226,7 +242,7 @@ export const useItemStore = defineStore('item', () => {
     const itemName = state.allItems.find((item) => item.id === id)?.name;
     logStore.insertLog(listStore.selectedList?.id, user.value.email, itemName, 'deleted', '');
     await client.from('items').delete().eq('id', id);
-    await fetchItems();
+    debouncedFetchItems();
   };
 
   const renameCategory = async (oldCategory: string, newCategory: string) => {
@@ -234,7 +250,7 @@ export const useItemStore = defineStore('item', () => {
     for (const item of items) {
       await client.from('items').update({ location: newCategory }).eq('id', item.id);
     }
-    await fetchItems();
+    debouncedFetchItems();
   };
 
   const renameStore = async (oldStore: string, newStore: string) => {
@@ -242,7 +258,7 @@ export const useItemStore = defineStore('item', () => {
     for (const item of items) {
       await client.from('items').update({ store: newStore }).eq('id', item.id);
     }
-    await fetchItems();
+    debouncedFetchItems();
   };
 
   const allItemNames = computed(() => {
