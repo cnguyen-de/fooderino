@@ -7,6 +7,7 @@ import { useListStore } from '~/store/list';
 const itemStore = useItemStore();
 const listStore = useListStore();
 const { getFilteredInventoryItems } = toRefs(itemStore);
+
 itemStore.fetchItems();
 const categories = computed(() => itemStore.inventoryCategories);
 // const items = computed(() => {

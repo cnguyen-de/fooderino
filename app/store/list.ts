@@ -4,6 +4,7 @@ import { useInviteStore } from '~/store/invites';
 interface State {
   lists: List[];
   selectedList: List | null;
+  isLoading: boolean;
 }
 export const useListStore = defineStore('list', () => {
   const supabase = useSupabaseClient();
@@ -12,14 +13,26 @@ export const useListStore = defineStore('list', () => {
 
   const state = reactive<State>({
     lists: [],
-    selectedList: null
+    selectedList: null,
+    isLoading: false
   });
 
   const fetchLists = async () => {
-    const { data } = await useFetch('/api/list');
-    state.lists = data?.value?.lists;
-    if (!state.selectedList) {
-      setSelectedList(state.lists[0]);
+    // Only show loading if no lists are cached yet
+    const hasNoLists = state.lists.length === 0;
+    if (hasNoLists) {
+      state.isLoading = true;
+    }
+    try {
+      const { data } = await useFetch('/api/list');
+      state.lists = data?.value?.lists;
+      if (!state.selectedList) {
+        setSelectedList(state.lists[0]);
+      }
+    } finally {
+      if (hasNoLists) {
+        state.isLoading = false;
+      }
     }
   };
 
@@ -33,8 +46,7 @@ export const useListStore = defineStore('list', () => {
       itemStore.buyItemsFromAllLists = [];
     }
     await itemStore.fetchItems();
-    await inviteStore.getReceivedInvites();
-    await inviteStore.getSentInvites();
+    await inviteStore.getInvites();
   };
 
   const createList = async (name: string) => {

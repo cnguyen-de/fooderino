@@ -15,7 +15,8 @@ const listStore = useListStore();
 const itemStore = useItemStore();
 const settingStore = useSettingsStore();
 const drawerStore = useDrawerStore();
-const { selectedList, lists } = toRefs(listStore);
+const { selectedList, lists, isLoading } = toRefs(listStore);
+const showLoading = computed(() => lists.value.length === 0 && isLoading.value);
 const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(1).max(50)
@@ -79,7 +80,13 @@ const onRenameList = async () => {
 </script>
 
 <template>
-  <div v-if="selectedList?.name" class="flex flex-row items-center p-1">
+  <div v-if="showLoading" class="flex h-20 items-center justify-center">
+    <LoadingSpinner message="Loading lists..." />
+  </div>
+  <div v-else-if="!selectedList?.name" class="p-4">
+    <NewList></NewList>
+  </div>
+  <div v-else class="flex flex-row items-center p-1">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
         <Button class="relative border-none bg-transparent p-0 px-2 text-2xl" variant="outline">
@@ -331,8 +338,5 @@ const onRenameList = async () => {
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
-  </div>
-  <div v-else class="p-4">
-    <NewList></NewList>
   </div>
 </template>

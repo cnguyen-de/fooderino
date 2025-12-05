@@ -17,13 +17,15 @@ export const useInviteStore = defineStore('invite', () => {
   const client = useSupabaseClient();
   const user = useSupabaseUser();
   const listStore = useListStore();
-  const getSentInvites = async () => {
-    const { data } = await client.from('invites').select().eq('from', user.value?.email).eq('status', 'INVITE_PENDING');
-    state.sentInvites = data;
-  };
-  const getReceivedInvites = async () => {
-    const { data } = await client.from('invites').select().eq('to', user.value?.email).eq('status', 'INVITE_PENDING');
-    state.receivedInvites = data;
+  const getInvites = async () => {
+    const { data } = await client
+      .from('invites')
+      .select()
+      .eq('status', 'INVITE_PENDING')
+      .or(`from.eq.${user.value?.email},to.eq.${user.value?.email}`);
+
+    state.sentInvites = data?.filter((invite) => invite.from === user.value?.email) || [];
+    state.receivedInvites = data?.filter((invite) => invite.to === user.value?.email) || [];
   };
 
   const sendInvite = async (email: string, selectedListId: string) => {
@@ -41,7 +43,7 @@ export const useInviteStore = defineStore('invite', () => {
       status: 'INVITE_PENDING',
       list_id: selectedListId
     });
-    await getSentInvites();
+    await getInvites();
     toast('Successfully sent invite', {
       description: `An invite was sent to ${invitedUser.email}`
     });
@@ -56,19 +58,18 @@ export const useInviteStore = defineStore('invite', () => {
       query: { inviteId: state.selectedInvite.id, status: accept ? 'INVITE_ACCEPTED' : 'INVITE_REJECTED' }
     });
     await listStore.fetchLists();
-    await getReceivedInvites();
+    await getInvites();
   };
 
   const removeInvite = async (email) => {
     await client.from('invites').delete().eq('to', email).eq('from', user.value?.email);
-    await getSentInvites();
+    await getInvites();
   };
 
   return {
     ...toRefs(state),
 
-    getReceivedInvites,
-    getSentInvites,
+    getInvites,
     sendInvite,
     setSelectedInvite,
     acceptInvite,
