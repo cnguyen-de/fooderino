@@ -33,6 +33,10 @@ const onAddRecipeIngredientsToBuy = async (recipe: Recipe) => {
   });
   toast('Added ingredients to buy list');
 };
+
+const onRecipeUpdated = () => {
+  recipeStore.fetchRecipeById(id);
+};
 </script>
 
 <template>
@@ -44,6 +48,7 @@ const onAddRecipeIngredientsToBuy = async (recipe: Recipe) => {
           :recipe="recipe"
           @save-recipe="onSaveRecipe($event)"
           @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
+          @updated="onRecipeUpdated"
           hide-delete></RecipeCard>
         <div v-else>
           <p>Recipe not found</p>

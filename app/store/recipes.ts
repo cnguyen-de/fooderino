@@ -53,7 +53,16 @@ export const useRecipeStore = defineStore('recipes', () => {
     const { data } = await supabase.from('recipes').insert({ ...recipe, id: user.value?.id });
   };
   const updateRecipe = async (recipe: Recipe) => {
-    const { data } = await supabase.from('recipes').update({ saved: true }).eq('index', recipe.index);
+    const { data } = await supabase
+      .from('recipes')
+      .update({
+        name: recipe.name,
+        description: recipe.description,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        saved: recipe.saved
+      })
+      .eq('index', recipe.index);
     await fetchRecipes();
   };
 

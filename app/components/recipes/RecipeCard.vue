@@ -7,9 +7,10 @@ interface Props {
   recipe: Recipe;
   hideDelete: boolean;
   hideAddToCart: boolean;
+  hideEdit?: boolean;
 }
 const props = defineProps<Props>();
-const emit = defineEmits(['saveRecipe', 'addRecipeIngredientsToBuy', 'delete']);
+const emit = defineEmits(['saveRecipe', 'addRecipeIngredientsToBuy', 'delete', 'updated']);
 const isOpen = ref(!props.recipe?.saved);
 const user = useSupabaseUser();
 const recipeStore = useRecipeStore(); // probably use a util instead
@@ -91,6 +92,7 @@ const shareRecipe = () => {
           <Button variant="outline" @click="shareRecipe">
             <Share2></Share2>
           </Button>
+          <EditRecipe v-if="!hideEdit" :recipe="props.recipe" @updated="emit('updated')"></EditRecipe>
         </div>
         <Button v-if="!hideDelete" variant="ghost" class="text-red-500" @click="emit('delete', props.recipe)"
           ><svg

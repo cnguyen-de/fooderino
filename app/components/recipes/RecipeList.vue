@@ -32,6 +32,10 @@ const onDeleteRecipe = (recipe) => {
   console.log('delete recipe', recipe);
   recipeStore.deleteRecipe(recipe);
 };
+
+const onRecipeUpdated = () => {
+  recipeStore.fetchRecipes();
+};
 </script>
 
 <template>
@@ -42,6 +46,7 @@ const onDeleteRecipe = (recipe) => {
     @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
     @delete="onDeleteRecipe($event)"
+    @updated="onRecipeUpdated"
     :hide-delete="false"></RecipeCard>
 </template>
 
