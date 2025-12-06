@@ -55,7 +55,7 @@ export const useItemStore = defineStore('item', () => {
     fetchItemsTimer = setTimeout(() => {
       fetchItems();
       fetchItemsTimer = null;
-    }, 5000);
+    }, 2500);
   };
 
   const fetchBuyItems = async () => {
