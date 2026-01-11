@@ -55,7 +55,7 @@ export const useItemStore = defineStore('item', () => {
     fetchItemsTimer = setTimeout(() => {
       fetchItems();
       fetchItemsTimer = null;
-    }, 2500);
+    }, 1700);
   };
 
   const fetchBuyItems = async () => {
@@ -109,7 +109,7 @@ export const useItemStore = defineStore('item', () => {
       })
       .eq('id', item.id);
 
-    debouncedFetchItems();
+    fetchItems();
   };
 
   const addItemToBuy = async (item) => {
@@ -121,7 +121,7 @@ export const useItemStore = defineStore('item', () => {
         last_updated: new Date().toISOString()
       })
       .eq('id', item.id);
-    debouncedFetchItems();
+    fetchItems();
   };
 
   const insertItem = async (data) => {
@@ -146,7 +146,7 @@ export const useItemStore = defineStore('item', () => {
       list_id: listStore.selectedList?.id
     });
     logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name, 'created', '');
-    debouncedFetchItems();
+    fetchItems();
   };
 
   const updateItem = async (data) => {
