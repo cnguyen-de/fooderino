@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import * as z from 'zod';
 import { useRecipeStore } from '~/store/recipes';
-import type { Recipe } from '~~/types/Recipe';
+import type { RecipeRecord } from '~~/types/sync';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 
 interface Props {
-  recipe: Recipe;
+  recipe: RecipeRecord;
 }
 
 const props = defineProps<Props>();
@@ -54,12 +54,19 @@ watch([() => props.recipe, isEditRecipeDrawerOpen], () => {
   }
 });
 
-const saveChanges = async (values) => {
-  const updatedRecipe = {
-    ...props.recipe,
-    ...values
-  };
-  await recipeStore.updateRecipe(updatedRecipe);
+const saveChanges = async (values: z.infer<typeof schema>) => {
+  await recipeStore.updateRecipe(props.recipe.id, {
+    name: values.name,
+    description: values.description ?? null,
+    // The form drops `amount_type`, so carry each ingredient's original across
+    // rather than letting an edit silently reset every gram amount to a count.
+    ingredients: values.ingredients.map((i, idx) => ({
+      name: i.name,
+      amount: i.amount,
+      amount_type: props.recipe.ingredients[idx]?.amount_type ?? 'count'
+    })),
+    instructions: values.instructions ?? null
+  });
   isEditRecipeDrawerOpen.value = false;
   emit('updated');
 };

@@ -2,28 +2,25 @@
 import { useItemStore } from '~/store/item';
 import { useRecipeStore } from '~/store/recipes';
 import { toast } from 'vue-sonner';
-import type { Recipe, Ingredient } from '~~/types/Recipe';
+import type { RecipeRecord, RecipeIngredient } from '~~/types/sync';
 
 const recipeStore = useRecipeStore();
 const itemStore = useItemStore();
-const id = useRoute().params.id;
+const route = useRoute();
 const router = useRouter();
-watch(
-  () => id,
-  () => recipeStore.fetchRecipeById(id),
-  { immediate: true }
-);
-const recipe = computed(() => (recipeStore.recipeMap[id]?.length > 0 ? recipeStore.recipeMap[id][0] : null));
-const onSaveRecipe = async (recipe: Recipe) => {
-  delete recipe.id;
-  delete recipe.index;
-  recipe.saved = true;
-  await recipeStore.insertRecipe(recipe);
+const { byId, update } = useRecipes();
+
+// Recipes are read from Dexie, so the lookup is reactive — no fetch, and no
+// re-fetch after an edit.
+const recipe = computed(() => byId(route.params.id as string).value);
+
+const onSaveRecipe = async (r: RecipeRecord) => {
+  await update(r.id, { saved: true });
   router.push('/recipe');
 };
 
-const onAddRecipeIngredientsToBuy = async (recipe: Recipe) => {
-  recipe.ingredients.forEach((ingredient: Ingredient) => {
+const onAddRecipeIngredientsToBuy = async (r: RecipeRecord) => {
+  r.ingredients.forEach((ingredient: RecipeIngredient) => {
     if (recipeStore.hasIngredients(ingredient.name)) {
       return;
     }
@@ -32,10 +29,6 @@ const onAddRecipeIngredientsToBuy = async (recipe: Recipe) => {
     itemStore.insertItem(item);
   });
   toast('Added ingredients to buy list');
-};
-
-const onRecipeUpdated = () => {
-  recipeStore.fetchRecipeById(id);
 };
 </script>
 
@@ -48,7 +41,6 @@ const onRecipeUpdated = () => {
           :recipe="recipe"
           @save-recipe="onSaveRecipe($event)"
           @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
-          @updated="onRecipeUpdated"
           hide-delete></RecipeCard>
         <div v-else>
           <p>Recipe not found</p>

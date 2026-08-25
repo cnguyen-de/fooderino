@@ -3,12 +3,13 @@ import { useRecipeStore } from '~/store/recipes';
 import { useItemStore } from '~/store/item';
 import { toast } from 'vue-sonner';
 import { useListStore } from '~/store/list';
+import type { RecipeRecord } from '~~/types/sync';
 const recipeStore = useRecipeStore();
 const itemStore = useItemStore();
 const listStore = useListStore();
-recipeStore.fetchRecipes();
+// No fetch: `useRecipes()` subscribes to Dexie and the sync engine keeps it fed.
 
-const onAddRecipeIngredientsToBuy = (recipe) => {
+const onAddRecipeIngredientsToBuy = (recipe: RecipeRecord) => {
   recipe.ingredients.forEach((ingredient) => {
     if (recipeStore.hasIngredients(ingredient.name)) {
       return;
@@ -20,21 +21,16 @@ const onAddRecipeIngredientsToBuy = (recipe) => {
   toast('Added ingredients to buy list');
 };
 
-const onSaveRecipe = (recipe) => {
+// The legacy handler passed the recipe through unchanged, so `saved` stayed
+// false and the heart button did nothing. It now writes the flag it implies.
+const onSaveRecipe = (recipe: RecipeRecord) => {
   if (!recipe.saved) {
-    recipeStore.updateRecipe(recipe);
-  } else {
-    console.log('what do, remove recipe?');
+    recipeStore.updateRecipe(recipe.id, { saved: true });
   }
 };
 
-const onDeleteRecipe = (recipe) => {
-  console.log('delete recipe', recipe);
-  recipeStore.deleteRecipe(recipe);
-};
-
-const onRecipeUpdated = () => {
-  recipeStore.fetchRecipes();
+const onDeleteRecipe = (recipe: RecipeRecord) => {
+  recipeStore.deleteRecipe(recipe.id);
 };
 </script>
 
@@ -46,7 +42,6 @@ const onRecipeUpdated = () => {
     @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
     @delete="onDeleteRecipe($event)"
-    @updated="onRecipeUpdated"
     :hide-delete="false"></RecipeCard>
 </template>
 

@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
   // Gather current user preferences
   const reqQuery = getQuery(event);
-  const recipes = await client.from('recipes').select('name').eq('id', user.id);
+  const recipes = await client.from('recipes_v2').select('name').eq('user_id', user.id);
   const userKnownRecipes = recipes.data?.map((recipe) => recipe?.name).join(', ');
   // Preferences moved off `users` and into `user_settings`, which the client
   // syncs. Reading them from `users` here would pin every generation to
@@ -47,7 +47,12 @@ export default defineEventHandler(async (event) => {
   if (useHasIngredients) {
     const listId = reqQuery.listId ?? null;
     if (!listId) throw new Error('Missing listId');
-    const inventoryItems = await client.from('items').select('name').gte('amount', 1).eq('list_id', listId);
+    const inventoryItems = await client
+      .from('items_v2')
+      .select('name')
+      .gte('amount', 1)
+      .is('deleted_at', null)
+      .eq('list_id', listId);
     userHasIngredients = inventoryItems.data?.map((item) => item?.name).join(', ') ?? '';
   }
 

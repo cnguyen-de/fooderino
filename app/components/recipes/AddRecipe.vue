@@ -15,8 +15,22 @@ const schema = z.object({
     )
     .describe('Ingredients for the recipe')
 });
-const saveChanges = (values) => {
-  recipeStore.insertRecipe(values);
+const saveChanges = async (values: z.infer<typeof schema>) => {
+  await recipeStore.insertRecipe({
+    name: values.name ?? '',
+    description: null,
+    // The form has no amount_type field; count is the neutral default.
+    ingredients: (values.ingredients ?? []).map((i) => ({
+      name: i.name ?? '',
+      amount: i.amount,
+      amount_type: 'count' as const
+    })),
+    instructions: null,
+    // Saved, not generated: this drawer sits on /recipe, which renders
+    // `savedRecipes`. Inserting with saved=false — what the legacy call did —
+    // put the new recipe on a page the user cannot see.
+    saved: true
+  });
   isAddRecipeDrawerOpen.value = false;
 };
 </script>

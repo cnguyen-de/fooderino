@@ -4,12 +4,13 @@ import { useRecipeStore } from '~/store/recipes';
 import { useItemStore } from '~/store/item';
 import { toast } from 'vue-sonner';
 import { useListStore } from '~/store/list';
+import type { RecipeRecord } from '~~/types/sync';
 const recipeStore = useRecipeStore();
 const itemStore = useItemStore();
 const listStore = useListStore();
-recipeStore.fetchRecipes();
+// No fetch: `useRecipes()` subscribes to Dexie and the sync engine keeps it fed.
 
-const onAddRecipeIngredientsToBuy = (recipe) => {
+const onAddRecipeIngredientsToBuy = (recipe: RecipeRecord) => {
   recipe.ingredients.forEach((ingredient) => {
     const item = { ...ingredient, amount_to_purchase: ingredient.amount };
     delete item.amount;
@@ -18,17 +19,17 @@ const onAddRecipeIngredientsToBuy = (recipe) => {
   toast('Added ingredients to buy list');
 };
 
-const onSaveRecipe = (recipe) => {
+// The legacy handler passed the recipe through unchanged, so `saved` stayed
+// false and a generated recipe could never actually be kept.
+const onSaveRecipe = (recipe: RecipeRecord) => {
   if (!recipe.saved) {
-    recipeStore.updateRecipe(recipe);
-  } else {
-    console.log('what do, remove recipe?');
+    recipeStore.updateRecipe(recipe.id, { saved: true });
   }
 };
 
-const onDeleteRecipe = (recipe) => {
+const onDeleteRecipe = (recipe: RecipeRecord) => {
   toast(`Deleted ${recipe?.name}`);
-  recipeStore.deleteRecipe(recipe);
+  recipeStore.deleteRecipe(recipe.id);
 };
 </script>
 
