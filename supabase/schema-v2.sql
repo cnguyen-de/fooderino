@@ -169,6 +169,57 @@ create trigger lists_v2_guard_owner
 before update on public.lists_v2
 for each row execute function public.guard_list_owner();
 
+-- item_ops is an append-only op log, not a value clients write directly:
+-- two devices tapping +1 on the same item at once must both land, which
+-- plain last-write-wins on items_v2.amount cannot guarantee. Clients insert
+-- delta/set ops here and this trigger folds each one into the materialized
+-- amount columns. It is the sole writer of items_v2.amount and
+-- amount_to_purchase — must be `for each row`, not `for each statement`, or
+-- a multi-row insert would fold only once and silently lose increments.
+create or replace function public.apply_item_op()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.kind = 'delta' then
+    if new.field = 'amount' then
+      update public.items_v2
+         set amount = amount + new.value, updated_at = now()
+       where id = new.item_id;
+    else
+      update public.items_v2
+         set amount_to_purchase = amount_to_purchase + new.value, updated_at = now()
+       where id = new.item_id;
+    end if;
+  else
+    if new.field = 'amount' then
+      update public.items_v2
+         set amount = new.value, updated_at = now()
+       where id = new.item_id;
+    else
+      update public.items_v2
+         set amount_to_purchase = new.value, updated_at = now()
+       where id = new.item_id;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger item_ops_apply
+after insert on public.item_ops
+for each row execute function public.apply_item_op();
+
+-- Ops are already folded into items_v2 by the trigger above, so deleting old
+-- rows here is garbage collection, not data loss — unlike the rest of this
+-- schema, item_ops has no deleted_at and this is a real delete on purpose.
+create or replace function public.compact_item_ops()
+returns void
+language sql
+as $$
+  delete from public.item_ops where created_at < now() - interval '7 days';
+$$;
+
 alter table public.lists_v2          enable row level security;
 alter table public.list_members      enable row level security;
 alter table public.list_share_tokens enable row level security;
