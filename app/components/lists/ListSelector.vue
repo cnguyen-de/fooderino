@@ -30,13 +30,22 @@ const isCreateListDrawerOpen = ref(false);
 const openCreateListDrawer = () => {
   isCreateListDrawerOpen.value = true;
 };
+const user = useSupabaseUser();
 const onSubmit = form.handleSubmit(async (values) => {
-  await useListStore().createList(values.name);
+  await listStore.createList(values.name, {
+    id: user.value?.id ?? null,
+    email: user.value?.email ?? '',
+    name: user.value?.user_metadata?.full_name ?? null,
+    avatar: user.value?.user_metadata?.picture ?? null
+  });
   isCreateListDrawerOpen.value = false;
 });
-const selectedDropDownItem = ref(listStore.selectedList);
-watch(selectedDropDownItem, (value) => {
-  listStore.setSelectedList(value);
+// Radix's radio group binds string values, so this rides on the list id rather
+// than the record. Binding the object never matched — the group stringifies
+// what it is given, so the selected item could not be identified.
+const selectedDropDownItem = computed({
+  get: () => listStore.selectedList?.id ?? '',
+  set: (id: string) => listStore.setSelectedList(lists.value.find((l) => l.id === id) ?? null)
 });
 
 const inviteStore = useInviteStore();
@@ -69,12 +78,14 @@ const onSubmitInvite = async () => {
 };
 
 const onDeleteListConfirm = async () => {
+  if (!selectedList.value) return;
   await listStore.deleteList(selectedList.value.id);
 };
 
 const newListName = ref('');
 const onRenameList = async () => {
-  await listStore.renameList(newListName.value);
+  if (!selectedList.value) return;
+  await listStore.renameList(selectedList.value.id, newListName.value);
   newListName.value = '';
 };
 </script>
@@ -98,7 +109,9 @@ const onRenameList = async () => {
         <DropdownMenuLabel>Your Lists</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup v-model="selectedDropDownItem">
-          <DropdownMenuRadioItem v-for="list of lists" :value="list">{{ list?.name }}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem v-for="list of lists" :key="list.id" :value="list.id">{{
+            list.name
+          }}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem>

@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { useColorMode, useMediaQuery } from '@vueuse/core';
-import { useListStore } from '~/store/list';
 import { useSettingsStore } from '~/store/settings';
 import { Toaster } from '~/components/ui/sonner';
 import { useStorage } from '@vueuse/core';
 
-const listStore = useListStore();
 const settingStore = useSettingsStore();
 const user = useSupabaseUser();
 
-// Fetch data in parallel without blocking initial render
+// Lists are no longer fetched here — `useLists()` subscribes to Dexie and the
+// sync engine keeps it fed, so there is nothing to kick off on mount.
 onMounted(async () => {
   if (user.value) {
-    await Promise.all([listStore.fetchLists(), settingStore.fetchSettings()]);
+    await settingStore.fetchSettings();
   }
 });
 

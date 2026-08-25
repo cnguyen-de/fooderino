@@ -1,4 +1,3 @@
-import { useListStore } from '~/store/list';
 import { toast } from 'vue-sonner';
 
 export const useInviteStore = defineStore('invite', () => {
@@ -16,7 +15,6 @@ export const useInviteStore = defineStore('invite', () => {
 
   const client = useSupabaseClient();
   const user = useSupabaseUser();
-  const listStore = useListStore();
   const getInvites = async () => {
     const { data } = await client
       .from('invites')
@@ -57,7 +55,9 @@ export const useInviteStore = defineStore('invite', () => {
     const { data } = await useFetch('/api/invite', {
       query: { inviteId: state.selectedInvite.id, status: accept ? 'INVITE_ACCEPTED' : 'INVITE_REJECTED' }
     });
-    await listStore.fetchLists();
+    // Lists refresh themselves now — the accepted invite writes a legacy
+    // `lists` row, which this branch no longer reads. The whole invite flow is
+    // removed in the share-token cutover; this only keeps the tree building.
     await getInvites();
   };
 

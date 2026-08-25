@@ -92,8 +92,8 @@ export const useItemStore = defineStore('item', () => {
       newAmount = item.amount + item.amount_to_purchase;
     }
     logStore.insertLog(
-      listStore.selectedList?.id,
-      user.value.email,
+      listStore.selectedList?.id ?? '',
+      user.value.email ?? '',
       item.name,
       'updated',
       `${item.amount} → ${newAmount}`
@@ -145,7 +145,7 @@ export const useItemStore = defineStore('item', () => {
       user: user.value.email,
       list_id: listStore.selectedList?.id
     });
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name, 'created', '');
+    logStore.insertLog(listStore.selectedList?.id ?? '', user.value.email ?? '', data.name, 'created', '');
     fetchItems();
   };
 
@@ -155,7 +155,7 @@ export const useItemStore = defineStore('item', () => {
     if (item?.amount !== data.amount) {
       payload = `${item?.amount} → ${data.amount}`;
     }
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, data.name, 'updated', payload);
+    logStore.insertLog(listStore.selectedList?.id ?? '', user.value.email ?? '', data.name, 'updated', payload);
     const { data: updatedData, error } = await client
       .from('items')
       .update({
@@ -240,7 +240,13 @@ export const useItemStore = defineStore('item', () => {
 
   const deleteItem = async (id: number) => {
     const itemName = state.allItems.find((item) => item.id === id)?.name;
-    logStore.insertLog(listStore.selectedList?.id, user.value.email, itemName, 'deleted', '');
+    logStore.insertLog(
+      listStore.selectedList?.id ?? '',
+      user.value.email ?? '',
+      itemName ?? '',
+      'deleted',
+      ''
+    );
     await client.from('items').delete().eq('id', id);
     debouncedFetchItems();
   };

@@ -1,105 +1,59 @@
-import type { List } from '../../types/List';
+import type { ListRecord } from '~~/types/sync';
 import { useItemStore } from '~/store/item';
-import { useInviteStore } from '~/store/invites';
+
 interface State {
-  lists: List[];
-  selectedList: List | null;
-  isLoading: boolean;
+  selectedListId: string | null;
 }
+
 export const useListStore = defineStore('list', () => {
-  const supabase = useSupabaseClient();
-  const user = useSupabaseUser();
-  const inviteStore = useInviteStore();
+  const state = reactive<State>({ selectedListId: null });
+  const { lists, loading, create, rename, remove, removeMember, membersOf } = useLists();
 
-  const state = reactive<State>({
-    lists: [],
-    selectedList: null,
-    isLoading: false
-  });
+  const selectedList = computed<ListRecord | null>(
+    () => lists.value.find((l) => l.id === state.selectedListId) ?? lists.value[0] ?? null
+  );
 
-  const fetchLists = async () => {
-    // Only show loading if no lists are cached yet
-    const hasNoLists = state.lists.length === 0;
-    if (hasNoLists) {
-      state.isLoading = true;
-    }
-    try {
-      const { data } = await useFetch('/api/list');
-      state.lists = data?.value?.lists;
-      if (!state.selectedList) {
-        setSelectedList(state.lists[0]);
+  const setSelectedList = (list: ListRecord | null) => {
+    state.selectedListId = list?.id ?? null;
+  };
+
+  const selectedMembers = computed(() =>
+    selectedList.value ? membersOf(selectedList.value.id).value : []
+  );
+
+  // TEMPORARY BRIDGE — delete in Task 14 (items cutover).
+  // Lists now come from Dexie, but items still come from the legacy `items`
+  // table via a fetch keyed on the selected list. The old `setSelectedList`
+  // called `fetchItems()` inline; without something here, switching lists
+  // between this task and Task 14 would leave the previous list's items on
+  // screen, and a cold start would show none at all.
+  watch(
+    selectedList,
+    (list) => {
+      if (!import.meta.client) return;
+      const itemStore = useItemStore();
+      if (!list) {
+        itemStore.inventoryItems = [];
+        itemStore.buyItems = [];
+        itemStore.allItems = [];
+        itemStore.buyItemsFromAllLists = [];
+        return;
       }
-    } finally {
-      if (hasNoLists) {
-        state.isLoading = false;
-      }
-    }
-  };
+      void itemStore.fetchItems();
+    },
+    { immediate: true }
+  );
 
-  const setSelectedList = async (list: List | null) => {
-    state.selectedList = list;
-    const itemStore = useItemStore();
-    if (!list) {
-      itemStore.inventoryItems = [];
-      itemStore.buyItems = [];
-      itemStore.allItems = [];
-      itemStore.buyItemsFromAllLists = [];
-    }
-    await itemStore.fetchItems();
-    await inviteStore.getInvites();
-  };
-
-  const createList = async (name: string) => {
-    const newList = await supabase
-      .from('lists')
-      .insert({
-        name,
-        users: [
-          {
-            email: user.value?.email,
-            name: user.value?.user_metadata?.full_name,
-            avatar: user.value?.user_metadata?.picture,
-            admin: true
-          }
-        ],
-        admin: user.value?.id
-      })
-      .select();
-    setSelectedList(newList.data[0]);
-    await fetchLists();
-  };
-
-  const renameList = async (name: string) => {
-    await supabase.from('lists').update({ name }).eq('id', state.selectedList.id);
-    await fetchLists();
-    state.selectedList.name = name;
-  };
-
-  const deleteList = async (id: string) => {
-    await supabase.from('lists').delete().eq('id', id);
-    setSelectedList(state.lists[0]);
-    await fetchLists();
-  };
-
-  const removeUser = async (email) => {
-    if (state.selectedList.admin !== user.value?.id) {
-      return;
-    }
-    await supabase
-      .from('lists')
-      .update({
-        users: state.selectedList.users.filter((user) => user.email !== email)
-      })
-      .eq('id', state.selectedList.id);
-    await fetchLists();
-  };
   return {
     ...toRefs(state),
-    fetchLists,
-    createList,
-    renameList,
-    deleteList,
+    lists,
+    isLoading: loading,
+    selectedList,
+    selectedMembers,
     setSelectedList,
-    removeUser
+    createList: create,
+    renameList: rename,
+    deleteList: remove,
+    removeUser: removeMember
   };
 });

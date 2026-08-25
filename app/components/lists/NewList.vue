@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { useListStore } from '~/store/list';
 import { CookingPot, House, ShoppingBasket, ShoppingCart } from 'lucide-vue-next';
+
+const listStore = useListStore();
+const user = useSupabaseUser();
 const listname = ref('');
-const createNewList = async (listname: string) => {
-  await useListStore().createList(listname);
+const createNewList = async (name: string) => {
+  await listStore.createList(name, {
+    id: user.value?.id ?? null,
+    email: user.value?.email ?? '',
+    name: user.value?.user_metadata?.full_name ?? null,
+    avatar: user.value?.user_metadata?.picture ?? null
+  });
 };
 </script>
 
