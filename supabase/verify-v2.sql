@@ -1,35 +1,69 @@
 -- supabase/verify-v2.sql
 -- Run after supabase/backfill-v2.sql. Queries 1b, 2 and 3 must return `0`.
--- Queries 0, 1a, 3b, 4 and 5 are informational context, not gates.
+-- 1b is the pass/fail gate for all four tables (lists, items, logs,
+-- recipes) — recipes has no legitimate exclusion at all, so its row must
+-- be exactly 0 same as logs. Queries 0, 1a, 1c, 3b, 4 and 5 are
+-- informational context, not gates.
 
 -- 0. Legacy lists excluded from the backfill because admin is null (lists_v2
---    requires a non-null owner). Informational, but explains any nonzero
---    lists/items delta in query 1a: every item and log on an excluded list is
---    dropped by the same inner join, since items_v2.list_id and
---    logs_v2.list_id are not-null FKs to lists_v2. Record the count and the
---    ids; a human should confirm none of them were meant to have an owner.
+--    requires a non-null owner). Informational, but explains part of any
+--    nonzero lists/items/logs delta in query 1a (subtracted out in 1b):
+--    every item and log on an excluded list is dropped by the same inner
+--    join, since items_v2.list_id and logs_v2.list_id are not-null FKs to
+--    lists_v2 (query 1c has the other part — null/dangling list_id). Record
+--    the count and the ids; a human should confirm none of them were meant
+--    to have an owner.
 select count(*) as excluded_lists from lists where admin is null;
 select uid, id, name from lists where admin is null;
 
--- 1a. Raw row-count deltas, for context alongside 1b. lists/items are NOT
---     expected to be 0 once ownerless-list exclusion is legitimate (see
---     query 0) — read 1b for the actual pass/fail signal.
+-- 1a. Raw row-count deltas, for context alongside 1b. lists/items/logs may
+--     be nonzero here even on a correct backfill, once any legitimate
+--     exclusion (ownerless list, null list_id, dangling list_id — see
+--     query 0 and 1c) applies. This is context only, not a gate for any of
+--     the four tables — 1b is the actual pass/fail signal for all of them,
+--     recipes included.
 select 'lists'   as t, (select count(*) from lists)   - (select count(*) from lists_v2)   as delta
 union all select 'items',   (select count(*) from items)   - (select count(*) from items_v2)
 union all select 'logs',    (select count(*) from logs)    - (select count(*) from logs_v2)
 union all select 'recipes', (select count(*) from recipes) - (select count(*) from recipes_v2);
 
--- 1b. Same as 1a but with the legitimate ownerless-list shortfall subtracted
---     out. Expect 0. Any nonzero value here is a real, unexplained gap —
---     unlike 1a, this does not require mentally subtracting query 0's count.
+-- 1b. The pass/fail gate. Expect 0 in every row. Each table's raw delta has
+--     its legitimate exclusions subtracted, so any residue is a real gap.
+--     lists:   ownerless lists are excluded by the backfill (query 0).
+--     items:   dropped if on an ownerless list, or if list_id is null or
+--              dangling (query 1c).
+--     logs:    same two exclusions as items.
+--     recipes: no exclusion mechanism at all — this must be exactly 0.
 select 'lists' as t,
        (select count(*) from lists) - (select count(*) from lists_v2)
          - (select count(*) from lists where admin is null) as unexplained
 union all
 select 'items',
        (select count(*) from items) - (select count(*) from items_v2)
-         - (select count(*) from items i join lists l on l.id = i.list_id
-             where l.admin is null);
+         - (select count(*) from items i
+             left join lists l on l.id = i.list_id
+            where i.list_id is null or l.admin is null or l.id is null)
+union all
+select 'logs',
+       (select count(*) from logs) - (select count(*) from logs_v2)
+         - (select count(*) from logs g
+             left join lists l on l.id = g.list_id
+            where g.list_id is null or l.admin is null or l.id is null)
+union all
+select 'recipes',
+       (select count(*) from recipes) - (select count(*) from recipes_v2);
+
+-- 1c. Informational: items and logs the backfill drops for want of a usable
+--     list (null list_id, list_id with no matching lists row, or list_id
+--     pointing at an ownerless list). Explains the corresponding
+--     subtraction in 1b.
+select 'item' as kind, i.id::text as id, i.name as detail, i.list_id
+from items i left join lists l on l.id = i.list_id
+where i.list_id is null or l.admin is null or l.id is null
+union all
+select 'log', g.id::text, coalesce(g.item, '(no item)'), g.list_id
+from logs g left join lists l on l.id = g.list_id
+where g.list_id is null or l.admin is null or l.id is null;
 
 -- 2. No orphaned items. Expect 0. (Structurally guaranteed by the not-null
 --    FK items_v2.list_id -> lists_v2(id) if the backfill ran as written —
