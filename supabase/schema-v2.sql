@@ -225,12 +225,24 @@ for each row execute function public.apply_item_op();
 -- Ops are already folded into items_v2 by the trigger above, so deleting old
 -- rows here is garbage collection, not data loss — unlike the rest of this
 -- schema, item_ops has no deleted_at and this is a real delete on purpose.
+--
+-- Runs as the function owner so it can actually delete: `item_ops` has RLS
+-- enabled with no delete policy, so a caller relying on their own privileges
+-- would silently remove zero rows and the table would grow without bound.
+-- Execute is revoked from client roles — this is maintenance, invoked by the
+-- scheduled job, never by the app. Safe as `security definer` (unlike
+-- apply_item_op above) because it takes no arguments and its predicate is a
+-- fixed time window — there is no caller-controlled input to subvert.
 create or replace function public.compact_item_ops()
 returns void
 language sql
+security definer
+set search_path = public
 as $$
   delete from public.item_ops where created_at < now() - interval '7 days';
 $$;
+
+revoke all on function public.compact_item_ops() from public, anon, authenticated;
 
 alter table public.lists_v2          enable row level security;
 alter table public.list_members      enable row level security;
