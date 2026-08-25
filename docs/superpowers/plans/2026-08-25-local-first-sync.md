@@ -55,7 +55,7 @@
 
 | File | Responsibility |
 |---|---|
-| `supabase/schema-v2.sql` | v2 tables, RLS, `is_list_member()`, op trigger |
+| `supabase/schema-v2.sql` | v2 tables, RLS, `can_access_list()`, owner guard, op trigger |
 | `supabase/backfill-v2.sql` | One-shot backfill from the legacy tables |
 | `supabase/verify-v2.sql` | Pre-cutover verification queries |
 | `server/api/list/share.post.ts` | Mint a share token |
@@ -306,6 +306,68 @@ as $$
 $$;
 ```
 
+An owner check is needed too. RLS evaluates `WITH CHECK` before the new tuple
+exists, so a brand-new list has no `list_members` row for `is_list_member` to
+find — without this, a list's creator could never insert their own first
+membership row and every list would stay permanently memberless. It is
+`security definer` for the same reason: reading `lists_v2` from inside a policy
+would otherwise re-enter that table's own policy.
+
+```sql
+create or replace function public.is_list_owner(target uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.lists_v2
+    where id = target and owner = auth.uid()
+  );
+$$;
+```
+
+Every list-scoped policy goes through one predicate rather than repeating
+`owner or member`. The owner arm is load-bearing: the sync engine's
+write-through path pushes a single collection at a time, so an item write can
+reach the server before its list's membership row has synced.
+
+```sql
+create or replace function public.can_access_list(target uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.is_list_owner(target) or public.is_list_member(target);
+$$;
+```
+
+`owner` is the root of list authority, and the UPDATE policy below has no way to
+express "unchanged" — RLS `WITH CHECK` sees only the new row. Without this guard
+any member could reassign ownership to themselves. No product feature transfers
+ownership, so forbid the change outright.
+
+```sql
+create or replace function public.guard_list_owner()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.owner is distinct from old.owner then
+    raise exception 'lists_v2.owner is immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger lists_v2_guard_owner
+before update on public.lists_v2
+for each row execute function public.guard_list_owner();
+```
+
 - [ ] **Step 3: Write the RLS policies**
 
 ```sql
@@ -318,35 +380,48 @@ alter table public.logs_v2           enable row level security;
 alter table public.recipes_v2        enable row level security;
 alter table public.user_settings     enable row level security;
 
--- lists: members read/write; anyone signed in may create a list they own
-create policy "member reads list"   on public.lists_v2 for select using (is_list_member(id));
-create policy "member updates list" on public.lists_v2 for update using (is_list_member(id));
+-- lists: INSERT establishes the list, so it is gated on ownership rather than
+-- on list-scoped access.
+create policy "member reads list"   on public.lists_v2 for select using (can_access_list(id));
+create policy "member updates list" on public.lists_v2 for update using (can_access_list(id));
 create policy "owner creates list"  on public.lists_v2 for insert with check (owner = auth.uid());
 
--- members: visible to fellow members; you may insert your own membership row
-create policy "member reads members"  on public.list_members for select using (is_list_member(list_id));
-create policy "member writes members" on public.list_members for update using (is_list_member(list_id));
-create policy "member adds members"   on public.list_members for insert with check (is_list_member(list_id));
+-- members: readable by anyone with list access; UPDATE is deliberately
+-- narrower — the owner manages anyone, everyone else edits or leaves only
+-- their own row. The explicit `with check` matters: without it the USING
+-- expression is reused and a user could hand their row to someone else.
+create policy "member reads members"  on public.list_members for select using (can_access_list(list_id));
+create policy "member adds members"   on public.list_members for insert with check (can_access_list(list_id));
+create policy "member writes members" on public.list_members
+  for update
+  using (is_list_owner(list_id) or user_id = auth.uid())
+  with check (is_list_owner(list_id) or user_id = auth.uid());
 
--- share tokens: only members may mint or read them
-create policy "member reads tokens"  on public.list_share_tokens for select using (is_list_member(list_id));
-create policy "member mints tokens"  on public.list_share_tokens for insert with check (is_list_member(list_id));
-create policy "member revokes tokens" on public.list_share_tokens for update using (is_list_member(list_id));
+-- share tokens
+create policy "member reads tokens"   on public.list_share_tokens for select using (can_access_list(list_id));
+create policy "member mints tokens"   on public.list_share_tokens for insert with check (can_access_list(list_id));
+create policy "member revokes tokens" on public.list_share_tokens for update using (can_access_list(list_id));
 
 -- list-scoped data
-create policy "member reads items"   on public.items_v2 for select using (is_list_member(list_id));
-create policy "member writes items"  on public.items_v2 for update using (is_list_member(list_id));
-create policy "member adds items"    on public.items_v2 for insert with check (is_list_member(list_id));
+create policy "member reads items"   on public.items_v2 for select using (can_access_list(list_id));
+create policy "member writes items"  on public.items_v2 for update using (can_access_list(list_id));
+create policy "member adds items"    on public.items_v2 for insert with check (can_access_list(list_id));
 
-create policy "member reads ops"     on public.item_ops for select using (is_list_member(list_id));
-create policy "member adds ops"      on public.item_ops for insert with check (is_list_member(list_id));
+create policy "member reads ops"     on public.item_ops for select using (can_access_list(list_id));
+create policy "member adds ops"      on public.item_ops for insert with check (can_access_list(list_id));
 
-create policy "member reads logs"    on public.logs_v2 for select using (is_list_member(list_id));
-create policy "member adds logs"     on public.logs_v2 for insert with check (is_list_member(list_id));
+create policy "member reads logs"    on public.logs_v2 for select using (can_access_list(list_id));
+create policy "member adds logs"     on public.logs_v2 for insert with check (can_access_list(list_id));
 
--- per-user data
-create policy "own recipes" on public.recipes_v2   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "own settings" on public.user_settings for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- per-user data. NOT `for all` — that includes DELETE, and this project has no
+-- hard deletes on synced tables; deletion is `deleted_at`.
+create policy "own recipes read"   on public.recipes_v2 for select using (user_id = auth.uid());
+create policy "own recipes insert" on public.recipes_v2 for insert with check (user_id = auth.uid());
+create policy "own recipes update" on public.recipes_v2 for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "own settings read"   on public.user_settings for select using (user_id = auth.uid());
+create policy "own settings insert" on public.user_settings for insert with check (user_id = auth.uid());
+create policy "own settings update" on public.user_settings for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 ```
 
 - [ ] **Step 4: Enable Realtime**
