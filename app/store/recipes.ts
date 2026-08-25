@@ -40,7 +40,9 @@ export const useRecipeStore = defineStore('recipes', () => {
     }
     await insertRecipe(data.value);
     state.recipes?.unshift(data.value);
-    await settingStore.fetchSettings();
+    // Scaffolding: Task 16 rewrites this file wholesale. Converted here only
+    // so the tree builds now that `fetchSettings` is gone.
+    await settingStore.fetchQuota();
     state.generating = false;
   };
   const insertRecipe = async (recipe: Recipe) => {

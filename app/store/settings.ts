@@ -1,55 +1,24 @@
-import type { Settings } from '../../types/Settings';
-interface State {
-  settings: Settings | null;
-}
+import type { UserSettingsRecord } from '~~/types/sync';
+
 export const useSettingsStore = defineStore('settings', () => {
-  const client = useSupabaseClient();
-  const user = useSupabaseUser();
-  const state = reactive<State>({
-    settings: null
-  });
+  const { settings, update } = useUserSettings();
+  const quota = ref<{ ai: boolean; free_ai_calls: number } | null>(null);
 
-  const fetchSettings = async () => {
-    const { data } = await useFetch('/api/settings');
-    state.settings = data.value?.settings;
-    return data.value;
+  /** Read-only cache. The client never writes these — /api/recipe does. */
+  const fetchQuota = async () => {
+    const data = await $fetch('/api/settings');
+    quota.value = data?.quota ?? null;
+    return quota.value;
   };
 
-  const updateSettings = async (settings: Settings) => {
-    const { data, error } = await client.from('users').update(settings).eq('id', user.value?.id);
-    if (error) {
-      console.error('Error updating settings:', error);
-      return;
-    }
-    await fetchSettings();
-  };
+  const updateSettings = (patch: Partial<UserSettingsRecord>) => update(patch);
 
-  const toggleEmptyItems = async () => {
-    if (state.settings) {
-      const newSettings = { ...state.settings, show_empty_items: !state.settings.show_empty_items };
-      await updateSettings(newSettings);
-    }
-  };
+  const toggleEmptyItems = () => update({ show_empty_items: !(settings.value?.show_empty_items ?? true) });
 
-  const toggleNoInventoryMode = async (value) => {
-    if (state.settings) {
-      const newSettings = { ...state.settings, no_inventory: value ? value : !state.settings.no_inventory };
-      await updateSettings(newSettings);
-    }
-  };
+  const toggleNoInventoryMode = (value?: boolean) =>
+    update({ no_inventory: value ?? !(settings.value?.no_inventory ?? false) });
 
-  const freeAICalls = computed(() => {
-    if (state.settings?.ai) {
-      return 999;
-    }
-    return state.settings?.free_ai_calls;
-  });
-  return {
-    ...toRefs(state),
-    fetchSettings,
-    updateSettings,
-    toggleEmptyItems,
-    toggleNoInventoryMode,
-    freeAICalls
-  };
+  const freeAICalls = computed(() => (quota.value?.ai ? 999 : (quota.value?.free_ai_calls ?? 0)));
+
+  return { settings, quota, fetchQuota, updateSettings, toggleEmptyItems, toggleNoInventoryMode, freeAICalls };
 });

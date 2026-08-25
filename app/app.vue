@@ -11,7 +11,7 @@ const user = useSupabaseUser();
 // sync engine keeps it fed, so there is nothing to kick off on mount.
 onMounted(async () => {
   if (user.value) {
-    await settingStore.fetchSettings();
+    await settingStore.fetchQuota();
   }
 });
 

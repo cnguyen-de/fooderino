@@ -13,37 +13,39 @@ const logout = async () => {
   window.location.reload();
 };
 const settingsStore = useSettingsStore();
-settingsStore.fetchSettings();
+onMounted(() => settingsStore.fetchQuota());
+
 const formSchema = toTypedSchema(
   z.object({
-    servings: z
-      .number()
-      .min(1)
-      .max(50)
-      .default(settingsStore.settings?.servings ?? 0),
-    allergies: z
-      .string()
-      .min(2)
-      .max(500)
-      .default(settingsStore.settings?.allergies ?? ''),
-    cuisines: z
-      .string()
-      .min(2)
-      .max(500)
-      .default(settingsStore.settings?.cuisines ?? '')
+    servings: z.number().min(1).max(50).default(1),
+    allergies: z.string().min(2).max(500).default(''),
+    cuisines: z.string().min(2).max(500).default('')
   })
 );
 const form = useForm({
   validationSchema: formSchema
 });
+
+// Settings come from Dexie, which resolves after setup, so the form cannot be
+// seeded from the store at schema-build time the way it was when this page
+// blocked on an SSR fetch. Seed it when the row arrives — and only while the
+// form is untouched, so a pull from another device never clobbers typing.
+watch(
+  () => settingsStore.settings,
+  (s) => {
+    if (!s || form.meta.value.dirty) return;
+    form.resetForm({ values: { servings: s.servings, allergies: s.allergies, cuisines: s.cuisines } });
+  },
+  { immediate: true }
+);
+
 const onSubmit = form.handleSubmit(async (values) => {
   await settingsStore.updateSettings(values);
   toast('Successfully saved settings');
 });
 
-const noInventoryMode = ref(settingsStore.settings?.no_inventory);
+const noInventoryMode = computed(() => settingsStore.settings?.no_inventory ?? false);
 const updateNoInventoryMode = async (checked: boolean) => {
-  noInventoryMode.value = checked;
   await settingsStore.toggleNoInventoryMode(checked);
 };
 
@@ -75,12 +77,12 @@ const upgradeToPro = async () => {
           <div>
             <h3 class="text-lg">Account type</h3>
             <p
-              v-if="!settingsStore.settings.ai"
+              v-if="!settingsStore.quota?.ai"
               class="bg-gradient-to-r from-red-600 to-yellow-700 bg-clip-text font-bold text-transparent dark:from-red-500 dark:to-yellow-400">
               <button @click="upgradeToPro">Upgrade to PRO</button>
             </p>
           </div>
-          <div v-if="!settingsStore.settings.ai" class="rounded-md border border-solid border-gray-500/50 px-2 py-1">
+          <div v-if="!settingsStore.quota?.ai" class="rounded-md border border-solid border-gray-500/50 px-2 py-1">
             <span class="text-gray-600 dark:text-gray-300">Free</span>
           </div>
           <div

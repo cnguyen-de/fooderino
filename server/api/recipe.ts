@@ -1,7 +1,6 @@
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server';
-import { Settings } from '~~/types/Settings';
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event);
@@ -12,13 +11,10 @@ export default defineEventHandler(async (event) => {
     return { settings: null };
   }
   let hasAIRight = false;
-  const userInfos = await client.from('users').select().eq('id', user.id);
-  let userSettings: Settings = {};
-  if (userInfos.data?.length > 0) {
-    userSettings = userInfos.data[0];
-    if (userSettings?.ai || (!userSettings?.ai && userSettings?.free_ai_calls > 0)) {
-      hasAIRight = true;
-    }
+  const userInfos = await client.from('users').select('ai, free_ai_calls').eq('id', user.id);
+  const quota = userInfos.data?.[0] ?? null;
+  if (quota && (quota.ai || quota.free_ai_calls > 0)) {
+    hasAIRight = true;
   }
   if (!hasAIRight) {
     throw createError({
@@ -31,9 +27,20 @@ export default defineEventHandler(async (event) => {
   const reqQuery = getQuery(event);
   const recipes = await client.from('recipes').select('name').eq('id', user.id);
   const userKnownRecipes = recipes.data?.map((recipe) => recipe?.name).join(', ');
-  const userAllergies = userSettings.allergies ?? 'no allergies';
-  const userServings = userSettings.servings ?? '1';
-  const userFavCuisines = userSettings.cuisines ?? 'no preferences';
+  // Preferences moved off `users` and into `user_settings`, which the client
+  // syncs. Reading them from `users` here would pin every generation to
+  // whatever the values were at the moment of the local-first cutover.
+  const prefRows = await client
+    .from('user_settings')
+    .select('servings, allergies, cuisines')
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
+  const prefs = prefRows.data?.[0] ?? null;
+  // `||`, not `??`: these default to empty strings, and an empty string in the
+  // prompt reads as a truncated sentence to the model.
+  const userAllergies = prefs?.allergies || 'no allergies';
+  const userServings = prefs?.servings ?? 1;
+  const userFavCuisines = prefs?.cuisines || 'no preferences';
   const useHasIngredients = reqQuery?.useHasIngredients === 'true' || false;
   const userCustomRequest = reqQuery?.request ?? '';
   let userHasIngredients = '';
@@ -59,10 +66,10 @@ export default defineEventHandler(async (event) => {
     model: openai('gpt-4o-mini'),
     messages
   });
-  if (!userSettings?.ai) {
+  if (quota && !quota.ai) {
     await client
       .from('users')
-      .update({ free_ai_calls: userSettings?.free_ai_calls - 1 })
+      .update({ free_ai_calls: quota.free_ai_calls - 1 })
       .eq('id', user.id);
   }
 

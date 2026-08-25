@@ -5,7 +5,7 @@ import { useRecipeStore } from '~/store/recipes';
 
 const { messages, input, handleSubmit } = useChat();
 const settingsStore = useSettingsStore();
-await settingsStore.fetchSettings();
+onMounted(() => settingsStore.fetchQuota());
 const recipeStore = useRecipeStore();
 const useHasIngredients = ref(false);
 const request = ref('');
@@ -17,7 +17,7 @@ const generateRecipe = async () => {
 <template>
   <NuxtLayout name="app">
     <NuxtLayout name="recipe">
-      <div v-if="!settingsStore?.settings?.ai" class="w-full p-4">
+      <div v-if="!settingsStore.quota?.ai" class="w-full p-4">
         <Alert>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -41,7 +41,7 @@ const generateRecipe = async () => {
       </div>
       <div class="relative mx-auto flex w-full flex-col items-start justify-start gap-2">
         <Input
-          v-if="settingsStore?.settings?.ai"
+          v-if="settingsStore.quota?.ai"
           type="text"
           placeholder="What do you feel like eating today?"
           v-model="request" />
