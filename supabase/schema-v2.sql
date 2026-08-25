@@ -176,6 +176,18 @@ for each row execute function public.guard_list_owner();
 -- amount columns. It is the sole writer of items_v2.amount and
 -- amount_to_purchase — must be `for each row`, not `for each statement`, or
 -- a multi-row insert would fold only once and silently lose increments.
+--
+-- Deliberately NOT `security definer`. The UPDATE below runs under the
+-- inserting user's RLS, which is what stops a client from pairing an op whose
+-- `list_id` it can access with an `item_id` from a list it cannot: the update
+-- matches zero rows instead of writing across the boundary. Making this a
+-- definer would grant exactly that cross-list write.
+--
+-- The zero-row case is also silent by design. The realistic way to reach it is
+-- a member removed from a shared list while offline with queued ops; raising
+-- there would wedge that device's outbox permanently, since the drain stops at
+-- the first throw. Discarding an op for a list the user no longer belongs to is
+-- the correct outcome.
 create or replace function public.apply_item_op()
 returns trigger
 language plpgsql
