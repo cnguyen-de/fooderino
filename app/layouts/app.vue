@@ -2,6 +2,8 @@
 withDefaults(defineProps<{ hideBorder?: boolean }>(), {
   hideBorder: true
 });
+
+const { hydrated } = useSyncBootstrap();
 </script>
 <template>
   <div class="relative h-full w-full">
@@ -18,7 +20,10 @@ withDefaults(defineProps<{ hideBorder?: boolean }>(), {
         </span>
       </div>
       <div class="relative h-full w-full pt-12">
-        <slot></slot>
+        <div v-if="!hydrated" class="flex h-full items-center justify-center">
+          <LoadingSpinner />
+        </div>
+        <slot v-else></slot>
       </div>
 
       <div class="fixed bottom-0 h-16 w-full bg-gray-200/50 dark:bg-black/40">
