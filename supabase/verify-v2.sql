@@ -1,26 +1,35 @@
 -- supabase/verify-v2.sql
--- Run after supabase/backfill-v2.sql. Queries 2 and 3 must return `0`.
--- Queries 4 and 5 are informational, not gates. Query 1's deltas must be 0
--- for logs and recipes; for lists/items they are expected to equal query
--- 0's count (see below).
+-- Run after supabase/backfill-v2.sql. Queries 1b, 2 and 3 must return `0`.
+-- Queries 0, 1a, 4, 5 and 6 are informational context, not gates.
 
 -- 0. Legacy lists excluded from the backfill because admin is null (lists_v2
 --    requires a non-null owner). Informational, but explains any nonzero
---    lists/items delta in query 1: every item and log on an excluded list is
+--    lists/items delta in query 1a: every item and log on an excluded list is
 --    dropped by the same inner join, since items_v2.list_id and
 --    logs_v2.list_id are not-null FKs to lists_v2. Record the count and the
 --    ids; a human should confirm none of them were meant to have an owner.
 select count(*) as excluded_lists from lists where admin is null;
 select uid, id, name from lists where admin is null;
 
--- 1. Row counts match. Expect logs/recipes delta = 0. Expect lists/items
---    delta = query 0's excluded_lists count (lists) and the item count on
---    those excluded lists (items) — not necessarily 0. Any delta beyond
---    that is a real gap.
+-- 1a. Raw row-count deltas, for context alongside 1b. lists/items are NOT
+--     expected to be 0 once ownerless-list exclusion is legitimate (see
+--     query 0) — read 1b for the actual pass/fail signal.
 select 'lists'   as t, (select count(*) from lists)   - (select count(*) from lists_v2)   as delta
 union all select 'items',   (select count(*) from items)   - (select count(*) from items_v2)
 union all select 'logs',    (select count(*) from logs)    - (select count(*) from logs_v2)
 union all select 'recipes', (select count(*) from recipes) - (select count(*) from recipes_v2);
+
+-- 1b. Same as 1a but with the legitimate ownerless-list shortfall subtracted
+--     out. Expect 0. Any nonzero value here is a real, unexplained gap —
+--     unlike 1a, this does not require mentally subtracting query 0's count.
+select 'lists' as t,
+       (select count(*) from lists) - (select count(*) from lists_v2)
+         - (select count(*) from lists where admin is null) as unexplained
+union all
+select 'items',
+       (select count(*) from items) - (select count(*) from items_v2)
+         - (select count(*) from items i join lists l on l.id = i.list_id
+             where l.admin is null);
 
 -- 2. No orphaned items. Expect 0. (Structurally guaranteed by the not-null
 --    FK items_v2.list_id -> lists_v2(id) if the backfill ran as written —
@@ -54,3 +63,11 @@ select l.id, l.name from lists_v2 l
    select 1 from list_members m
     where m.list_id = l.id and m.role = 'admin' and m.deleted_at is null
  );
+
+-- 6. Legacy member entries with no email — informational, not a failure.
+--    The members backfill in backfill-v2.sql skips these (they cannot
+--    satisfy list_members.email not null); this surfaces exactly which
+--    ones were skipped, same principle as query 0 for ownerless lists.
+select l.id as list_id, l.name, u as malformed_entry
+from lists l cross join lateral jsonb_array_elements(l.users) u
+where u->>'email' is null;

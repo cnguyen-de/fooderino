@@ -13,8 +13,8 @@
 --           best_before date, "user" text, created_at, last_updated
 --   logs    id uuid PK, created_at, list_id uuid, item text, "user" text,
 --           payload text, action text
---   recipes index int8 PK, id uuid (holds the USER's id), name, description,
---           ingredients jsonb, instructions, saved
+--   recipes index int8 PK, created_at, id uuid (holds the USER's id), name,
+--           description, ingredients jsonb, instructions, saved
 --   users   id uuid (= auth user id), email, servings, allergies, cuisines,
 --           show_empty_items, no_inventory, ai, free_ai_calls
 -- A `settings` table (id int4, uid uuid, ai, servings, allergies, cuisines,
@@ -44,9 +44,15 @@ select l.id, l.uid, l.name, l.admin, coalesce(l.created_at, now()), null
 from lists l
 where l.admin is not null;
 
--- lists.users is a jsonb array of {email, name, avatar, admin}
+-- lists.users is a jsonb array of {email, name, avatar, admin}. email is
+-- stored lowercased: list_members.email is unique(list_id, email) on the
+-- raw text, case-sensitive, and Task 19's share-token redemption upserts
+-- on that same (list_id, email) pair using the authenticated user's email
+-- verbatim. Two differently-cased legacy entries for the same person would
+-- otherwise dodge on-conflict here AND collide with a future redemption
+-- upsert as a spurious duplicate rather than an update.
 insert into list_members (id, list_id, user_id, email, name, avatar, role)
-select gen_random_uuid(), v.id, au.id, u->>'email', u->>'name', u->>'avatar',
+select gen_random_uuid(), v.id, au.id, lower(u->>'email'), u->>'name', u->>'avatar',
        case when coalesce((u->>'admin')::boolean, false) then 'admin' else 'member' end
 from lists l
 join lists_v2 v on v.id = l.id
@@ -61,8 +67,9 @@ on conflict (list_id, email) do nothing;
 -- than a raw select of i.list_id) is still required: items_v2.list_id is a
 -- not-null FK to lists_v2, and an item on a list excluded above (null admin)
 -- would violate that FK if copied verbatim. The inner join drops those items
--- instead of aborting the whole transaction; verify-v2.sql query 1's items
--- delta is how that loss surfaces (see query 0 for the expected size of it).
+-- instead of aborting the whole transaction; verify-v2.sql query 1a's items
+-- delta is how that loss surfaces (query 0 explains the expected size of it,
+-- and query 1b nets it back out to 0).
 -- amount_type is the enum AmountType in production; cast to text explicitly.
 -- times_updated and last_updated are deliberately not carried over as their
 -- own columns — updated_at subsumes last_updated. best_before is real user
@@ -88,12 +95,16 @@ from logs g
 join lists_v2 v on v.id = g.list_id;
 
 -- recipes.id holds the USER's id, not a recipe id — the legacy row key is
--- `index`. r.id is already uuid, no cast needed.
+-- `index`. r.id is already uuid, no cast needed. recipes.created_at seeds
+-- updated_at, same as lists.created_at and items.created_at above — it was
+-- missed in the first pass at this file and defaulted to a bare now(),
+-- which would have silently replaced every migrated recipe's ordering with
+-- the backfill's wall-clock time.
 insert into recipes_v2 (id, legacy_index, user_id, name, description,
                         ingredients, instructions, saved, updated_at, deleted_at)
 select gen_random_uuid(), r.index, r.id, r.name, r.description,
        coalesce(r.ingredients, '[]'::jsonb), r.instructions,
-       coalesce(r.saved, false), now(), null
+       coalesce(r.saved, false), coalesce(r.created_at, now()), null
 from recipes r;
 
 -- Only the user-owned preferences move. ai and free_ai_calls stay on users.
