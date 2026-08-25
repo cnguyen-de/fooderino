@@ -5,7 +5,7 @@ import { useStorage } from '@vueuse/core';
 import { useListStore } from '~/store/list';
 const itemStore = useItemStore();
 const listStore = useListStore();
-itemStore.fetchItems();
+// No fetch: `useItems()` subscribes to Dexie and the sync engine keeps it fed.
 const { showBuyItemsFromAllLists } = toRefs(itemStore);
 const categories = computed(() => {
   let stores = itemStore?.buyItems?.map((item) => item.store.trim());
@@ -68,9 +68,7 @@ const renameStore = async () => {
                 :items="
                   shoppingItems
                     ?.filter((item) => item.store === category)
-                    .sort(
-                      (a, b) => new Date(b.last_updated) - new Date(a.last_updated) || a.name.localeCompare(b?.name)
-                    )
+                    .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.name.localeCompare(b?.name))
                 "
                 @item-value-changed="itemStore.updateItem($event)"
                 @add-item-to-inventory="itemStore.addItemToInventory($event)">

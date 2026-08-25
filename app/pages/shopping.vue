@@ -7,7 +7,7 @@ import { useActionStore } from '~/store/actions';
 const itemStore = useItemStore();
 const actionStore = useActionStore();
 itemStore.showBuyItemsFromAllLists = true;
-itemStore.fetchItems();
+// No fetch: `useItems()` subscribes to Dexie and the sync engine keeps it fed.
 const { showBuyItemsFromAllLists } = toRefs(itemStore);
 const categories = computed(() => {
   let stores = itemStore?.buyItemsFromAllLists
@@ -85,7 +85,7 @@ onUnmounted(() => {
                   ?.filter(
                     (item) => item.store === category && !actionStore.purchasedItems.some((i) => i.id === item.id)
                   )
-                  .sort((a, b) => b.last_updated - a.last_updated || a.name.localeCompare(b?.name))
+                  .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.name.localeCompare(b?.name))
               "
               @item-value-changed="onItemValueChanged($event)"
               @add-item-to-inventory="onAddItemToInventory($event)">

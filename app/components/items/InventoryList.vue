@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import type { Item } from '../../../types/Item';
+import type { ItemRecord } from '~~/types/sync';
 import { useItemStore } from '~/store/item';
 
 type ListItemProps = {
-  items: Item[];
+  items: ItemRecord[];
 };
-const props = defineProps<ListItemProps>();
+defineProps<ListItemProps>();
 
 const itemStore = useItemStore();
 
-const onItemAmountValueChanged = (item: Item) => {
+// The payload is the emitted spread of Item.vue's props, not the stored row,
+// so topping up `amount_to_purchase` here mutates a copy and is safe.
+const onItemAmountValueChanged = (item: ItemRecord) => {
   if (item.amount < item.default_amount) {
     item.amount_to_purchase = item.default_amount - item.amount;
   }
@@ -33,7 +35,6 @@ const onItemAmountValueChanged = (item: Item) => {
         :show-amount="false"
         :disable-swipe="true"
         :item="item"
-        :times_updated="item.times_updated"
         @value-changed="onItemAmountValueChanged($event)">
         <AddToBuy :item="item"></AddToBuy>
       </Item>

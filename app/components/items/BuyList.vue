@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { Item } from '~~/types/Item';
+import type { ItemRecord } from '~~/types/sync';
 
 type ListItemProps = {
-  items: Item[];
+  items: ItemRecord[];
 };
 defineProps<ListItemProps>();
 const emit = defineEmits(['itemValueChanged', 'addItemToInventory']);
-const onValueChanged = (item: Item) => {
+const onValueChanged = (item: ItemRecord) => {
   emit('itemValueChanged', item);
 };
-const onAddItemToInventory = async (item: Item) => {
+const onAddItemToInventory = async (item: ItemRecord) => {
   emit('addItemToInventory', item);
 };
 </script>
@@ -28,7 +28,6 @@ const onAddItemToInventory = async (item: Item) => {
         :default_amount="item.default_amount"
         :to-right="false"
         :item="item"
-        :times_updated="item.times_updated"
         show-amount
         disable-swipe
         :amount-as-number-input="false"

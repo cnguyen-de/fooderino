@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core';
 import { House } from 'lucide-vue-next';
-import type { Item } from '~~/types/Item';
+import type { ItemRecord } from '~~/types/sync';
 
 // @refactor this should accept item as an object instead -.-
 export type ItemProps = {
-  id: number;
+  id: string;
   name: string;
   amount: number;
   amount_to_purchase: number;
@@ -15,11 +15,10 @@ export type ItemProps = {
   disableSwipe?: boolean;
   amountAsNumberInput?: boolean;
   default_amount?: number;
-  times_updated?: number;
-  item: Item;
+  item: ItemRecord;
 };
 const props = withDefaults(defineProps<ItemProps>(), {
-  id: 0,
+  id: '',
   name: '',
   amount: 0,
   amount_to_purchase: 0,

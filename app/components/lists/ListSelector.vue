@@ -62,12 +62,11 @@ const acceptInvite = async (accept) => {
 };
 
 const isShoppingMode = ref(itemStore.showBuyItemsFromAllLists);
-const toggleAllLists = async () => {
+const toggleAllLists = () => {
   isShoppingMode.value = !isShoppingMode.value;
+  // No fetch: every list's items are already in Dexie, so the flag alone
+  // switches which computed the pages read.
   itemStore.showBuyItemsFromAllLists = isShoppingMode.value;
-  if (isShoppingMode.value) {
-    await itemStore.fetchBuyItemsFromAllLists();
-  }
 };
 
 const inviteEmail = ref('');

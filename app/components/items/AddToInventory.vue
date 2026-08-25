@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useItemStore } from '~/store/item';
+import type { ItemRecord } from '~~/types/sync';
 const itemStore = useItemStore();
 export type ItemProps = {
-  item: Item;
+  item: ItemRecord;
 };
 defineProps<ItemProps>();
 </script>

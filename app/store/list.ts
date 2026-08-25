@@ -1,5 +1,4 @@
 import type { ListRecord } from '~~/types/sync';
-import { useItemStore } from '~/store/item';
 
 interface State {
   selectedListId: string | null;
@@ -19,29 +18,6 @@ export const useListStore = defineStore('list', () => {
 
   const selectedMembers = computed(() =>
     selectedList.value ? membersOf(selectedList.value.id).value : []
-  );
-
-  // TEMPORARY BRIDGE — delete in Task 14 (items cutover).
-  // Lists now come from Dexie, but items still come from the legacy `items`
-  // table via a fetch keyed on the selected list. The old `setSelectedList`
-  // called `fetchItems()` inline; without something here, switching lists
-  // between this task and Task 14 would leave the previous list's items on
-  // screen, and a cold start would show none at all.
-  watch(
-    selectedList,
-    (list) => {
-      if (!import.meta.client) return;
-      const itemStore = useItemStore();
-      if (!list) {
-        itemStore.inventoryItems = [];
-        itemStore.buyItems = [];
-        itemStore.allItems = [];
-        itemStore.buyItemsFromAllLists = [];
-        return;
-      }
-      void itemStore.fetchItems();
-    },
-    { immediate: true }
   );
 
   return {

@@ -49,11 +49,15 @@ const setName = (n: string) => {
   form.value.name = n;
   toggleSuggestions('name');
   const existingItem = itemStore.allItems.find((item) => item.name === n);
-  form.value.amount = existingItem?.amount > 0 ? existingItem.amount : props.location ? 1 : 0;
-  form.value.amountToPurchase =
-    existingItem?.amount_to_purchase > 0 ? existingItem?.amount_to_purchase : props.store ? '1' : '0';
-  form.value.defaultAmount = existingItem?.defaultAmount ?? '0';
-  form.value.amountType = existingItem?.amountType ?? 'count';
+  // Every field on `form` is a string, because the inputs bind to strings.
+  // `defaultAmount`/`amountType` previously read camelCase keys that the record
+  // has never had, so picking an existing item never prefilled either one.
+  const amount = existingItem?.amount ?? 0;
+  const toPurchase = existingItem?.amount_to_purchase ?? 0;
+  form.value.amount = amount > 0 ? String(amount) : props.location ? '1' : '0';
+  form.value.amountToPurchase = toPurchase > 0 ? String(toPurchase) : props.store ? '1' : '0';
+  form.value.defaultAmount = String(existingItem?.default_amount ?? 0);
+  form.value.amountType = existingItem?.amount_type ?? 'count';
   form.value.store = existingItem?.store ?? '';
   form.value.location = existingItem?.location ?? '';
 };

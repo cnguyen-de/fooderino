@@ -8,7 +8,7 @@ const itemStore = useItemStore();
 const listStore = useListStore();
 const { getFilteredInventoryItems } = toRefs(itemStore);
 
-itemStore.fetchItems();
+// No fetch: `useItems()` subscribes to Dexie and the sync engine keeps it fed.
 const categories = computed(() => itemStore.inventoryCategories);
 // const items = computed(() => {
 //   let items = itemStore.getFilteredInventoryItems;
@@ -63,9 +63,7 @@ const updateCategoryMap = (category, isOpen) => {
                 :items="
                   getFilteredInventoryItems
                     ?.filter((item) => item.location === category)
-                    .sort(
-                      (a, b) => new Date(b.last_updated) - new Date(a.last_updated) || a.name.localeCompare(b?.name)
-                    )
+                    .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.name.localeCompare(b?.name))
                 "></InventoryList>
             </CollapsibleContent>
           </Collapsible>

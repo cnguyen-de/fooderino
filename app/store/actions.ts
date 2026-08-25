@@ -1,12 +1,12 @@
 import type { Command } from '~~/types/Command';
-import type { Item } from '~~/types/Item';
+import type { ItemRecord } from '~~/types/sync';
 import { useStorage } from '@vueuse/core';
 import { useItemStore } from './item';
 
 interface State {
   actions: Command[];
   currentActionIndex: number;
-  purchasedItems: Item[];
+  purchasedItems: ItemRecord[];
 }
 
 export const useActionStore = defineStore('actions', () => {
@@ -15,8 +15,11 @@ export const useActionStore = defineStore('actions', () => {
     currentActionIndex: -1,
     purchasedItems: []
   });
-  const purchasedItems = useStorage('purchasedItem', []);
-  state.purchasedItems = purchasedItems.value;
+  const purchasedItems = useStorage<ItemRecord[]>('purchasedItem', []);
+  // Baskets persisted before the Dexie cutover hold legacy rows with numeric
+  // ids that no longer exist. Confirming one would queue an op against a
+  // missing item, so they are dropped on load rather than carried forward.
+  state.purchasedItems = purchasedItems.value.filter((item) => typeof item?.id === 'string');
   watch(
     () => state.purchasedItems,
     (value) => {
@@ -71,7 +74,7 @@ export const useActionStore = defineStore('actions', () => {
     state.purchasedItems = [];
   };
 
-  const removePurchasedItemById = (id: number) => {
+  const removePurchasedItemById = (id: string) => {
     const index = state.purchasedItems.findIndex((item) => item.id === id);
     if (index > -1) {
       state.purchasedItems.splice(index, 1);
@@ -80,10 +83,12 @@ export const useActionStore = defineStore('actions', () => {
 
   const confirmPurchasing = async () => {
     const itemStore = useItemStore();
-    state.purchasedItems.forEach(async (item) => {
+    // Sequential, over a copy: the previous `forEach(async …)` never awaited,
+    // so it mutated the array it was iterating while the updates were in flight.
+    for (const item of [...state.purchasedItems]) {
       await itemStore.addItemToInventory(item);
       removePurchasedItemById(item.id);
-    });
+    }
     state.actions = [];
     state.currentActionIndex = -1;
   };

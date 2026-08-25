@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useItemStore } from '~/store/item';
-import type { Item } from '~~/types/Item';
+import type { ItemRecord } from '~~/types/sync';
 
-const props = defineProps<{ item: Item; isBuyList: boolean }>();
+const props = defineProps<{ item: ItemRecord; isBuyList: boolean }>();
 
 const itemStore = useItemStore();
 const isEditItemDrawerOpen = ref(false);

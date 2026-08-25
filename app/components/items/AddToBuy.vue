@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useItemStore } from '~/store/item';
-import type { Item } from '../../../types/Item';
+import type { ItemRecord } from '~~/types/sync';
 import { ShoppingCart } from 'lucide-vue-next';
 const itemStore = useItemStore();
-const addToBuy = (item) => {
+const addToBuy = (item: ItemRecord) => {
   itemStore.addItemToBuy(item);
 };
 interface Props {
-  item: Item;
+  item: ItemRecord;
 }
 const props = defineProps<Props>();
 </script>

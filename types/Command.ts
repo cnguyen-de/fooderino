@@ -1,6 +1,6 @@
-import type { Item } from './Item';
+import type { ItemRecord } from './sync';
 
 export interface Command {
   type: string;
-  payload: Item;
+  payload: ItemRecord;
 }
