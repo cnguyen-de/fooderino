@@ -20,6 +20,7 @@
     "@pinia/nuxt": "^0.5.5",
     "@radix-icons/vue": "^1.0.0",
     "@selemondev/vue3-marquee": "^0.0.8",
+    "@supabase/supabase-js": "^2.45.4",
     "@vee-validate/nuxt": "^4.13.2",
     "@vee-validate/zod": "^4.13.2",
     "@vite-pwa/nuxt": "^0.10.5",
@@ -57,6 +58,7 @@
     "prettier-plugin-tailwindcss": "^0.6.8",
     "typescript": "^5.6.2",
     "vite-tsconfig-paths": "^5",
-    "vitest": "^3"
+    "vitest": "^3",
+    "vue-tsc": "~2.1.10"
   }
 }

@@ -75,7 +75,7 @@ describe('pushDirty', () => {
     await createSyncEngine(f.transport).pushDirty(defFor('items'));
 
     expect(f.upserted).toHaveLength(1);
-    expect(f.upserted[0].rows.map((r) => r.id)).toEqual(['new']);
+    expect(f.upserted[0]!.rows.map((r) => r.id)).toEqual(['new']);
   });
 
   it('strips the trigger-owned counter columns from item pushes', async () => {
@@ -84,7 +84,7 @@ describe('pushDirty', () => {
     const f = fakeTransport();
     await createSyncEngine(f.transport).pushDirty(defFor('items'));
 
-    const sent = f.upserted[0].rows[0];
+    const sent = f.upserted[0]!.rows[0]!;
     expect(sent).not.toHaveProperty('amount');
     expect(sent).not.toHaveProperty('amount_to_purchase');
     expect(sent.name).toBe('milk');
@@ -158,7 +158,7 @@ describe('pushOutbox', () => {
     await expect(createSyncEngine(f.transport).pushOutbox()).rejects.toThrow('network down');
 
     expect(await db.pendingOps.toArray()).toHaveLength(1);
-    expect((await db.pendingOps.toArray())[0].id).toBe('b');
+    expect((await db.pendingOps.toArray())[0]!.id).toBe('b');
   });
 });
 
