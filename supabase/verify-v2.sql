@@ -1,6 +1,6 @@
 -- supabase/verify-v2.sql
 -- Run after supabase/backfill-v2.sql. Queries 1b, 2 and 3 must return `0`.
--- Queries 0, 1a, 4, 5 and 6 are informational context, not gates.
+-- Queries 0, 1a, 3b, 4 and 5 are informational context, not gates.
 
 -- 0. Legacy lists excluded from the backfill because admin is null (lists_v2
 --    requires a non-null owner). Informational, but explains any nonzero
@@ -37,16 +37,28 @@ select 'items',
 select count(*) from items_v2 i
  where not exists (select 1 from lists_v2 l where l.id = i.list_id);
 
--- 3. Every legacy member email, on a list that was actually backfilled,
---    made it across. Expect 0. Restricted to admin-not-null lists because
---    members of an excluded list (query 0) have nowhere to land and are not
---    a backfill failure.
+-- 3. Every legacy member email the backfill actually attempted made it
+--    across. Expect 0. Restricted to admin-not-null lists (members of an
+--    excluded list, per query 0, have nowhere to land) AND to non-null
+--    emails (the backfill's own `u->>'email' is not null` guard skips
+--    those, per query 3b below) — without the email filter, every null
+--    email collapses under DISTINCT into one bogus "missing member" and
+--    under-reports if there's more than one.
 select count(*) from (
   select distinct lower(u->>'email') as email
   from lists l cross join lateral jsonb_array_elements(l.users) u
-  where l.admin is not null
+  where l.admin is not null and u->>'email' is not null
 ) legacy
 where not exists (select 1 from list_members m where lower(m.email) = legacy.email);
+
+-- 3b. Legacy member entries with no email — informational, not a failure.
+--     The members backfill skips these (they cannot satisfy
+--     list_members.email not null); this surfaces exactly which ones were
+--     skipped, same principle as query 0 for ownerless lists, and is why
+--     query 3 above excludes them rather than letting them corrupt the count.
+select l.id as list_id, l.name, u as malformed_entry
+from lists l cross join lateral jsonb_array_elements(l.users) u
+where u->>'email' is null;
 
 -- 4. Members with no account yet — informational, not a failure.
 --    These sync once they sign up (see the claim trigger in backfill-v2.sql).
@@ -63,11 +75,3 @@ select l.id, l.name from lists_v2 l
    select 1 from list_members m
     where m.list_id = l.id and m.role = 'admin' and m.deleted_at is null
  );
-
--- 6. Legacy member entries with no email — informational, not a failure.
---    The members backfill in backfill-v2.sql skips these (they cannot
---    satisfy list_members.email not null); this surfaces exactly which
---    ones were skipped, same principle as query 0 for ownerless lists.
-select l.id as list_id, l.name, u as malformed_entry
-from lists l cross join lateral jsonb_array_elements(l.users) u
-where u->>'email' is null;
