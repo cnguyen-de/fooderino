@@ -137,6 +137,38 @@ as $$
   );
 $$;
 
+-- The list-scoped access rule, in one place. Owner is included explicitly
+-- because a list's owner must reach their own list even in the window before
+-- the membership row has synced — the write-through push path sends one
+-- collection at a time and cannot guarantee members land before items.
+create or replace function public.can_access_list(target uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.is_list_owner(target) or public.is_list_member(target);
+$$;
+
+-- `owner` is the root of list authority (is_list_owner reads it) and no
+-- product feature transfers ownership. Pin it at insert time.
+create or replace function public.guard_list_owner()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.owner is distinct from old.owner then
+    raise exception 'lists_v2.owner is immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger lists_v2_guard_owner
+before update on public.lists_v2
+for each row execute function public.guard_list_owner();
+
 alter table public.lists_v2          enable row level security;
 alter table public.list_members      enable row level security;
 alter table public.list_share_tokens enable row level security;
@@ -146,35 +178,47 @@ alter table public.logs_v2           enable row level security;
 alter table public.recipes_v2        enable row level security;
 alter table public.user_settings     enable row level security;
 
--- lists: members read/write; anyone signed in may create a list they own
-create policy "member reads list"   on public.lists_v2 for select using (is_list_member(id));
-create policy "member updates list" on public.lists_v2 for update using (is_list_member(id) or is_list_owner(id));
+-- lists: members (and the owner, even before their member row has synced)
+-- read/write; anyone signed in may create a list they own
+create policy "member reads list"   on public.lists_v2 for select using (can_access_list(id));
+create policy "member updates list" on public.lists_v2 for update using (can_access_list(id));
 create policy "owner creates list"  on public.lists_v2 for insert with check (owner = auth.uid());
 
--- members: visible to fellow members; you may insert your own membership row
-create policy "member reads members"  on public.list_members for select using (is_list_member(list_id));
-create policy "member writes members" on public.list_members for update using (is_list_member(list_id));
-create policy "member adds members"   on public.list_members for insert with check (is_list_owner(list_id) or is_list_member(list_id));
+-- members: visible to fellow members (or the owner); you may insert your own
+-- membership row; editing a membership row is narrower — see below, this is
+-- deliberately not can_access_list
+create policy "member reads members"  on public.list_members for select using (can_access_list(list_id));
+create policy "member adds members"   on public.list_members for insert with check (can_access_list(list_id));
+create policy "member writes members" on public.list_members
+  for update
+  using (is_list_owner(list_id) or user_id = auth.uid())
+  with check (is_list_owner(list_id) or user_id = auth.uid());
 
--- share tokens: only members may mint or read them
-create policy "member reads tokens"  on public.list_share_tokens for select using (is_list_member(list_id));
-create policy "member mints tokens"  on public.list_share_tokens for insert with check (is_list_member(list_id));
-create policy "member revokes tokens" on public.list_share_tokens for update using (is_list_member(list_id));
+-- share tokens: only members (or the owner) may mint or read them
+create policy "member reads tokens"  on public.list_share_tokens for select using (can_access_list(list_id));
+create policy "member mints tokens"  on public.list_share_tokens for insert with check (can_access_list(list_id));
+create policy "member revokes tokens" on public.list_share_tokens for update using (can_access_list(list_id));
 
 -- list-scoped data
-create policy "member reads items"   on public.items_v2 for select using (is_list_member(list_id));
-create policy "member writes items"  on public.items_v2 for update using (is_list_member(list_id));
-create policy "member adds items"    on public.items_v2 for insert with check (is_list_member(list_id));
+create policy "member reads items"   on public.items_v2 for select using (can_access_list(list_id));
+create policy "member writes items"  on public.items_v2 for update using (can_access_list(list_id));
+create policy "member adds items"    on public.items_v2 for insert with check (can_access_list(list_id));
 
-create policy "member reads ops"     on public.item_ops for select using (is_list_member(list_id));
-create policy "member adds ops"      on public.item_ops for insert with check (is_list_member(list_id));
+create policy "member reads ops"     on public.item_ops for select using (can_access_list(list_id));
+create policy "member adds ops"      on public.item_ops for insert with check (can_access_list(list_id));
 
-create policy "member reads logs"    on public.logs_v2 for select using (is_list_member(list_id));
-create policy "member adds logs"     on public.logs_v2 for insert with check (is_list_member(list_id));
+create policy "member reads logs"    on public.logs_v2 for select using (can_access_list(list_id));
+create policy "member adds logs"     on public.logs_v2 for insert with check (can_access_list(list_id));
 
--- per-user data
-create policy "own recipes" on public.recipes_v2   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "own settings" on public.user_settings for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- per-user data — select/insert/update only, no delete policy: these are
+-- LWW tables with deleted_at, hard deletes are not part of this product
+create policy "own recipes read"   on public.recipes_v2 for select using (user_id = auth.uid());
+create policy "own recipes insert" on public.recipes_v2 for insert with check (user_id = auth.uid());
+create policy "own recipes update" on public.recipes_v2 for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "own settings read"   on public.user_settings for select using (user_id = auth.uid());
+create policy "own settings insert" on public.user_settings for insert with check (user_id = auth.uid());
+create policy "own settings update" on public.user_settings for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- Realtime
 alter publication supabase_realtime add table public.lists_v2;
