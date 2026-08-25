@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useLogStore } from '~/store/logs';
 
+// No fetch: `useLogs` subscribes to Dexie and the sync engine keeps it fed.
 const logStore = useLogStore();
-logStore.fetchLogs();
 </script>
 
 <template>
@@ -15,7 +15,7 @@ logStore.fetchLogs();
             <li v-for="log in logStore.logs" :key="log.id">
               <div class="flex w-full flex-row items-center justify-between rounded-lg border border-gray-300 p-2">
                 <span>
-                  {{ log.item }}
+                  {{ log.item_name }}
                   <LogAction :log="log" />
                 </span>
                 <span class="text-sm text-gray-500 dark:text-gray-400" v-if="log.created_at">

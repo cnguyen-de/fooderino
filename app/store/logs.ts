@@ -1,38 +1,19 @@
 import { useListStore } from './list';
 
 export const useLogStore = defineStore('logs', () => {
-  const supabase = useSupabaseClient();
-  const user = useSupabaseUser();
   const listStore = useListStore();
-  const state = reactive({
-    logs: []
-  });
+  const user = useSupabaseUser();
+  const listId = computed(() => listStore.selectedList?.id ?? null);
+  const { logs, append } = useLogs(listId);
 
-  const fetchLogs = async () => {
-    if (!listStore.selectedList) {
-      return;
-    }
-    const { data } = await supabase
-      .from('logs')
-      .select()
-      .eq('list_id', listStore.selectedList?.id)
-      .neq('payload', '')
-      .order('created_at', { ascending: false })
-      .limit(30);
-    state.logs = data;
+  /**
+   * The list id and actor come from context now, so callers pass only what
+   * they know about the change itself.
+   */
+  const insertLog = async (itemName: string, action: string, payload: string) => {
+    if (!listId.value) return;
+    await append(listId.value, user.value?.email ?? null, itemName, action, payload);
   };
 
-  const insertLog = async (list_id: string, user: string, item: string, action: string, payload: string) => {
-    if (!listStore.selectedList) {
-      return;
-    }
-    const { data } = await supabase.from('logs').insert({ list_id, user, item, action, payload });
-    state.logs.unshift(data[0]);
-  };
-
-  return {
-    ...toRefs(state),
-    fetchLogs,
-    insertLog
-  };
+  return { logs, insertLog };
 });
