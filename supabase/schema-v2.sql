@@ -46,6 +46,7 @@ create table public.items_v2 (
   amount_to_purchase numeric not null default 0,
   amount_type        text not null default 'count',
   default_amount     numeric not null default 1,
+  best_before        date,
   created_by         text,
   updated_at         timestamptz not null default now(),
   deleted_at         timestamptz
