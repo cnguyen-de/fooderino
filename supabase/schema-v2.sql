@@ -119,6 +119,24 @@ as $$
   );
 $$;
 
+-- Owner check, needed to break the list_members bootstrap: RLS evaluates
+-- WITH CHECK before the tuple exists, so a brand-new list has no member row
+-- for is_list_member to find and its creator could never insert the first one.
+-- security definer for the same reason as is_list_member — reading lists_v2
+-- from inside a policy would otherwise re-enter that table's own policy.
+create or replace function public.is_list_owner(target uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.lists_v2
+    where id = target and owner = auth.uid()
+  );
+$$;
+
 alter table public.lists_v2          enable row level security;
 alter table public.list_members      enable row level security;
 alter table public.list_share_tokens enable row level security;
@@ -130,13 +148,13 @@ alter table public.user_settings     enable row level security;
 
 -- lists: members read/write; anyone signed in may create a list they own
 create policy "member reads list"   on public.lists_v2 for select using (is_list_member(id));
-create policy "member updates list" on public.lists_v2 for update using (is_list_member(id));
+create policy "member updates list" on public.lists_v2 for update using (is_list_member(id) or is_list_owner(id));
 create policy "owner creates list"  on public.lists_v2 for insert with check (owner = auth.uid());
 
 -- members: visible to fellow members; you may insert your own membership row
 create policy "member reads members"  on public.list_members for select using (is_list_member(list_id));
 create policy "member writes members" on public.list_members for update using (is_list_member(list_id));
-create policy "member adds members"   on public.list_members for insert with check (is_list_member(list_id));
+create policy "member adds members"   on public.list_members for insert with check (is_list_owner(list_id) or is_list_member(list_id));
 
 -- share tokens: only members may mint or read them
 create policy "member reads tokens"  on public.list_share_tokens for select using (is_list_member(list_id));
