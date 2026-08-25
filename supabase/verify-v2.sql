@@ -1,7 +1,8 @@
 -- supabase/verify-v2.sql
--- Run after supabase/backfill-v2.sql. Queries 2, 3 and 5 must return `0`.
--- Query 4 is informational. Query 1's deltas must be 0 for logs and recipes;
--- for lists/items they are expected to equal query 0's count (see below).
+-- Run after supabase/backfill-v2.sql. Queries 2 and 3 must return `0`.
+-- Queries 4 and 5 are informational, not gates. Query 1's deltas must be 0
+-- for logs and recipes; for lists/items they are expected to equal query
+-- 0's count (see below).
 
 -- 0. Legacy lists excluded from the backfill because admin is null (lists_v2
 --    requires a non-null owner). Informational, but explains any nonzero
@@ -42,7 +43,12 @@ where not exists (select 1 from list_members m where lower(m.email) = legacy.ema
 --    These sync once they sign up (see the claim trigger in backfill-v2.sql).
 select email from list_members where user_id is null;
 
--- 5. Every list has at least one admin. Expect 0.
+-- 5. Lists with no member flagged admin in the legacy JSON array —
+--    informational, not a failure. The real ownership gate is
+--    lists_v2.owner (always set, since query 0 already excludes
+--    admin-null lists). This only flags a data-quality gap: none of a
+--    list's member entries had `admin: true`, independent of who its
+--    actual owner is.
 select l.id, l.name from lists_v2 l
  where not exists (
    select 1 from list_members m

@@ -52,6 +52,7 @@ from lists l
 join lists_v2 v on v.id = l.id
 cross join lateral jsonb_array_elements(l.users) u
 left join auth.users au on lower(au.email) = lower(u->>'email')
+where u->>'email' is not null
 on conflict (list_id, email) do nothing;
 
 -- items.id stays int8 in production, so items keep the mint-a-uuid +
