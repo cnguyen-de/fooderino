@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyCommand, replayPending } from '~~/utils/pantry';
 import raw from '../fixtures/commands.json';
-import type { BagEntry, BagId, Command, CommandId, Item, ItemEvent, ItemId, Snapshot } from '~~/utils/pantry';
+import type { BagEntry, BagId, Command, CommandId, Inverse, Item, ItemEvent, ItemId, Snapshot } from '~~/utils/pantry';
 
 type Json = Record<string, unknown>;
 
@@ -90,5 +90,41 @@ describe('applyCommand', () => {
     if (!('state' in first)) throw new Error('expected the first apply to be accepted');
     const second = applyCommand(first.state, use);
     expect(second).toEqual({ state: first.state, events: [] });
+  });
+});
+
+describe('replayPending over a confirmed snapshot', () => {
+  it('predicts undo of an already confirmed command from a device-local inverse log', () => {
+    const milk = {
+      ...fixture.defaults.item,
+      id: 'milk',
+      name: 'Milk',
+      amount: 3,
+      best_before: '2026-11-18'
+    } as unknown as Item;
+    const entry = {
+      ...fixture.defaults.bag_entry,
+      id: 'b1',
+      item_id: 'milk',
+      qty: 2,
+      purchase_event: 'e1',
+      state: 'unpacked',
+      closed_by_command: 'c1'
+    } as unknown as BagEntry;
+    const localInverses = new Map([
+      ['c1' as CommandId, { kind: 'repack', bag_id: 'b1' as BagId, best_before: '2026-11-20' } as Inverse]
+    ]);
+    const confirmed: Snapshot = {
+      items: new Map([[milk.id, milk]]),
+      bag: new Map([[entry.id, entry]]),
+      log: localInverses
+    };
+    const undo = { ...fixture.defaults.command, id: 'c2', kind: 'undo', target: 'c1' } as unknown as Command;
+
+    const { state, rejected } = replayPending(confirmed, [undo], new Set());
+
+    expect(rejected).toEqual([]);
+    expect(state.items.get(milk.id)).toMatchObject({ amount: 1, best_before: '2026-11-20' });
+    expect(state.bag.get(entry.id)).toMatchObject({ state: 'open', closed_by_command: null });
   });
 });

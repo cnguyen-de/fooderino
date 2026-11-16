@@ -98,7 +98,7 @@ function unpack(state: Snapshot, cmd: Command & { kind: 'unpack' }): Outcome {
   return {
     items: [{ ...item, amount: item.amount + entry.qty, best_before, tags }],
     bag: { ...entry, state: 'unpacked', closed_by_command: cmd.id },
-    inverse: { kind: 'unstock', item_id: item.id, qty: entry.qty }
+    inverse: { kind: 'repack', bag_id: entry.id, best_before: item.best_before }
   };
 }
 
@@ -108,6 +108,17 @@ function undo(state: Snapshot, cmd: Command & { kind: 'undo' }): Outcome {
   if (inverse.kind === 'cancel_bag') {
     const outcome = cancelBag(state, cmd, inverse.bag_id);
     return typeof outcome === 'string' ? outcome : { ...outcome, undoes: cmd.target };
+  }
+  if (inverse.kind === 'repack') {
+    const entry = state.bag.get(inverse.bag_id);
+    const item = entry && liveItem(state, entry.item_id, cmd.household_id);
+    if (!entry || !item || item.amount < entry.qty) return 'cannot_undo';
+    return {
+      items: [{ ...item, amount: item.amount - entry.qty, best_before: inverse.best_before }],
+      bag: { ...entry, state: 'open', closed_by_command: null },
+      inverse: null,
+      undoes: cmd.target
+    };
   }
   const item = liveItem(state, inverse.item_id, cmd.household_id);
   if (!item) return 'cannot_undo';
@@ -126,9 +137,6 @@ function undo(state: Snapshot, cmd: Command & { kind: 'undo' }): Outcome {
       return done({ ...item, to_buy: inverse.to_buy });
     case 'restore_stock':
       return done({ ...item, ...inverse.before }, inverse.reverses);
-    case 'unstock':
-      if (item.amount < inverse.qty) return 'cannot_undo';
-      return done({ ...item, amount: item.amount - inverse.qty });
   }
 }
 
@@ -189,17 +197,19 @@ function effectOf(state: Snapshot, cmd: Command): Outcome {
         items: [{ ...item, to_buy: cmd.qty }],
         inverse: { kind: 'restore_to_buy', item_id: item.id, to_buy: item.to_buy }
       };
-    case 'tick':
+    case 'tick': {
       if (!isQty(cmd.qty) || !isCount(cmd.from_list) || cmd.from_list > cmd.qty) return 'invalid';
-      if (cmd.from_list > item.to_buy || state.bag.has(cmd.bag_id)) return 'invalid';
+      if (state.bag.has(cmd.bag_id)) return 'invalid';
+      // Another shopper may have ticked the same line first, so take only what is still listed.
+      const from_list = Math.min(cmd.from_list, item.to_buy);
       return {
-        items: [{ ...item, to_buy: item.to_buy - cmd.from_list }],
+        items: [{ ...item, to_buy: item.to_buy - from_list }],
         bag: {
           id: cmd.bag_id,
           household_id: cmd.household_id,
           item_id: item.id,
           qty: cmd.qty,
-          from_list: cmd.from_list,
+          from_list,
           bought_at: cmd.at,
           purchase_event: eventId,
           state: 'open',
@@ -208,6 +218,7 @@ function effectOf(state: Snapshot, cmd: Command): Outcome {
         event: { kind: 'purchase', item_id: item.id, qty: cmd.qty },
         inverse: { kind: 'cancel_bag', bag_id: cmd.bag_id }
       };
+    }
     case 'set': {
       const touched: Partial<Pick<Stock, 'amount' | 'best_before'>> = {};
       if (cmd.amount !== undefined) touched.amount = cmd.amount;

@@ -164,7 +164,7 @@ export type Inverse =
       reverses: EventId;
     }
   | { kind: 'cancel_bag'; bag_id: BagId }
-  | { kind: 'unstock'; item_id: ItemId; qty: number };
+  | { kind: 'repack'; bag_id: BagId; best_before: LocalDate | null };
 
 export interface Snapshot {
   items: ReadonlyMap<ItemId, Item>;
