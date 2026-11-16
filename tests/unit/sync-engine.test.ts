@@ -319,7 +319,7 @@ describe('runOnce after joining a list', () => {
   };
 
   async function seedCursors(): Promise<void> {
-    for (const t of ['lists', 'list_members', 'items', 'logs', 'recipes', 'user_settings']) {
+    for (const t of ['lists', 'list_members', 'items', 'logs', 'recipes']) {
       await setCursor(t, { pulled: CURSOR, pushed: CURSOR });
     }
   }

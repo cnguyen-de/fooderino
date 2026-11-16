@@ -8,7 +8,6 @@ describe('sync registry', () => {
     expect(defFor('logs').remote).toBe('logs_v2');
     expect(defFor('recipes').remote).toBe('recipes_v2');
     expect(defFor('list_members').remote).toBe('list_members');
-    expect(defFor('user_settings').remote).toBe('user_settings');
   });
 
   it('omits the trigger-owned counter columns from item pushes', () => {

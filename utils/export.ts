@@ -1,4 +1,4 @@
-import type { ListRecord, ItemRecord, RecipeRecord, UserSettingsRecord, SyncRecord, OpField } from '~~/types/sync';
+import type { ListRecord, ItemRecord, RecipeRecord, SyncRecord, OpField } from '~~/types/sync';
 
 export const EXPORT_VERSION = 1;
 
@@ -7,7 +7,6 @@ export interface ExportPayload {
   lists: ListRecord[];
   items: ItemRecord[];
   recipes: RecipeRecord[];
-  user_settings: UserSettingsRecord[];
 }
 
 export interface ImportSummaryItem {
@@ -17,8 +16,8 @@ export interface ImportSummaryItem {
   skipCount: number;
 }
 
-export type Collection = 'lists' | 'items' | 'recipes' | 'user_settings';
-const COLLECTIONS: Collection[] = ['lists', 'items', 'recipes', 'user_settings'];
+export type Collection = 'lists' | 'items' | 'recipes';
+const COLLECTIONS: Collection[] = ['lists', 'items', 'recipes'];
 
 const alive = <T extends SyncRecord>(rows: T[]): T[] => rows.filter((r) => r.deleted_at === null);
 
@@ -26,15 +25,13 @@ const alive = <T extends SyncRecord>(rows: T[]): T[] => rows.filter((r) => r.del
 export function buildExportPayload(
   lists: ListRecord[],
   items: ItemRecord[],
-  recipes: RecipeRecord[],
-  settings: UserSettingsRecord[]
+  recipes: RecipeRecord[]
 ): ExportPayload {
   return {
     version: EXPORT_VERSION,
     lists: alive(lists),
     items: alive(items),
-    recipes: alive(recipes),
-    user_settings: alive(settings)
+    recipes: alive(recipes)
   };
 }
 
@@ -56,15 +53,12 @@ export interface ImportContext {
   existing: Record<Collection, Set<string>>;
   /** Lists on this device that are not deleted. */
   liveListIds: Set<string>;
-  /** Whether this account already has a settings row. */
-  hasSettings: boolean;
 }
 
 export interface ImportPlan {
   lists: ListRecord[];
   items: ItemRecord[];
   recipes: RecipeRecord[];
-  user_settings: UserSettingsRecord[];
   /** Opening counter values, to be queued as `set` ops. */
   counters: { item_id: string; field: OpField; value: number }[];
   summary: ImportSummaryItem[];
@@ -85,13 +79,11 @@ const num = (v: unknown): number => {
  * pushed in, and the engine retries that batch forever.
  *
  * - `updated_at` is restamped, or rows older than the push cursor never push.
- * - Lists, recipes and settings owned by another account are skipped: RLS
+ * - Lists and recipes owned by another account are skipped: RLS
  *   rejects them.
  * - Items need a list that is here or arriving with this import (foreign key).
  * - Item counters are zeroed and returned as `set` ops, because item pushes
  *   omit them and the op trigger is their only writer.
- * - At most one settings row, and none if the account already has one
- *   (`user_settings.user_id` is unique).
  */
 export function planImport(payload: ExportPayload, ctx: ImportContext): ImportPlan {
   const fresh = <T extends { id: string }>(key: Collection, rows: T[]) =>
@@ -118,23 +110,15 @@ export function planImport(payload: ExportPayload, ctx: ImportContext): ImportPl
     .filter((r) => r.user_id === ctx.userId)
     .map(restamp);
 
-  const user_settings = ctx.hasSettings
-    ? []
-    : fresh('user_settings', payload.user_settings)
-        .filter((s) => s.user_id === ctx.userId)
-        .slice(0, 1)
-        .map(restamp);
-
   const added: Record<Collection, number> = {
     lists: lists.length,
     items: items.length,
-    recipes: recipes.length,
-    user_settings: user_settings.length
+    recipes: recipes.length
   };
   const summary = COLLECTIONS.map((key) => {
     const total = payload[key].length;
     return { label: key, total, newCount: added[key], skipCount: total - added[key] };
   });
 
-  return { lists, items, recipes, user_settings, counters, summary };
+  return { lists, items, recipes, counters, summary };
 }

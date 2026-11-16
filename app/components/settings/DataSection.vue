@@ -21,18 +21,12 @@ const unsyncedOps = ref(0);
 const LABELS: Record<string, string> = {
   lists: 'Lists',
   items: 'Items',
-  recipes: 'Recipes',
-  user_settings: 'Settings'
+  recipes: 'Recipes'
 };
 
 async function exportJSON(): Promise<void> {
-  const [lists, items, recipes, settings] = await Promise.all([
-    db.lists.toArray(),
-    db.items.toArray(),
-    db.recipes.toArray(),
-    db.user_settings.toArray()
-  ]);
-  const payload = buildExportPayload(lists, items, recipes, settings);
+  const [lists, items, recipes] = await Promise.all([db.lists.toArray(), db.items.toArray(), db.recipes.toArray()]);
+  const payload = buildExportPayload(lists, items, recipes);
   const today = new Date().toISOString().slice(0, 10);
   downloadFile(JSON.stringify(payload, null, 2), `fooderino-export-${today}.json`, 'application/json');
 }
@@ -55,11 +49,10 @@ async function buildPlan(payload: ExportPayload): Promise<ImportPlan | null> {
   const userId = user.value?.id;
   if (!userId) return null;
 
-  const [lists, items, recipes, settings] = await Promise.all([
+  const [lists, items, recipes] = await Promise.all([
     db.lists.toArray(),
     db.items.toCollection().primaryKeys(),
-    db.recipes.toCollection().primaryKeys(),
-    db.user_settings.toArray()
+    db.recipes.toCollection().primaryKeys()
   ]);
 
   return planImport(payload, {
@@ -68,11 +61,9 @@ async function buildPlan(payload: ExportPayload): Promise<ImportPlan | null> {
     existing: {
       lists: new Set(lists.map((l) => l.id)),
       items: new Set(items as string[]),
-      recipes: new Set(recipes as string[]),
-      user_settings: new Set(settings.map((s) => s.id))
+      recipes: new Set(recipes as string[])
     },
-    liveListIds: new Set(lists.filter((l) => l.deleted_at === null).map((l) => l.id)),
-    hasSettings: settings.some((s) => s.user_id === userId)
+    liveListIds: new Set(lists.filter((l) => l.deleted_at === null).map((l) => l.id))
   });
 }
 
@@ -134,12 +125,11 @@ async function confirmImport(): Promise<void> {
       )
     );
 
-    await db.transaction('rw', [db.lists, db.list_members, db.items, db.recipes, db.user_settings], async () => {
+    await db.transaction('rw', [db.lists, db.list_members, db.items, db.recipes], async () => {
       await db.lists.bulkAdd(p.lists);
       await db.list_members.bulkAdd(members);
       await db.items.bulkAdd(p.items);
       await db.recipes.bulkAdd(p.recipes);
-      await db.user_settings.bulkAdd(p.user_settings);
     });
 
     // Rows go up before any counter op: an op's item, and that item's list,

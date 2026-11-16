@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildExportPayload, isValidPayload, planImport, EXPORT_VERSION, type ExportPayload } from '~~/utils/export';
-import type { ItemRecord, ListRecord, RecipeRecord, UserSettingsRecord } from '~~/types/sync';
+import type { ItemRecord, ListRecord, RecipeRecord } from '~~/types/sync';
 
 const ME = 'user-me';
 const NOW = '2026-11-16T12:00:00.000Z';
@@ -33,33 +33,20 @@ const recipe = (id: string, user_id = ME): RecipeRecord => ({
   updated_at: OLD,
   deleted_at: null
 });
-const settings = (id: string, user_id = ME): UserSettingsRecord => ({
-  id,
-  user_id,
-  servings: 2,
-  allergies: '',
-  cuisines: '',
-  show_empty_items: true,
-  no_inventory: false,
-  updated_at: OLD,
-  deleted_at: null
-});
 
 const payload = (over: Partial<ExportPayload> = {}): ExportPayload => ({
   version: EXPORT_VERSION,
   lists: [],
   items: [],
   recipes: [],
-  user_settings: [],
   ...over
 });
 
 const ctx = (over: Partial<Parameters<typeof planImport>[1]> = {}) => ({
   userId: ME,
   now: NOW,
-  existing: { lists: new Set<string>(), items: new Set<string>(), recipes: new Set<string>(), user_settings: new Set<string>() },
+  existing: { lists: new Set<string>(), items: new Set<string>(), recipes: new Set<string>() },
   liveListIds: new Set<string>(),
-  hasSettings: false,
   ...over
 });
 
@@ -67,7 +54,7 @@ const count = (plan: ReturnType<typeof planImport>, label: string) => plan.summa
 
 describe('buildExportPayload', () => {
   it('stamps the version and carries every collection', () => {
-    const p = buildExportPayload([list('l1')], [item('i1')], [], []);
+    const p = buildExportPayload([list('l1')], [item('i1')], []);
     expect(p.version).toBe(EXPORT_VERSION);
     expect(p.lists).toHaveLength(1);
     expect(p.items).toHaveLength(1);
@@ -76,14 +63,14 @@ describe('buildExportPayload', () => {
 
   it('drops tombstoned rows, so an export is a clean snapshot', () => {
     const dead = item('i2', { deleted_at: '2026-01-02T00:00:00.000Z' });
-    const p = buildExportPayload([list('l1')], [item('i1'), dead], [], []);
+    const p = buildExportPayload([list('l1')], [item('i1'), dead], []);
     expect(p.items.map((i) => i.id)).toEqual(['i1']);
   });
 });
 
 describe('isValidPayload', () => {
   it('accepts a well-formed payload', () => {
-    expect(isValidPayload({ version: 1, lists: [], items: [], recipes: [], user_settings: [] })).toBe(true);
+    expect(isValidPayload({ version: 1, lists: [], items: [], recipes: [] })).toBe(true);
   });
 
   it('rejects a non-object', () => {
@@ -96,18 +83,18 @@ describe('isValidPayload', () => {
   });
 
   it('rejects a payload with no version', () => {
-    expect(isValidPayload({ lists: [], items: [], recipes: [], user_settings: [] })).toBe(false);
+    expect(isValidPayload({ lists: [], items: [], recipes: [] })).toBe(false);
   });
 
   it('rejects a version newer than this build understands', () => {
-    expect(isValidPayload({ version: EXPORT_VERSION + 1, lists: [], items: [], recipes: [], user_settings: [] })).toBe(
+    expect(isValidPayload({ version: EXPORT_VERSION + 1, lists: [], items: [], recipes: [] })).toBe(
       false
     );
   });
 
   it('rejects rows without a string id', () => {
-    expect(isValidPayload({ version: 1, lists: [{ name: 'x' }], items: [], recipes: [], user_settings: [] })).toBe(false);
-    expect(isValidPayload({ version: 1, lists: [null], items: [], recipes: [], user_settings: [] })).toBe(false);
+    expect(isValidPayload({ version: 1, lists: [{ name: 'x' }], items: [], recipes: [] })).toBe(false);
+    expect(isValidPayload({ version: 1, lists: [null], items: [], recipes: [] })).toBe(false);
   });
 });
 
@@ -160,30 +147,17 @@ describe('planImport', () => {
     expect(plan.items.map((i) => i.id)).toEqual(['i1']);
   });
 
-  it("skips lists, recipes and settings belonging to another account, which RLS would reject", () => {
+  it("skips lists and recipes belonging to another account, which RLS would reject", () => {
     const plan = planImport(
       payload({
         lists: [list('l1', 'someone-else')],
         items: [item('i1', { list_id: 'l1' })],
-        recipes: [recipe('r1', 'someone-else')],
-        user_settings: [settings('s1', 'someone-else')]
+        recipes: [recipe('r1', 'someone-else')]
       }),
       ctx()
     );
     expect(plan.lists).toEqual([]);
     expect(plan.items).toEqual([]);
     expect(plan.recipes).toEqual([]);
-    expect(plan.user_settings).toEqual([]);
-  });
-
-  it('never adds a second settings row for an account that already has one', () => {
-    const plan = planImport(payload({ user_settings: [settings('s1')] }), ctx({ hasSettings: true }));
-    expect(plan.user_settings).toEqual([]);
-    expect(count(plan, 'user_settings')).toMatchObject({ newCount: 0, skipCount: 1 });
-  });
-
-  it('imports at most one settings row', () => {
-    const plan = planImport(payload({ user_settings: [settings('s1'), settings('s2')] }), ctx());
-    expect(plan.user_settings.map((s) => s.id)).toEqual(['s1']);
   });
 });

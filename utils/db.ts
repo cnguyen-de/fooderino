@@ -5,7 +5,6 @@ import type {
   ItemRecord,
   LogRecord,
   RecipeRecord,
-  UserSettingsRecord,
   PendingOp,
   SyncStateRow
 } from '~~/types/sync';
@@ -16,7 +15,6 @@ const db = new Dexie('FooderinoDB') as Dexie & {
   items: EntityTable<ItemRecord, 'id'>;
   logs: EntityTable<LogRecord, 'id'>;
   recipes: EntityTable<RecipeRecord, 'id'>;
-  user_settings: EntityTable<UserSettingsRecord, 'id'>;
   pendingOps: EntityTable<PendingOp, 'id'>;
   syncState: EntityTable<SyncStateRow, 'key'>;
 };
@@ -32,5 +30,7 @@ db.version(1).stores({
   pendingOps: 'id, item_id, created_at',
   syncState: 'key'
 });
+
+db.version(2).stores({ user_settings: null });
 
 export { db };

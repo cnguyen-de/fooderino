@@ -45,13 +45,6 @@ export const SYNC_TABLES: SyncTableDef[] = [
     cursor: 'updated_at',
     appendOnly: false,
     pushOmit: []
-  },
-  {
-    local: 'user_settings',
-    remote: 'user_settings',
-    cursor: 'updated_at',
-    appendOnly: false,
-    pushOmit: []
   }
 ];
 

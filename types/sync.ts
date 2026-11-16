@@ -57,15 +57,6 @@ export interface RecipeRecord extends SyncRecord {
   saved: boolean;
 }
 
-export interface UserSettingsRecord extends SyncRecord {
-  user_id: string;
-  servings: number;
-  allergies: string;
-  cuisines: string;
-  show_empty_items: boolean;
-  no_inventory: boolean;
-}
-
 export type OpField = 'amount' | 'amount_to_purchase';
 export type OpKind = 'delta' | 'set';
 

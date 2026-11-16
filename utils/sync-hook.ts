@@ -3,8 +3,7 @@ export type SyncCollection =
   | 'list_members'
   | 'items'
   | 'logs'
-  | 'recipes'
-  | 'user_settings';
+  | 'recipes';
 
 export type LocalChangeHook = (collection: SyncCollection, id: string) => void;
 
