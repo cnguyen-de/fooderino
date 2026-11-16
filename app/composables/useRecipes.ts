@@ -67,8 +67,7 @@ export function useRecipes() {
   }
 
   const savedRecipes = computed(() => recipes.value.filter((r) => r.saved));
-  const generatedRecipes = computed(() => recipes.value.filter((r) => !r.saved));
   const byId = (id: string) => computed(() => recipes.value.find((r) => r.id === id) ?? null);
 
-  return { recipes, loading, savedRecipes, generatedRecipes, add, update, remove, byId };
+  return { recipes, loading, savedRecipes, add, update, remove, byId };
 }

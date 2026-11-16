@@ -29,7 +29,6 @@ Create `.env` with:
 |---|---|
 | `SUPABASE_URL`, `SUPABASE_KEY` | Project URL and anon key |
 | `SUPABASE_SERVICE_KEY` | Service-role key. Required by `/api/list/join`, the one route that bypasses RLS. **Never commit it.** |
-| `OPENAI_API_KEY` | Recipe generation |
 | `BASE_URL` | Public origin, used to build share links (defaults to `http://localhost:3000`) |
 
 Apply `supabase/schema-v2.sql` to the database before the first run. Migrating an existing

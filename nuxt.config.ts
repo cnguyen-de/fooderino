@@ -36,7 +36,6 @@ export default defineNuxtConfig({
     }
   },
   runtimeConfig: {
-    openaiApiKey: process.env.OPENAI_API_KEY,
     public: {
       baseUrl: process.env.BASE_URL || 'http://localhost:3000'
     }
@@ -72,7 +71,7 @@ export default defineNuxtConfig({
     manifest: {
       name: 'Fooderino',
       short_name: 'Fooderino',
-      description: 'Fooderino is a AI powered recipe and check list app for groceries.',
+      description: 'Fooderino is a recipe and check list app for groceries.',
       theme_color: '#000000',
       background_color: '#170206',
       lang: 'en',

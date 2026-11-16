@@ -24,7 +24,7 @@ const benefitList: BenefitsProps[] = [
     icon: 'wallet',
     title: 'Dynamic Recipes',
     description:
-      'You can manually add recipes or let Fooderino suggest recipes based on your preferences and available ingredients.'
+      'Save your own recipes and add their ingredients to your shopping list in one tap.'
   },
   {
     icon: 'sparkle',

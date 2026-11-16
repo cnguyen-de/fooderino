@@ -57,12 +57,6 @@ const isLargeScreen = useMediaQuery('(min-width: 1024px)');
                 :src="isLargeScreen ? '/hero-inventory-desktop.png' : '/hero-inventory-mobile.png'"
                 alt="Fooderino Screenshot Inventory" />
             </CarouselItem>
-            <CarouselItem class="pl-4">
-              <img
-                class="img-border-animation relative mx-auto flex w-full cursor-grab items-center rounded-lg border border-t-2 border-t-primary/30 object-contain leading-none md:w-[1200px]"
-                :src="isLargeScreen ? '/hero-ai-desktop.png' : '/hero-ai-mobile.png'"
-                alt="Fooderino Screenshot AI" />
-            </CarouselItem>
           </CarouselContent>
           <CarouselPrevious />
           <CarouselNext />
