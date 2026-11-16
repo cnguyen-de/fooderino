@@ -105,6 +105,14 @@ The three core loops, in priority order:
   the AI quota UI, the landing-page AI copy, and the OpenAI dependencies.
 - **Manual recipes stay** as they are.
 
+### No write debounce (owner, 2026-11-16)
+
+- The old debounce before updating was a workaround for rows jumping when lists were sorted
+  by `updated_at`. It is not carried over. Every write applies immediately.
+- No list is sorted by last-updated time. Home sorts by use count, then name. Shopping sorts by
+  store, then name. A tap never moves the row under the user's thumb.
+- Editing happens in the item sheet with an explicit Save, not in inline inputs on rows.
+
 ## Out of scope
 
 - Push notifications for suggestions.
