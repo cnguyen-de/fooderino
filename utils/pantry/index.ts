@@ -8,3 +8,5 @@ export { planHouseholdMerge } from './merge';
 export type { MergePlan } from './merge';
 export { suggest, DEFAULT_RULES } from './suggest';
 export type { SuggestRules, SuggestInput, Suggestions } from './suggest';
+export { buildSearchIndex } from './search';
+export type { Hit, MatchKind, MatchField } from './search';
