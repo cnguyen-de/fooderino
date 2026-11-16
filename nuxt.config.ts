@@ -130,18 +130,6 @@ export default defineNuxtConfig({
       maximumFileSizeToCacheInBytes: 3000000,
       runtimeCaching: [
         {
-          urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'supabase-cache',
-            expiration: {
-              maxEntries: 50,
-              maxAgeSeconds: 60 * 5 // 5 minutes
-            },
-            networkTimeoutSeconds: 10
-          }
-        },
-        {
           urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
           handler: 'CacheFirst',
           options: {
