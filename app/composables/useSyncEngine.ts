@@ -111,9 +111,4 @@ export function useSyncEngine() {
   return { status, lastSyncedAt, start, stop, syncNow };
 }
 
-/** Wipes every synced store. Used on account switch and by "clear local data". */
-export async function clearLocalData(): Promise<void> {
-  await db.transaction('rw', db.tables, async () => {
-    await Promise.all(db.tables.map((t) => t.clear()));
-  });
-}
+export { clearLocalData } from '~~/utils/account';

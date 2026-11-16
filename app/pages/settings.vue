@@ -57,7 +57,10 @@ const upgradeToPro = async () => {
   <NuxtLayout name="app">
     <div class="relative h-full w-full">
       <div class="h-[calc(100%_-_4rem)] w-full overflow-auto p-4">
-        <h1 class="mt-2 text-2xl font-bold">Account</h1>
+        <div class="flex flex-row items-center justify-between">
+          <h1 class="mt-2 text-2xl font-bold">Account</h1>
+          <SyncStatus />
+        </div>
         <section class="flex flex-row justify-between gap-2 pt-4">
           <div class="">
             <h3 class="text-lg">{{ user?.user_metadata?.name }}</h3>
@@ -157,6 +160,12 @@ const upgradeToPro = async () => {
 
           <Button class="mt-4" type="submit" @click.prevent="onSubmit">Save changes</Button>
         </form>
+
+        <Separator class="my-8" />
+
+        <h2 class="mt-3 text-2xl font-bold">Data</h2>
+        <p class="text-gray-500">Everything is stored on this device and synced to your account</p>
+        <DataSection class="pt-4" />
       </div>
     </div>
   </NuxtLayout>

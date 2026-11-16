@@ -57,7 +57,9 @@ export default defineNuxtConfig({
     { path: '~/components/items', pathPrefix: false },
     { path: '~/components/lists', pathPrefix: false },
     { path: '~/components/recipes', pathPrefix: false },
-    { path: '~/components/logs', pathPrefix: false }
+    { path: '~/components/logs', pathPrefix: false },
+    { path: '~/components/settings', pathPrefix: false },
+    { path: '~/components/sync', pathPrefix: false }
   ],
   //Work around dev tools error
   vite: {

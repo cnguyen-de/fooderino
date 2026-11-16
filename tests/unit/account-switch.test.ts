@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '~~/utils/db';
 import { getSyncState, setCursor } from '~~/utils/sync-state';
-import { resolveAccountChange } from '~~/utils/account';
+import { resolveAccountChange, clearLocalData } from '~~/utils/account';
 
 beforeEach(async () => {
   await db.open();
@@ -100,5 +100,35 @@ describe('resolveAccountChange', () => {
     const before = (await getSyncState()).device_id;
     await resolveAccountChange('user-b');
     expect((await getSyncState()).device_id).toBe(before);
+  });
+});
+
+describe('clearLocalData', () => {
+  it('wipes records, ops and cursors but keeps who and what this device is', async () => {
+    await resolveAccountChange('user-a');
+    const { device_id } = await getSyncState();
+    await db.lists.add({ id: 'l', name: 'x', owner: 'user-a', updated_at: '2026-01-01T00:00:00.000Z', deleted_at: null });
+    await db.pendingOps.add({
+      id: 'op',
+      item_id: 'i',
+      list_id: 'l',
+      field: 'amount',
+      kind: 'delta',
+      value: 1,
+      actor: null,
+      created_at: '2026-01-01T00:00:00.000Z'
+    });
+    await setCursor('lists', { pulled: '2026-01-01T00:00:00.000Z', pushed: '2026-01-01T00:00:00.000Z' });
+
+    await clearLocalData();
+
+    expect(await db.lists.count()).toBe(0);
+    expect(await db.pendingOps.count()).toBe(0);
+    const state = await getSyncState();
+    expect(state.cursors).toEqual({});
+    expect(state.user_id).toBe('user-a');
+    expect(state.device_id).toBe(device_id);
+    // A clear followed by another boot is not an account switch.
+    expect(await resolveAccountChange('user-a')).toBe('same');
   });
 });

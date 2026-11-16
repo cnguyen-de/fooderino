@@ -26,10 +26,25 @@ export async function resolveAccountChange(
     return 'first-login';
   }
 
+  await wipeRecords();
+  await setSyncState({ user_id: incomingUserId, cursors: {}, hydrated_at: null });
+  return 'switched';
+}
+
+/**
+ * "Clear local data": drops every record, queued op and cursor so the next
+ * sync pulls from scratch. Unlike an account switch, the account and device
+ * identity stay — otherwise the next boot would read as a first login.
+ * Anything not yet pushed is lost; callers warn first.
+ */
+export async function clearLocalData(): Promise<void> {
+  await wipeRecords();
+  await setSyncState({ cursors: {} });
+}
+
+async function wipeRecords(): Promise<void> {
   const synced = db.tables.filter((t) => t.name !== 'syncState');
   await db.transaction('rw', synced, async () => {
     await Promise.all(synced.map((t) => t.clear()));
   });
-  await setSyncState({ user_id: incomingUserId, cursors: {}, hydrated_at: null });
-  return 'switched';
 }
