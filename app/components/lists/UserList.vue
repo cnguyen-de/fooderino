@@ -37,7 +37,6 @@ const removeUser = (email: string) => {
         </Avatar>
         <div class="flex flex-col">
           <p v-if="name">{{ name }}</p>
-          <p v-else>Pending Invite</p>
           <p class="text-sm font-thin">{{ email }}</p>
           <p v-if="admin" class="text-white">Admin</p>
           <button class="self-start text-red-500" v-if="!admin" @click="removeUser(email)">Remove</button>

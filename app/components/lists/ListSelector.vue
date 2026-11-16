@@ -4,8 +4,6 @@ import { useSettingsStore } from '~/store/settings';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useForm } from 'vee-validate';
-import { useInviteStore } from '~/store/invites';
-import { toast } from 'vue-sonner';
 import { ScanLine, ShoppingBasket } from 'lucide-vue-next';
 import { useStorage } from '@vueuse/core';
 import { useItemStore } from '~/store/item';
@@ -49,32 +47,12 @@ const selectedDropDownItem = computed({
   set: (id: string) => listStore.setSelectedList(lists.value.find((l) => l.id === id) ?? null)
 });
 
-const inviteStore = useInviteStore();
-const isAcceptInviteDrawerOpen = ref(false);
-const openAcceptInviteDrawer = (invite) => {
-  isAcceptInviteDrawerOpen.value = true;
-  inviteStore.setSelectedInvite(invite);
-};
-const acceptInvite = async (accept) => {
-  await inviteStore.acceptInvite(accept);
-  inviteStore.setSelectedInvite(null);
-  toast('Successfully joined list');
-  isAcceptInviteDrawerOpen.value = false;
-};
-
 const isShoppingMode = ref(itemStore.showBuyItemsFromAllLists);
 const toggleAllLists = () => {
   isShoppingMode.value = !isShoppingMode.value;
   // No fetch: every list's items are already in Dexie, so the flag alone
   // switches which computed the pages read.
   itemStore.showBuyItemsFromAllLists = isShoppingMode.value;
-};
-
-const inviteEmail = ref('');
-const onSubmitInvite = async () => {
-  await inviteStore.sendInvite(inviteEmail.value, selectedList.value.id);
-  drawerStore.isInviteDrawerOpen = false;
-  inviteEmail.value = '';
 };
 
 const onDeleteListConfirm = async () => {
@@ -100,9 +78,6 @@ const onRenameList = async () => {
       <DropdownMenuTrigger as-child>
         <Button class="relative border-none bg-transparent p-0 px-2 text-2xl" variant="outline">
           {{ selectedList?.name }} ▾
-          <span
-            v-if="inviteStore.receivedInvites?.length > 0"
-            class="absolute right-0 top-1 size-2 animate-pulse rounded-full bg-primary"></span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
@@ -134,17 +109,6 @@ const onRenameList = async () => {
             Join With Code
           </button>
         </DropdownMenuItem>
-        <div v-if="inviteStore.receivedInvites?.length > 0">
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Invitations</DropdownMenuLabel>
-          <DropdownMenuItem
-            v-for="invite of inviteStore.receivedInvites"
-            :key="invite.id"
-            class="whitespace-nowrap"
-            @click="openAcceptInviteDrawer(invite)">
-            From {{ invite.from }}
-          </DropdownMenuItem>
-        </div>
       </DropdownMenuContent>
     </DropdownMenu>
     <div class="flex items-center justify-center">
@@ -192,29 +156,6 @@ const onRenameList = async () => {
       >
     </NuxtLink>
     <ListMenu></ListMenu>
-    <!-- 
-    <div class="mx-2 flex flex-row items-center justify-center gap-1">
-      <InviteButton></InviteButton>
-      <UserList
-        v-if="
-          inviteStore.sentInvites?.length > 0 &&
-          inviteStore.sentInvites?.some((invite) => invite.list_id === selectedList?.id)
-        "
-        v-for="invitedUser of inviteStore.sentInvites"
-        :email="invitedUser.to"
-        @remove-user="onRemoveUser($event, true)"></UserList>
-      <UserList
-        class="size-8"
-        v-for="user of selectedList?.users"
-        :avatar="user.avatar"
-        :name="user.name"
-        :email="user.email"
-        :admin="user?.admin ?? false"
-        :key="user.email"
-        @remove-user="onRemoveUser($event)">
-      </UserList>
-    </div> -->
-
     <ScanJoinModal v-model:open="isScanOpen" />
 
     <!-- Create List Drawer -->
@@ -246,59 +187,6 @@ const onRenameList = async () => {
       </DrawerContent>
     </Drawer>
 
-    <!-- Accept Invite Drawer -->
-    <Drawer v-model:open="isAcceptInviteDrawerOpen" @onOpenChange="isAcceptInviteDrawerOpen = $event">
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>List Invitation</DrawerTitle>
-          <DrawerDescription
-            >{{ inviteStore.selectedInvite?.from }} has invited you to join their list. Do you accept the
-            invitation?</DrawerDescription
-          >
-        </DrawerHeader>
-        <DrawerFooter>
-          <div class="flex flex-row justify-between">
-            <DrawerClose>
-              <Button class="text-red-500" variant="ghost" @click="acceptInvite(false)">Deny</Button>
-            </DrawerClose>
-            <DrawerClose>
-              <Button type="submit" @click.prevent="acceptInvite(true)">Accept</Button>
-            </DrawerClose>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-
-    <!-- Invite Drawer -->
-    <Drawer v-model:open="drawerStore.isInviteDrawerOpen" @onOpenChange="drawerStore.isInviteDrawerOpen = $event">
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Invite someone to join the {{ selectedList?.name }} list</DrawerTitle>
-          <DrawerDescription>The invited person will be able to see and edit the list</DrawerDescription>
-        </DrawerHeader>
-        <form class="space-y-2 p-4" @submit="onSubmitInvite">
-          <FormField name="invite-email">
-            <FormItem>
-              <FormControl>
-                <Input type="text" name="invite-email" placeholder="Email" v-model="inviteEmail" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          </FormField>
-        </form>
-        <DrawerFooter>
-          <div class="flex flex-row justify-between">
-            <DrawerClose>
-              <Button class="text-red-500" variant="ghost"> Cancel </Button>
-            </DrawerClose>
-            <DrawerClose>
-              <Button type="submit" @click.prevent="onSubmitInvite">Submit</Button>
-            </DrawerClose>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-
     <!-- Rename List Drawer -->
     <Drawer
       v-model:open="drawerStore.isRenameListDrawerOpen"
@@ -307,7 +195,7 @@ const onRenameList = async () => {
         <DrawerHeader>
           <DrawerTitle>Rename {{ selectedList.name }} list</DrawerTitle>
         </DrawerHeader>
-        <form class="space-y-2 p-4" @submit="onSubmitInvite">
+        <form class="space-y-2 p-4" @submit.prevent="onRenameList">
           <FormField name="list-rename">
             <FormItem>
               <FormControl>
