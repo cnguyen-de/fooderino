@@ -10,3 +10,5 @@ export { suggest, DEFAULT_RULES } from './suggest';
 export type { SuggestRules, SuggestInput, Suggestions } from './suggest';
 export { buildSearchIndex } from './search';
 export type { Hit, MatchKind, MatchField } from './search';
+export { buildPantryView } from './view';
+export type { PantryViewInput } from './view';
