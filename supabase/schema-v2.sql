@@ -90,18 +90,6 @@ create table public.recipes_v2 (
   deleted_at    timestamptz
 );
 
-create table public.user_settings (
-  id               uuid primary key,
-  user_id          uuid not null unique,
-  servings         integer not null default 1,
-  allergies        text not null default '',
-  cuisines         text not null default '',
-  show_empty_items boolean not null default true,
-  no_inventory     boolean not null default false,
-  updated_at       timestamptz not null default now(),
-  deleted_at       timestamptz
-);
-
 -- Membership helper. Must be security definer: without it, the lists_v2
 -- policy queries list_members, whose own policy queries lists_v2, and
 -- Postgres recurses until it errors with "stack depth limit exceeded".
@@ -252,7 +240,6 @@ alter table public.items_v2          enable row level security;
 alter table public.item_ops          enable row level security;
 alter table public.logs_v2           enable row level security;
 alter table public.recipes_v2        enable row level security;
-alter table public.user_settings     enable row level security;
 
 -- lists: members (and the owner, even before their member row has synced)
 -- read/write; anyone signed in may create a list they own
@@ -292,14 +279,9 @@ create policy "own recipes read"   on public.recipes_v2 for select using (user_i
 create policy "own recipes insert" on public.recipes_v2 for insert with check (user_id = auth.uid());
 create policy "own recipes update" on public.recipes_v2 for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 
-create policy "own settings read"   on public.user_settings for select using (user_id = auth.uid());
-create policy "own settings insert" on public.user_settings for insert with check (user_id = auth.uid());
-create policy "own settings update" on public.user_settings for update using (user_id = auth.uid()) with check (user_id = auth.uid());
-
 -- Realtime
 alter publication supabase_realtime add table public.lists_v2;
 alter publication supabase_realtime add table public.list_members;
 alter publication supabase_realtime add table public.items_v2;
 alter publication supabase_realtime add table public.logs_v2;
 alter publication supabase_realtime add table public.recipes_v2;
-alter publication supabase_realtime add table public.user_settings;

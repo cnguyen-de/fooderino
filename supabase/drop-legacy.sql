@@ -2,8 +2,8 @@
 -- supabase/verify-v2.sql still reports clean. Until then the legacy tables
 -- are the rollback path.
 --
--- public.users stays: it still holds the server-owned `ai` / `free_ai_calls`
--- quota written by /api/recipe.
+-- public.users and public.settings are not dropped here. The app no longer
+-- reads them, but confirm no auth trigger writes to public.users first.
 drop table if exists public.invites;
 drop table if exists public.items;
 drop table if exists public.logs;

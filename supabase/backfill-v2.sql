@@ -15,15 +15,10 @@
 --           payload text, action text
 --   recipes index int8 PK, created_at, id uuid (holds the USER's id), name,
 --           description, ingredients jsonb, instructions, saved
---   users   id uuid (= auth user id), email, servings, allergies, cuisines,
---           show_empty_items, no_inventory, ai, free_ai_calls
--- A `settings` table (id int4, uid uuid, ai, servings, allergies, cuisines,
--- show_empty_items, no_inventory) also exists in production. It duplicates a
--- subset of `users`'s columns and appears vestigial: server/api/settings.ts
--- reads from `users`, not `settings`. Not backfilled here — see the report's
--- dropped-columns section. Confirm it is truly unread before dropping it.
+-- The legacy `users` and `settings` tables hold only per-user preferences and
+-- the AI quota, none of which v2 carries, so neither is backfilled.
 --
--- To re-run: truncate lists_v2 cascade; truncate recipes_v2; truncate user_settings;
+-- To re-run: truncate lists_v2 cascade; truncate recipes_v2;
 -- then re-run this whole file. The cascade on lists_v2 clears list_members, items_v2,
 -- item_ops and logs_v2 via their FKs.
 
@@ -106,17 +101,6 @@ select gen_random_uuid(), r.index, r.id, r.name, r.description,
        coalesce(r.ingredients, '[]'::jsonb), r.instructions,
        coalesce(r.saved, false), coalesce(r.created_at, now()), null
 from recipes r;
-
--- Only the user-owned preferences move. ai and free_ai_calls stay on users.
--- Backfilled from `users`, not the vestigial `settings` table — see header.
-insert into user_settings (id, user_id, servings, allergies, cuisines,
-                           show_empty_items, no_inventory, updated_at)
-select gen_random_uuid(), u.id, coalesce(u.servings, 1),
-       coalesce(u.allergies, ''), coalesce(u.cuisines, ''),
-       coalesce(u.show_empty_items, true), coalesce(u.no_inventory, false),
-       now()
-from users u
-on conflict (user_id) do nothing;
 
 commit;
 
