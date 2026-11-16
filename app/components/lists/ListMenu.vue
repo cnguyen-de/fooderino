@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EllipsisVertical, Pencil, Trash } from 'lucide-vue-next';
+import { EllipsisVertical, Pencil, QrCode, Trash } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import { useDrawerStore } from '~/store/drawers';
 import { useListStore } from '~/store/list';
@@ -43,7 +43,10 @@ const onRemoveUser = async (listId: string, email: string) => {
         </UserList>
       </div>
       <DropdownMenuItem>
-        <InviteButton>Invite</InviteButton>
+        <button class="flex items-center justify-center gap-2" @click="drawerStore.isShareListDrawerOpen = true">
+          <QrCode class="size-5"></QrCode>
+          Share
+        </button>
       </DropdownMenuItem>
 
       <DropdownMenuSeparator />
@@ -61,4 +64,5 @@ const onRemoveUser = async (listId: string, email: string) => {
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
+  <ShareListModal v-model:open="drawerStore.isShareListDrawerOpen" :list-id="selectedList?.id ?? null" />
 </template>
