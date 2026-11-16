@@ -5,6 +5,7 @@ import { CookingPot, House, ShoppingBasket, ShoppingCart } from 'lucide-vue-next
 const listStore = useListStore();
 const user = useSupabaseUser();
 const listname = ref('');
+const isScanOpen = ref(false);
 const createNewList = async (name: string) => {
   await listStore.createList(name, {
     id: user.value?.id ?? null,
@@ -51,4 +52,9 @@ const createNewList = async (name: string) => {
     <Input class="" placeholder="Groceries" v-model="listname"></Input>
     <Button class="mt-4" @click="createNewList(listname)" :disabled="listname.length === 0">Create A List</Button>
   </div>
+  <div class="mt-6">
+    <p class="text-sm text-gray-500">Someone shared a list with you?</p>
+    <Button class="mt-2" variant="outline" @click="isScanOpen = true">Scan a share code</Button>
+  </div>
+  <ScanJoinModal v-model:open="isScanOpen" />
 </template>

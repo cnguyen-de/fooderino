@@ -6,7 +6,7 @@ import * as z from 'zod';
 import { useForm } from 'vee-validate';
 import { useInviteStore } from '~/store/invites';
 import { toast } from 'vue-sonner';
-import { ShoppingBasket } from 'lucide-vue-next';
+import { ScanLine, ShoppingBasket } from 'lucide-vue-next';
 import { useStorage } from '@vueuse/core';
 import { useItemStore } from '~/store/item';
 import { useDrawerStore } from '~/store/drawers';
@@ -26,6 +26,7 @@ const form = useForm({
   validationSchema: formSchema
 });
 
+const isScanOpen = ref(false);
 const isCreateListDrawerOpen = ref(false);
 const openCreateListDrawer = () => {
   isCreateListDrawerOpen.value = true;
@@ -127,6 +128,12 @@ const onRenameList = async () => {
             Create New List
           </button>
         </DropdownMenuItem>
+        <DropdownMenuItem>
+          <button @click="isScanOpen = true" class="flex items-center justify-center gap-2">
+            <ScanLine class="size-4" />
+            Join With Code
+          </button>
+        </DropdownMenuItem>
         <div v-if="inviteStore.receivedInvites?.length > 0">
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Invitations</DropdownMenuLabel>
@@ -207,6 +214,8 @@ const onRenameList = async () => {
         @remove-user="onRemoveUser($event)">
       </UserList>
     </div> -->
+
+    <ScanJoinModal v-model:open="isScanOpen" />
 
     <!-- Create List Drawer -->
     <Drawer v-model:open="isCreateListDrawerOpen" @onOpenChange="isCreateListDrawerOpen = $event">
