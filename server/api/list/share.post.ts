@@ -10,7 +10,8 @@ const TOKEN_TTL_HOURS = 24;
  */
 export default defineEventHandler(
   async (event): Promise<{ token: string; url: string; expiresAt: string }> => {
-    const user = await serverSupabaseUser(event);
+    // Throws "Auth session missing" rather than returning null when signed out.
+    const user = await serverSupabaseUser(event).catch(() => null);
     if (!user) throw createError({ statusCode: 401, message: 'Sign in to share a list' });
 
     const { listId } = (await readBody<{ listId?: string }>(event)) ?? {};

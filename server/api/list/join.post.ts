@@ -8,7 +8,8 @@ const REASON: Record<string, string> = {
 };
 
 export default defineEventHandler(async (event): Promise<{ listId: string; listName: string }> => {
-  const user = await serverSupabaseUser(event);
+  // Throws "Auth session missing" rather than returning null when signed out.
+  const user = await serverSupabaseUser(event).catch(() => null);
   if (!user) throw createError({ statusCode: 401, message: 'Sign in to join a list' });
   if (!user.email) throw createError({ statusCode: 400, message: 'Your account has no email address' });
 
