@@ -326,3 +326,22 @@ legacy `logs` table must have RLS enabled (it's anon-readable today).
   households on a device.
 - We accept that the household clock row serializes writes per household, in exchange for
   exact pull cursors. The write volume is a few people tapping.
+
+## Contract amendments (from implementing the TS reducer)
+
+These override the command table above where they differ.
+
+1. A command emits at most one event, and its id equals the command id.
+2. `tick` never rejects on the list. The server clamps `from_list` to the current `to_buy`, so
+   two shoppers ticking the same item both get a bag entry and a purchase.
+3. Undo of `unpack` reopens the bag entry, takes the quantity back off home stock, and
+   restores the pre-unpack `best_before`.
+4. `unpack` into empty stock with no date clears `best_before`.
+5. `bag_entries.purchase_event` links the entry to its purchase, for `reverses`.
+6. Only `use`, `want`, `set`, `tick` and `unpack` are undoable. Undo of a tick is a
+   `cancel_bag`.
+7. Merge: a stockless side contributes no date. The source's counters go to 0. A unit
+   mismatch is `invalid`.
+8. Undo after sync: the server's `command_log` holds each inverse and is the authority. The
+   device keeps its own inverse log for commands it issued, so it can still predict an undo
+   after the command is confirmed.
