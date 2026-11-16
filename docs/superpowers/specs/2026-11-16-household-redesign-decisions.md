@@ -70,7 +70,10 @@ The three core loops, in priority order:
   matching names, aliases and tags. Each result row has a one-tap −1. Tapping the row opens
   the edit sheet. Every decrement shows an undo toast.
 - With the search empty, Home shows **Use soon** (near or past `best_before`) first, then
-  everything in stock grouped by place tag.
+  **You use these most** (the ~10 in-stock items with the most consume events in the window,
+  one-tap −1), then every other place as a **closed drawer** with its count. The owner has
+  ~200 items, so a full grouped list was rejected as a chore to scroll (prototype variant A,
+  chosen over place tiles and the full list).
 - Use soon offers **used it** (−1, consumption) and **binned it** (−1, logged as waste). Waste
   never counts toward consumption rate.
 
