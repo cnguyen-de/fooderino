@@ -58,8 +58,16 @@ export function useSyncEngine() {
           'postgres_changes',
           { event: '*', schema: 'public', table: def.remote },
           (payload) => {
+            const row = payload.new as Row;
             engine
-              ?.applyRemote(def, payload.new as Row)
+              ?.applyRemote(def, row)
+              .then(async () => {
+                // A membership for a list this device has never seen means
+                // the user joined it elsewhere. Its rows predate the pull
+                // cursor, so only a full sync (which back-fills) brings them in.
+                if (def.local !== 'list_members' || row.deleted_at) return;
+                if (!(await db.lists.get(row.list_id as string))) await syncNow();
+              })
               .catch((e) => markFailure(`realtime ${def.remote}`, e));
           }
         )

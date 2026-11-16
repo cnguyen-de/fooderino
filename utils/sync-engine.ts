@@ -27,6 +27,9 @@ export interface SyncTransport {
 
 export const PAGE_SIZE = 1000;
 
+/** Tables whose rows belong to a list, and so become visible on joining one. */
+const LIST_SCOPED = new Set(['lists', 'list_members', 'items', 'logs']);
+
 function strip(row: Row, omit: string[]): Row {
   if (omit.length === 0) return { ...row };
   const out: Row = {};
@@ -118,6 +121,27 @@ export function createSyncEngine(transport: SyncTransport) {
     for (const def of SYNC_TABLES) await pushDirty(def);
     await pushOutbox();
     for (const def of SYNC_TABLES) await pull(def);
+    await backfillJoinedLists();
+  }
+
+  /**
+   * Joining a list makes rows visible that were last written long before this
+   * device's pull cursor, so an incremental pull brings in the new membership
+   * row and nothing else. A live membership whose list is missing locally is
+   * the tell: re-pull the list-scoped tables from the beginning. LWW makes
+   * re-applying rows already held a no-op.
+   */
+  async function backfillJoinedLists(): Promise<void> {
+    const known = new Set(await db.lists.toCollection().primaryKeys());
+    const members = await db.list_members.toArray();
+    const orphaned = members.some((m) => m.deleted_at === null && !known.has(m.list_id));
+    if (!orphaned) return;
+
+    for (const def of SYNC_TABLES) {
+      if (!LIST_SCOPED.has(def.local)) continue;
+      await setCursor(def.local, { pulled: null });
+      await pull(def);
+    }
   }
 
   return { pushDirty, pushOutbox, pull, applyRemote, runOnce };

@@ -45,7 +45,9 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/']
+      // /join renders its own signed-out state and keeps the share token
+      // across sign-in; the module's redirect would drop it.
+      exclude: ['/', '/join']
     }
   },
   components: [

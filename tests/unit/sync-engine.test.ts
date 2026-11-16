@@ -284,3 +284,72 @@ describe('runOnce', () => {
     expect(order.indexOf('upsert:items_v2')).toBeLessThan(order.indexOf('op'));
   });
 });
+
+describe('runOnce after joining a list', () => {
+  const CURSOR = '2026-06-01T00:00:00.000Z';
+  const joined = {
+    lists_v2: [
+      { id: 'L', name: 'Shared', owner: 'alice', updated_at: '2026-01-01T00:00:00.000Z', deleted_at: null }
+    ],
+    items_v2: [item({ id: 'old-item', list_id: 'L', updated_at: '2026-01-02T00:00:00.000Z' }) as unknown as Row],
+    list_members: [
+      {
+        id: 'm-alice',
+        list_id: 'L',
+        user_id: 'alice',
+        email: 'alice@x.test',
+        name: null,
+        avatar: null,
+        role: 'admin',
+        updated_at: '2026-01-01T00:00:00.000Z',
+        deleted_at: null
+      },
+      {
+        id: 'm-bob',
+        list_id: 'L',
+        user_id: 'bob',
+        email: 'bob@x.test',
+        name: null,
+        avatar: null,
+        role: 'member',
+        updated_at: '2026-06-02T00:00:00.000Z',
+        deleted_at: null
+      }
+    ]
+  };
+
+  async function seedCursors(): Promise<void> {
+    for (const t of ['lists', 'list_members', 'items', 'logs', 'recipes', 'user_settings']) {
+      await setCursor(t, { pulled: CURSOR, pushed: CURSOR });
+    }
+  }
+
+  it('back-fills a list whose rows predate the pull cursor', async () => {
+    await seedCursors();
+    const f = fakeTransport(joined);
+
+    await createSyncEngine(f.transport).runOnce();
+
+    expect(await db.lists.get('L')).toBeTruthy();
+    expect(await db.items.get('old-item')).toBeTruthy();
+    expect(await db.list_members.get('m-alice')).toBeTruthy();
+  });
+
+  it('leaves cursors alone when every membership has its list', async () => {
+    await seedCursors();
+    await db.lists.add({ id: 'L', name: 'Shared', owner: 'alice', updated_at: CURSOR, deleted_at: null });
+    const f = fakeTransport(joined);
+    const sinces: (string | null)[] = [];
+    const spy: SyncTransport = {
+      ...f.transport,
+      fetchSince(table, field, since, offset, limit) {
+        sinces.push(since);
+        return f.transport.fetchSince(table, field, since, offset, limit);
+      }
+    };
+
+    await createSyncEngine(spy).runOnce();
+
+    expect(sinces).not.toContain(null);
+  });
+});
