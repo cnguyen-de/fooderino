@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useItemStore } from '~/store/item';
-import { useSettingsStore } from '~/store/settings';
 const itemStore = useItemStore();
 const props = defineProps<{
   location?: string;
@@ -142,7 +141,7 @@ const clickOutside = () => {
           </FormItem>
         </FormField>
 
-        <FormField name="location" v-if="!useSettingsStore().settings?.no_inventory">
+        <FormField name="location">
           <FormItem class="relative grid grid-cols-[64px_1fr] place-items-center gap-2">
             <FormLabel>Category</FormLabel>
             <FormControl>

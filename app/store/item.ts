@@ -1,5 +1,4 @@
 import { useListStore } from './list';
-import { useSettingsStore } from './settings';
 import { useLogStore } from './logs';
 import type { ItemRecord } from '~~/types/sync';
 
@@ -23,7 +22,6 @@ export const useItemStore = defineStore('item', () => {
   });
 
   const listStore = useListStore();
-  const settingStore = useSettingsStore();
   const logStore = useLogStore();
 
   const listId = computed(() => listStore.selectedList?.id ?? null);
@@ -48,15 +46,11 @@ export const useItemStore = defineStore('item', () => {
 
   const addItemToInventory = async (item: ItemRecord) => {
     const moved = num(item.amount_to_purchase);
-    const noInventory = useNoInventoryMode();
-    if (!noInventory) {
-      await repo.addDelta(item, 'amount', moved);
-    }
+    await repo.addDelta(item, 'amount', moved);
     await repo.setAmount(item, 'amount_to_purchase', 0);
 
     const before = num(item.amount);
-    const after = noInventory ? before : before + moved;
-    await logStore.insertLog(item.name, 'updated', `${before} → ${after}`);
+    await logStore.insertLog(item.name, 'updated', `${before} → ${before + moved}`);
   };
 
   const insertItem = async (data: any) => {
@@ -152,11 +146,7 @@ export const useItemStore = defineStore('item', () => {
     [...new Set(values.map((v) => v.trim()))].sort((a, b) => a.localeCompare(b));
 
   const inventoryCategories = computed(() =>
-    uniqueSorted(
-      getFilteredInventoryItems.value
-        .filter((i) => (settingStore.settings?.show_empty_items ? true : i.amount > 0))
-        .map((i) => i.location)
-    )
+    uniqueSorted(getFilteredInventoryItems.value.filter((i) => i.amount > 0).map((i) => i.location))
   );
   const allCategories = computed(() => uniqueSorted(repo.items.value.map((i) => i.location)));
   const buyCategories = computed(() => uniqueSorted(getFilteredShoppingItems.value.map((i) => i.store)));

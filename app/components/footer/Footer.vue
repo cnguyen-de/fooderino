@@ -4,7 +4,7 @@ import { CookingPot, House, Settings, ShoppingCart } from 'lucide-vue-next';
 
 <template>
   <div class="flex h-full flex-row items-center justify-between border-t border-solid border-gray-500/50 p-2">
-    <FooterLink link="/inventory" v-if="!useNoInventoryMode()">
+    <FooterLink link="/inventory">
       <House></House>
     </FooterLink>
     <FooterLink link="/buy">

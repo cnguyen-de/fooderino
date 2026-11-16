@@ -10,13 +10,6 @@ const { getFilteredInventoryItems } = toRefs(itemStore);
 
 // No fetch: `useItems()` subscribes to Dexie and the sync engine keeps it fed.
 const categories = computed(() => itemStore.inventoryCategories);
-// const items = computed(() => {
-//   let items = itemStore.getFilteredInventoryItems;
-//   if (!settingStore.settings?.show_empty_items) {
-//     items = items.filter((item) => item.amount > 0);
-//   }
-//   return items;
-// });
 const isEditCategoryOpen = ref(false);
 const selectedCategory = ref('');
 const selectedOldCategory = ref('');

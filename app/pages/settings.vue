@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useSettingsStore } from '~/store/settings';
 import ToggleTheme from '../components/landing-page/ToggleTheme.vue';
 
 const supabase = useSupabaseClient();
@@ -7,12 +6,6 @@ const user = useSupabaseUser();
 const logout = async () => {
   await supabase.auth.signOut();
   window.location.reload();
-};
-const settingsStore = useSettingsStore();
-
-const noInventoryMode = computed(() => settingsStore.settings?.no_inventory ?? false);
-const updateNoInventoryMode = async (checked: boolean) => {
-  await settingsStore.toggleNoInventoryMode(checked);
 };
 </script>
 <template>
@@ -46,13 +39,6 @@ const updateNoInventoryMode = async (checked: boolean) => {
 
         <h1 class="mt-3 text-2xl font-bold">Settings</h1>
         <p class="text-gray-500">Manage your app settings</p>
-        <section class="flex flex-row justify-between gap-2 pt-4">
-          <div class="">
-            <h3 class="text-lg">No inventory mode</h3>
-            <p class="text-gray-500">Use as a checklist for shopping only</p>
-          </div>
-          <Switch :checked="noInventoryMode" @update:checked="updateNoInventoryMode($event)"></Switch>
-        </section>
         <section class="flex flex-row items-center justify-between gap-2 pt-4">
           <h3 class="text-lg">Theme</h3>
           <div class="size-11">

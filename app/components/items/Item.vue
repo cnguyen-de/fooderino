@@ -66,7 +66,7 @@ const onInputClick = (state) => {
 <template>
   <div
     class="border-px flex flex-row items-center rounded-xl border border-border bg-gray-100/70 pl-4 pr-2 dark:bg-gray-700/20">
-    <div v-if="showAmount && !useNoInventoryMode()" class="mr-5 flex items-center justify-center">
+    <div v-if="showAmount" class="mr-5 flex items-center justify-center">
       <House class="mr-1 size-4 opacity-50"></House>
       <p class="tabular-nums opacity-50">
         {{ amount }}

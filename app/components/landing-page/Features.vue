@@ -24,7 +24,7 @@ const featureList: FeaturesProps[] = [
     icon: 'badgeCheck',
     title: 'Easy to Use',
     description:
-      'Inventory management is boring, so we made it as easy as possible to use and optionally shopping mode only.'
+      'Inventory management is boring, so we made it as easy as possible to use.'
   },
   {
     icon: 'mousePointerClick',
