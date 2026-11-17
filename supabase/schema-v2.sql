@@ -1240,6 +1240,9 @@ $$;
 -- Grants -------------------------------------------------------------------
 
 revoke all on all functions in schema private from public;
+-- items_v2's CHECK constraints call these as the writing role, so a client's
+-- metadata push needs EXECUTE on them. Both are pure.
+grant execute on function private.tags_valid(jsonb), private.aliases_valid(text[]) to authenticated;
 revoke all on function public.my_household() from public, anon, authenticated, service_role;
 revoke all on function public.apply_commands(jsonb) from public, anon, authenticated, service_role;
 revoke all on function public.move_household(uuid, uuid, text, jsonb) from public, anon, authenticated, service_role;
