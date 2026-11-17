@@ -56,6 +56,8 @@ export interface PantryOps {
   editItem(id: ItemId, edit: ItemEdit): Promise<UndoHandle | null>;
   /** Defaults to 1. */
   useUp(id: ItemId, qty?: number): Promise<UndoHandle | null>;
+  /** Uses several ingredients together, checking their combined quantities before queueing any change. */
+  useItems(lines: readonly { id: ItemId; qty: number }[]): Promise<UndoHandle | null>;
   /** Like `useUp`, logged as waste. Defaults to 1. */
   bin(id: ItemId, qty?: number): Promise<UndoHandle | null>;
   /** Sets the listed amount to `qty`. Without one, adds the item's default quantity to the list. */
@@ -261,6 +263,23 @@ export function createPantryOps({
     },
 
     useUp: (id, qty = 1) => one((ctx) => ({ ...base(ctx, id), kind: 'use', qty, waste: false })),
+
+    useItems: (lines) =>
+      run((ctx) => {
+        const totals = new Map<ItemId, number>();
+        for (const line of lines) {
+          if (!Number.isFinite(line.qty) || line.qty <= 0) throw new RangeError('Enter a quantity greater than zero.');
+          const item = live(ctx, line.id);
+          if (!item) throw new Error('An ingredient is no longer available. Reopen the recipe and try again.');
+          totals.set(item.id, (totals.get(item.id) ?? 0) + line.qty);
+        }
+        for (const [id, qty] of totals) {
+          const item = live(ctx, id)!;
+          if (qty > item.amount)
+            throw new RangeError(`Not enough ${item.name} at home. Adjust the quantity or skip it.`);
+        }
+        return { commands: [...totals].map(([id, qty]) => ({ ...base(ctx, id), kind: 'use', qty, waste: false })) };
+      }),
 
     bin: (id, qty = 1) => one((ctx) => ({ ...base(ctx, id), kind: 'use', qty, waste: true })),
 

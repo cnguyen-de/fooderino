@@ -3,6 +3,7 @@ import type { RecipeRecord } from '~~/types/sync';
 import { useRecipeStore } from '~/store/recipes';
 import { Share2, ShoppingCart } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
+import CookRecipe from './CookRecipe.vue';
 interface Props {
   recipe: RecipeRecord;
   // Optional, matching how every call site already uses them: two of the four
@@ -72,7 +73,8 @@ const shareRecipe = () => {
       </CollapsibleContent>
     </Collapsible>
 
-    <CardFooter>
+    <CardFooter class="flex-col items-stretch gap-2">
+      <CookRecipe v-if="!hideAddToCart" :recipe="recipe" />
       <div class="flex w-full flex-row justify-between">
         <div class="flex flex-row gap-3">
           <Button variant="outline" class="text-red-700" @click="emit('saveRecipe', props.recipe)">

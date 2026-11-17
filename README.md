@@ -22,6 +22,9 @@ A local-first grocery list and recipe app built on Nuxt (`ssr: false`), Dexie an
   (list-era v1 files included), and can clear local data and re-download it.
 - **Activity** (`/logs`, also linked from each item's editor) shows household changes,
   including pending offline actions. Search by item, member or action, or view one item's history.
+- **Cook this recipe** previews ingredient matches and quantities before deducting them from
+  home. Names and aliases both match; missing or ambiguous ingredients are left for review.
+  The selected ingredients are recorded as usage, with one Undo for the dish.
 - **Items have alternate names.** Add them under **More options → Other names** in the editor;
   search matches every name, ignoring case and accents. Places and stores can be picked from
   existing tags or entered in the same field. New items use count units, including recipe and
