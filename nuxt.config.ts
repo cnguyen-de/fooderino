@@ -30,7 +30,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=5, interactive-widget=resizes-content',
       charset: 'utf-8',
       meta: [{ name: 'format-detection', content: 'telephone=no' }]
     }

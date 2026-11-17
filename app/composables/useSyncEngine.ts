@@ -19,6 +19,10 @@ let onOnline: (() => void) | null = null;
 let onVisible: (() => void) | null = null;
 let realtimeTimer: ReturnType<typeof setTimeout> | null = null;
 let membershipChanged = false;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryDelay = 2_000;
+let needsRecovery = false;
+let active = 0;
 
 export function useSyncEngine() {
   const status = useState<'idle' | 'syncing' | 'offline' | 'error'>('sync-status', () => 'idle');
@@ -26,22 +30,45 @@ export function useSyncEngine() {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
 
-  function markFailure(context: string, err?: unknown): void {
-    status.value = typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error';
-    console.error(`[sync] ${context} failed`, err);
+  function clearRetry(): void {
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
+  function retryLater(): void {
+    if (retryTimer || !navigator.onLine || document.visibilityState === 'hidden') return;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      void checkMembership();
+    }, retryDelay);
+    retryDelay = Math.min(retryDelay * 2, 60_000);
   }
 
   async function track(context: string, work: (e: SyncEngine) => Promise<unknown>): Promise<void> {
     const current = engine;
     if (!current) return;
-    status.value = 'syncing';
+    active++;
+    status.value = navigator.onLine ? 'syncing' : 'offline';
     try {
+      if (!navigator.onLine) throw new Error('Offline');
       await work(current);
+      if (current !== engine) return;
       lastSyncedAt.value = new Date().toISOString();
-      status.value = 'idle';
-    } catch (e) {
-      // Never leave the UI stuck on 'syncing'; the next sync clears this back to idle.
-      markFailure(context, e);
+      if (context === 'membership') {
+        needsRecovery = false;
+        clearRetry();
+        retryDelay = 2_000;
+      }
+    } catch (err) {
+      if (current !== engine) return;
+      needsRecovery = true;
+      retryLater();
+      if (navigator.onLine) console.error(`[sync] ${context} failed`, err);
+    } finally {
+      if (current === engine) {
+        active--;
+        status.value = !navigator.onLine ? 'offline' : active ? 'syncing' : needsRecovery ? 'error' : 'idle';
+      }
     }
   }
 
@@ -67,21 +94,16 @@ export function useSyncEngine() {
   async function checkMembership(): Promise<void> {
     await track('membership', async (e) => {
       await e.syncMembership();
+      if (engine !== e) return;
       await e.sync('full');
+      if (engine === e) await subscribe();
     });
-    await subscribe();
   }
 
   /** Write-through: every local write is pushed as soon as it is queued. */
   function installChangeHook(): void {
     setLocalChangeHook(() => {
-      engine
-        ?.sync('push')
-        .then(() => {
-          lastSyncedAt.value = new Date().toISOString();
-          if (status.value !== 'syncing') status.value = 'idle';
-        })
-        .catch((e) => markFailure('write-through push', e));
+      void flush();
     });
   }
 
@@ -126,7 +148,7 @@ export function useSyncEngine() {
     // A phone suspends the socket in the background, and a Realtime that just came up can
     // drop its first changes, so coming back to the app always pulls.
     onVisible = () => {
-      if (document.visibilityState === 'visible') void syncNow();
+      if (document.visibilityState === 'visible') void checkMembership();
     };
     document.addEventListener('visibilitychange', onVisible);
     await checkMembership();
@@ -151,6 +173,12 @@ export function useSyncEngine() {
     onOnline = null;
     onVisible = null;
     engine = null;
+    clearRetry();
+    retryDelay = 2_000;
+    needsRecovery = false;
+    active = 0;
+    status.value = 'idle';
+    lastSyncedAt.value = null;
   }
 
   return { status, lastSyncedAt, start, stop, syncNow, flush, checkMembership };

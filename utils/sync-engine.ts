@@ -274,8 +274,8 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
     if ((await db.commands.count()) > 0) await drain().catch(() => {});
     const pending = await db.commands.count();
     if (pending > 0) throw new PendingCommandsError(pending);
-    // Best effort: an edit that cannot land now belongs to a household this device is leaving.
-    await pushEdits().catch(() => {});
+    // A transient network failure leaves the old household and its edits intact for retry.
+    await pushEdits();
     await db.transaction('rw', [...householdTables(), db.edits, db.syncState], async () => {
       await Promise.all([...householdTables(), db.edits].map((t) => t.clear()));
       const state = await getSyncState(db);

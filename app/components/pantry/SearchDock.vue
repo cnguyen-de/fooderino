@@ -5,7 +5,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>();
 </script>
 <template>
   <div
-    class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t bg-background/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+    class="z-10 shrink-0 border-t bg-background/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
     <div class="relative rounded-xl bg-muted/70 transition-shadow focus-within:ring-2 focus-within:ring-primary/30">
       <component
         :is="adding ? Plus : Search"

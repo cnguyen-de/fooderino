@@ -4,10 +4,29 @@ import PantryNotices from '~/components/pantry/PantryNotices.vue';
 import { BookOpen, History, House, Settings, ShoppingBasket } from 'lucide-vue-next';
 const hydrated = useState<boolean>('sync-hydrated', () => false);
 const route = useRoute();
+const hasDock = computed(() => ['/home', '/shop'].includes(route.path));
+const viewport = ref<{ height: string; top: string }>();
+onMounted(() => {
+  const visible = window.visualViewport;
+  if (!visible) return;
+  const resize = () => {
+    viewport.value = visible.scale === 1 ? { height: `${visible.height}px`, top: `${visible.offsetTop}px` } : undefined;
+  };
+  resize();
+  visible.addEventListener('resize', resize);
+  visible.addEventListener('scroll', resize);
+  onBeforeUnmount(() => {
+    visible.removeEventListener('resize', resize);
+    visible.removeEventListener('scroll', resize);
+  });
+});
 </script>
 <template>
-  <div class="mx-auto min-h-dvh max-w-xl bg-background text-foreground sm:border-x">
-    <header class="sticky top-0 z-20 space-y-1 border-b bg-background/90 px-3 py-2 backdrop-blur-xl">
+  <div
+    class="mx-auto max-w-xl bg-background text-foreground sm:border-x"
+    :class="hasDock ? 'fixed inset-x-0 top-0 flex h-dvh flex-col' : 'min-h-dvh'"
+    :style="hasDock ? viewport : undefined">
+    <header class="sticky top-0 z-20 shrink-0 space-y-1 border-b bg-background/90 px-3 py-2 backdrop-blur-xl">
       <div class="flex items-center justify-between">
         <NuxtLink
           to="/home"
@@ -66,7 +85,7 @@ const route = useRoute();
         >
       </nav>
     </header>
-    <main class="pb-[calc(4rem+env(safe-area-inset-bottom))]">
+    <main :class="hasDock ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'">
       <p v-if="!hydrated" class="p-4" role="status">Loading your household…</p>
       <HouseholdGate v-else-if="['/home', '/shop', '/household', '/logs'].includes(route.path)"><slot /></HouseholdGate>
       <slot v-else />

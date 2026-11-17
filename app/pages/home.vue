@@ -8,6 +8,8 @@ import type { ItemId, PantryItem } from '~~/types/pantry';
 const { view, search, ops, ready } = usePantry();
 const act = usePantryAction();
 const query = ref('');
+const listPane = ref<HTMLElement | null>(null);
+watch(query, () => listPane.value?.scrollTo({ top: 0 }), { flush: 'post' });
 const selected = ref<ItemId | null>(null);
 const results = computed(() => search(query.value));
 function storageIcon(name: string | null) {
@@ -54,7 +56,7 @@ function matchText(hit: ReturnType<typeof search>[number]) {
 </script>
 <template>
   <NuxtLayout name="app"
-    ><div class="space-y-3 p-3">
+    ><div ref="listPane" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
       <div class="flex items-baseline justify-between gap-2">
         <h1 class="text-xl font-semibold tracking-tight">At home<span class="text-primary">.</span></h1>
         <span v-if="ready" class="text-xs tabular-nums text-muted-foreground"

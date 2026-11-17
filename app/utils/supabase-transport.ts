@@ -24,10 +24,28 @@ function recipeRow(r: RecipeRecord) {
   return { id, user_id, name, description, ingredients, instructions, saved, updated_at, deleted_at };
 }
 
+// The SDK can wait for an auth lock before reaching fetch. Bound that wait too,
+// and abort the underlying request so a late token cannot send a stale write.
+async function request<T>(query: { abortSignal(signal: AbortSignal): PromiseLike<T> }): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error('Sync request timed out'));
+    }, 30_000);
+  });
+  try {
+    return await Promise.race([query.abortSignal(controller.signal), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
   return {
     async applyCommands(batch) {
-      const { data, error, status } = await client.rpc('apply_commands', { commands: batch });
+      const { data, error, status } = await request(client.rpc('apply_commands', { commands: batch }));
       // Even a refused batch stays queued: apply_commands turns bad commands into rejections,
       // so an error here is about the call, not about any one command.
       if (error) throw new Error(`apply_commands (${status}): ${error.message}`);
@@ -35,28 +53,29 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
     },
 
     async pull(table, household, afterSeq, limit) {
-      const { data, error, status } = await client
-        .from(table.remote)
-        .select('*')
-        .eq(table.scope, household)
-        .gt('seq', afterSeq)
-        .order('seq', { ascending: true })
-        .limit(limit);
+      const { data, error, status } = await request(
+        client
+          .from(table.remote)
+          .select('*')
+          .eq(table.scope, household)
+          .gt('seq', afterSeq)
+          .order('seq', { ascending: true })
+          .limit(limit)
+      );
       if (error) fail(`pull ${table.remote}`, error, status);
       return (data ?? []).map(table.parse);
     },
 
     async pushItemSheets(sheets) {
-      const { data, error, status } = await client
-        .from('items_v2')
-        .upsert(sheets.map(sheetRow), { onConflict: 'id' })
-        .select('*');
+      const { data, error, status } = await request(
+        client.from('items_v2').upsert(sheets.map(sheetRow), { onConflict: 'id' }).select('*')
+      );
       if (error) fail('push items_v2', error, status);
       return (data ?? []).map(parseItem);
     },
 
     async myHousehold() {
-      const { data, error, status } = await client.rpc('my_household');
+      const { data, error, status } = await request(client.rpc('my_household'));
       if (error) fail('my_household', error, status);
       return data ? (String(data) as HouseholdId) : null;
     },
@@ -72,13 +91,15 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
         const at = `"${after.synced_at}"`;
         query = query.or(`synced_at.gt.${at},and(synced_at.eq.${at},id.gt.${after.id})`);
       }
-      const { data, error, status } = await query;
+      const { data, error, status } = await request(query);
       if (error) fail('pull recipes_v2', error, status);
       return (data ?? []).map(parseRecipe);
     },
 
     async pushRecipes(rows) {
-      const { error, status } = await client.from('recipes_v2').upsert(rows.map(recipeRow), { onConflict: 'id' });
+      const { error, status } = await request(
+        client.from('recipes_v2').upsert(rows.map(recipeRow), { onConflict: 'id' })
+      );
       if (error) fail('push recipes_v2', error, status);
     }
   };

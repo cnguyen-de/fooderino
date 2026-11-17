@@ -125,8 +125,9 @@ export function useHousehold(): HouseholdApi {
     started = true;
     liveQuery(readLocal).subscribe({
       next: (next) => {
+        const previous = local.value;
         local.value = next;
-        if (!next.household) void refresh();
+        if (!next.household && (!previous || previous.household)) void refresh();
       },
       error: (e) => console.error('useHousehold:', e)
     });

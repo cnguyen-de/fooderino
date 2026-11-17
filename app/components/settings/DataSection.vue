@@ -14,7 +14,7 @@ import { notifyLocalChange } from '~~/utils/sync-hook';
 import { clearLocalData, countPendingChanges } from '~~/utils/account';
 
 const user = useSupabaseUser();
-const { status, syncNow, flush, checkMembership } = useSyncEngine();
+const { flush, checkMembership } = useSyncEngine();
 const { ops } = usePantry();
 const household = useHousehold();
 
@@ -35,20 +35,6 @@ async function exportJSON(): Promise<void> {
   const payload = await exportDevice();
   const today = new Date().toISOString().slice(0, 10);
   downloadFile(JSON.stringify(payload, null, 2), `fooderino-export-${today}.json`, 'application/json');
-}
-
-/** Syncs first so the "already here" check covers what is on the server too. */
-async function syncedOrWarn(action: string): Promise<boolean> {
-  if (!navigator.onLine) {
-    toast(`${action} needs a connection`);
-    return false;
-  }
-  await syncNow();
-  if (status.value !== 'idle') {
-    toast(`${action} needs a working sync — try again in a moment`);
-    return false;
-  }
-  return true;
 }
 
 async function buildPlan(payload: ImportPayload): Promise<ImportPlan | null> {
@@ -80,7 +66,6 @@ async function onFileSelected(event: Event): Promise<void> {
 
   busy.value = true;
   try {
-    if (!(await syncedOrWarn('Import'))) return;
     plan.value = await buildPlan(parsed);
     pendingImport.value = parsed;
     isImportOpen.value = !!plan.value;
