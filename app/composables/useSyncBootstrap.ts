@@ -1,5 +1,6 @@
 import { resolveAccountChange } from '~~/utils/account';
-import { getSyncState, setSyncState } from '~~/utils/sync-state';
+import { getSyncState } from '~~/utils/sync-state';
+import { db } from '~~/utils/db';
 
 /**
  * Starts the engine for the whole session, from the layout rather than from
@@ -19,14 +20,10 @@ export function useSyncBootstrap() {
     }
 
     await resolveAccountChange(userId);
-    hydrated.value = (await getSyncState()).hydrated_at !== null;
-
+    // A device that has pulled before opens at once; a first launch waits for one attempt.
+    hydrated.value = (await getSyncState(db)).hydrated_at !== null;
     await start();
-
-    if (!hydrated.value) {
-      await setSyncState({ hydrated_at: new Date().toISOString() });
-      hydrated.value = true;
-    }
+    hydrated.value = true;
   }
 
   onMounted(() => {

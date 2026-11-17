@@ -1,4 +1,4 @@
-import { db } from '~~/utils/db';
+import { db } from '~~/utils/legacy-db';
 import type { LogRecord } from '~~/types/sync';
 
 /** Local retention. The server keeps full history; this bounds IndexedDB. */

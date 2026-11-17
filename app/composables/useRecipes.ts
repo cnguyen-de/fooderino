@@ -50,20 +50,20 @@ export function useRecipes() {
       deleted_at: null
     };
     await db.recipes.add(recipe);
-    notifyLocalChange('recipes', recipe.id);
+    notifyLocalChange('recipes');
     return recipe.id;
   }
 
   async function update(id: string, patch: Partial<RecipeRecord>): Promise<void> {
     await db.recipes.update(id, { ...patch, updated_at: new Date().toISOString() });
-    notifyLocalChange('recipes', id);
+    notifyLocalChange('recipes');
   }
 
   /** Soft delete, so the removal reaches other devices. */
   async function remove(id: string): Promise<void> {
     const now = new Date().toISOString();
     await db.recipes.update(id, { deleted_at: now, updated_at: now });
-    notifyLocalChange('recipes', id);
+    notifyLocalChange('recipes');
   }
 
   const savedRecipes = computed(() => recipes.value.filter((r) => r.saved));

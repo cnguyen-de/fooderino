@@ -1,11 +1,7 @@
-export type SyncCollection =
-  | 'lists'
-  | 'list_members'
-  | 'items'
-  | 'logs'
-  | 'recipes';
+/** What a local write touched: the household outboxes, or the user's recipes. */
+export type LocalChange = 'pantry' | 'recipes';
 
-export type LocalChangeHook = (collection: SyncCollection, id: string) => void;
+export type LocalChangeHook = (change: LocalChange) => void;
 
 let hook: LocalChangeHook | null = null;
 
@@ -15,10 +11,9 @@ export function setLocalChangeHook(fn: LocalChangeHook | null): void {
 }
 
 /**
- * Called by every repository mutation. When no engine is running — signed
- * out, or before bootstrap — this is a no-op and the write stays local until
- * the next catch-up sweep picks it up by cursor.
+ * Called after every local write. With no engine running (signed out, or before
+ * bootstrap) it does nothing, and the write waits in its outbox for the next sync.
  */
-export function notifyLocalChange(collection: SyncCollection, id: string): void {
-  hook?.(collection, id);
+export function notifyLocalChange(change: LocalChange): void {
+  hook?.(change);
 }

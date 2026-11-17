@@ -1,7 +1,6 @@
 import type { Ref, ComputedRef } from 'vue';
 import { liveQuery } from 'dexie';
-import { db } from '~~/utils/db';
-import { notifyLocalChange } from '~~/utils/sync-hook';
+import { db, notifyLocalChange } from '~~/utils/legacy-db';
 import { buildLog, pruneLogs, LOCAL_LOG_LIMIT } from '~~/utils/log-ops';
 import type { LogRecord } from '~~/types/sync';
 

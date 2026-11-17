@@ -1,355 +1,304 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { db } from '~~/utils/db';
-import { defFor } from '~~/utils/sync-registry';
-import { getCursor, setCursor } from '~~/utils/sync-state';
-import { createSyncEngine, PAGE_SIZE, type Row, type SyncTransport } from '~~/utils/sync-engine';
-import type { ItemRecord, PendingOp } from '~~/types/sync';
+import { describe, expect, it } from 'vitest';
+import type { CommandId, HouseholdId, Instant, ItemId, ItemRow } from '~~/types/pantry';
+import type { QueuedCommand } from '~~/types/sync';
+import { PendingCommandsError, type SyncTransport } from '~~/utils/sync-engine';
+import { getSyncState } from '~~/utils/sync-state';
+import { FakeServer, HOUSEHOLD, OTHER_HOUSEHOLD } from '../support/fake-server';
+import { makeDevice, project } from '../support/device';
 
-/** In-memory stand-in for Supabase. Records what was sent for assertions. */
-function fakeTransport(seed: Record<string, Row[]> = {}) {
-  const remote: Record<string, Row[]> = { ...seed };
-  const upserted: { table: string; rows: Row[] }[] = [];
-  const ops: PendingOp[] = [];
-  let failOpsAfter = Number.POSITIVE_INFINITY;
-  const duplicateIds = new Set<string>();
+const ALICE = 'aaaaaaaa-0000-4000-8000-000000000001';
+const BOB = 'bbbbbbbb-0000-4000-8000-000000000002';
 
-  const transport: SyncTransport = {
-    async fetchSince(table, cursorField, since, offset, limit) {
-      const all = (remote[table] ?? [])
-        .filter((r) => !since || String(r[cursorField]) > since)
-        .sort((a, b) => String(a[cursorField]).localeCompare(String(b[cursorField])));
-      return all.slice(offset, offset + limit);
-    },
-    async upsertRows(table, rows) {
-      upserted.push({ table, rows });
-    },
-    async insertOp(op) {
-      if (ops.length >= failOpsAfter) throw new Error('network down');
-      if (duplicateIds.has(op.id)) return 'duplicate';
-      ops.push(op);
-      return 'inserted';
+async function seededItem(server: FakeServer, name = 'Milk', amount = 1): Promise<ItemId> {
+  const id = crypto.randomUUID() as ItemId;
+  const response = server.apply(BOB, [
+    {
+      id: crypto.randomUUID() as CommandId,
+      household_id: HOUSEHOLD,
+      item_id: id,
+      at: '2026-11-01T00:00:00.000Z' as Instant,
+      kind: 'create',
+      item: { name, aliases: [], tags: [], unit: 'count', default_amount: 1, shelf_life_days: null },
+      start: { amount }
     }
-  };
-
-  return {
-    transport,
-    upserted,
-    ops,
-    failOpsAfter: (n: number) => {
-      failOpsAfter = n;
-    },
-    markDuplicate: (id: string) => duplicateIds.add(id)
-  };
+  ]);
+  expect(response.results[0]!.status).toBe('accepted');
+  return id;
 }
 
-const item = (over: Partial<ItemRecord> = {}): ItemRecord => ({
-  id: crypto.randomUUID(),
-  list_id: 'list-1',
-  name: 'milk',
-  location: '',
-  store: '',
-  amount: 0,
-  amount_to_purchase: 0,
-  amount_type: 'count',
-  default_amount: 1,
-  created_by: null,
-  updated_at: '2026-01-01T00:00:00.000Z',
-  deleted_at: null,
-  ...over
-});
+describe('drain', () => {
+  it('sends the outbox in order, in batches of 50, and confirms what each batch touched', async () => {
+    const server = new FakeServer();
+    const transport = server.transport(ALICE);
+    const device = await makeDevice(transport, HOUSEHOLD);
+    const id = (await device.ops.createItem({ name: 'Rice', amount: 200 }))!;
+    for (let i = 0; i < 119; i++) await device.ops.useUp(id);
+    const queued = (await device.db.commands.orderBy('created_seq').toArray()).map((c) => c.id);
 
-beforeEach(async () => {
-  await db.open();
-  await Promise.all(db.tables.map((t) => t.clear()));
-});
+    await device.engine.sync('push');
 
-describe('pushDirty', () => {
-  it('sends rows newer than the pushed cursor and skips the rest', async () => {
-    await db.items.bulkAdd([
-      item({ id: 'old', updated_at: '2026-01-01T00:00:00.000Z' }),
-      item({ id: 'new', updated_at: '2026-01-03T00:00:00.000Z' })
+    expect(server.batches.map((b) => b.length)).toEqual([50, 50, 20]);
+    expect(server.batches.flat().map((c) => c.id)).toEqual(queued);
+    expect(await device.db.commands.count()).toBe(0);
+    expect((await device.db.items.get(id))?.amount).toBe(81);
+    expect(await device.db.events.count()).toBe(119);
+    expect(await device.db.log.count()).toBe(120);
+  });
+
+  it('drops a rejected command, reports it, and keeps draining the rest', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const milk = await seededItem(server, 'Milk', 1);
+    await device.engine.sync('full');
+
+    // Bob uses the last one while Alice is offline and still sees it.
+    server.apply(BOB, [
+      { id: crypto.randomUUID() as CommandId, household_id: HOUSEHOLD, item_id: milk, at: '2026-11-02T00:00:00.000Z' as Instant, kind: 'use', qty: 1, waste: false }
     ]);
-    await setCursor('items', { pushed: '2026-01-02T00:00:00.000Z' });
+    const used = await device.ops.useUp(milk);
+    await device.ops.addToShopping(milk, 3);
+    expect(used).not.toBeNull();
 
-    const f = fakeTransport();
-    await createSyncEngine(f.transport).pushDirty(defFor('items'));
+    await device.engine.sync('full');
 
-    expect(f.upserted).toHaveLength(1);
-    expect(f.upserted[0]!.rows.map((r) => r.id)).toEqual(['new']);
-  });
-
-  it('strips the trigger-owned counter columns from item pushes', async () => {
-    await db.items.add(item({ id: 'a', amount: 7, amount_to_purchase: 3 }));
-
-    const f = fakeTransport();
-    await createSyncEngine(f.transport).pushDirty(defFor('items'));
-
-    const sent = f.upserted[0]!.rows[0]!;
-    expect(sent).not.toHaveProperty('amount');
-    expect(sent).not.toHaveProperty('amount_to_purchase');
-    expect(sent.name).toBe('milk');
-  });
-
-  it('advances the pushed cursor to the newest row sent', async () => {
-    await db.items.bulkAdd([
-      item({ id: 'a', updated_at: '2026-01-01T00:00:00.000Z' }),
-      item({ id: 'b', updated_at: '2026-01-05T00:00:00.000Z' })
+    expect(device.notices).toEqual([
+      expect.objectContaining({ kind: 'use', item_id: milk, item_name: 'Milk', reason: 'insufficient_stock' })
     ]);
-
-    const f = fakeTransport();
-    await createSyncEngine(f.transport).pushDirty(defFor('items'));
-
-    expect((await getCursor('items')).pushed).toBe('2026-01-05T00:00:00.000Z');
+    expect(await device.db.commands.count()).toBe(0);
+    expect(await device.item(milk)).toMatchObject({ amount: 0, to_buy: 3 });
   });
 
-  it('sends nothing and leaves the cursor alone when no rows are dirty', async () => {
-    const f = fakeTransport();
-    await createSyncEngine(f.transport).pushDirty(defFor('items'));
+  it('keeps the batch queued on a transport error and sends it on the next sync', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const milk = await seededItem(server, 'Milk', 2);
+    await device.engine.sync('full');
+    await device.ops.useUp(milk);
 
-    expect(f.upserted).toHaveLength(0);
-    expect((await getCursor('items')).pushed).toBeNull();
-  });
-});
+    server.failNextApply('before');
+    await expect(device.engine.sync('full')).rejects.toThrow('network down');
+    expect(await device.db.commands.count()).toBe(1);
+    expect((await device.item(milk))?.amount).toBe(1);
 
-describe('pushOutbox', () => {
-  const op = (over: Partial<PendingOp> = {}): PendingOp => ({
-    id: crypto.randomUUID(),
-    item_id: 'item-1',
-    list_id: 'list-1',
-    field: 'amount',
-    kind: 'delta',
-    value: 1,
-    actor: null,
-    created_at: '2026-01-01T00:00:00.000Z',
-    ...over
+    await device.engine.sync('full');
+    expect(await device.db.commands.count()).toBe(0);
+    expect(server.items.get(milk)?.amount).toBe(1);
   });
 
-  it('sends queued ops oldest first and empties the queue', async () => {
-    await db.pendingOps.bulkAdd([
-      op({ id: 'second', created_at: '2026-01-01T00:00:02.000Z' }),
-      op({ id: 'first', created_at: '2026-01-01T00:00:01.000Z' })
-    ]);
+  it('never double counts an accepted command whose response was lost', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const milk = await seededItem(server, 'Milk', 3);
+    await device.engine.sync('full');
+    await device.ops.useUp(milk);
 
-    const f = fakeTransport();
-    await createSyncEngine(f.transport).pushOutbox();
+    server.failNextApply('after-commit');
+    await expect(device.engine.sync('full')).rejects.toThrow('connection reset');
 
-    expect(f.ops.map((o) => o.id)).toEqual(['first', 'second']);
-    expect(await db.pendingOps.count()).toBe(0);
-  });
+    // The pull brought the server's amount, which already includes the pending use.
+    expect(await device.db.commands.count()).toBe(1);
+    expect((await device.db.items.get(milk))?.amount).toBe(2);
+    expect((await device.item(milk))?.amount).toBe(2);
 
-  it('drops a duplicate op, because the server already folded it', async () => {
-    await db.pendingOps.add(op({ id: 'dupe' }));
-
-    const f = fakeTransport();
-    f.markDuplicate('dupe');
-    await createSyncEngine(f.transport).pushOutbox();
-
-    expect(await db.pendingOps.count()).toBe(0);
-  });
-
-  it('keeps unsent ops queued when the transport throws', async () => {
-    await db.pendingOps.bulkAdd([
-      op({ id: 'a', created_at: '2026-01-01T00:00:01.000Z' }),
-      op({ id: 'b', created_at: '2026-01-01T00:00:02.000Z' })
-    ]);
-
-    const f = fakeTransport();
-    f.failOpsAfter(1);
-    await expect(createSyncEngine(f.transport).pushOutbox()).rejects.toThrow('network down');
-
-    expect(await db.pendingOps.toArray()).toHaveLength(1);
-    expect((await db.pendingOps.toArray())[0]!.id).toBe('b');
+    await device.engine.sync('full');
+    expect(await device.db.commands.count()).toBe(0);
+    expect((await device.item(milk))?.amount).toBe(2);
+    expect(server.items.get(milk)?.amount).toBe(2);
   });
 });
 
 describe('pull', () => {
-  it('writes rows we have never seen', async () => {
-    const f = fakeTransport({
-      items_v2: [{ ...item({ id: 'remote-1', name: 'eggs' }) }]
-    });
-    await createSyncEngine(f.transport).pull(defFor('items'));
+  it('pulls by server seq, so a late write with an old gesture time still arrives', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const milk = await seededItem(server, 'Milk', 2);
+    await device.engine.sync('full');
 
-    expect((await db.items.get('remote-1'))?.name).toBe('eggs');
+    server.apply(BOB, [
+      { id: crypto.randomUUID() as CommandId, household_id: HOUSEHOLD, item_id: milk, at: '2020-01-01T00:00:00.000Z' as Instant, kind: 'use', qty: 1, waste: false }
+    ]);
+    await device.engine.sync('full');
+
+    expect((await device.db.items.get(milk))?.amount).toBe(1);
+    expect((await device.db.events.toArray()).map((e) => e.occurred_at)).toContain('2020-01-01T00:00:00.000Z');
+    const { cursors } = await getSyncState(device.db);
+    expect(cursors.events).toBe(Math.max(...server.rows('events').map((e) => e.seq)));
   });
 
-  it('does not overwrite a locally newer row', async () => {
-    await db.items.add(item({ id: 'x', name: 'local', updated_at: '2026-01-05T00:00:00.000Z' }));
-    const f = fakeTransport({
-      items_v2: [{ ...item({ id: 'x', name: 'remote', updated_at: '2026-01-01T00:00:00.000Z' }) }]
-    });
-
-    await createSyncEngine(f.transport).pull(defFor('items'));
-
-    expect((await db.items.get('x'))?.name).toBe('local');
-  });
-
-  it('replays unpushed ops on top of a pulled item', async () => {
-    const f = fakeTransport({
-      items_v2: [{ ...item({ id: 'x', amount: 5, updated_at: '2026-01-09T00:00:00.000Z' }) }]
-    });
-    await db.pendingOps.add({
-      id: 'op-1',
-      item_id: 'x',
-      list_id: 'list-1',
-      field: 'amount',
-      kind: 'delta',
-      value: 1,
-      actor: null,
-      created_at: '2026-01-09T00:00:01.000Z'
-    });
-
-    await createSyncEngine(f.transport).pull(defFor('items'));
-
-    // Server says 5; our un-acked +1 must still show, or the tap looks lost.
-    expect((await db.items.get('x'))?.amount).toBe(6);
-  });
-
-  it('pages past the row limit', async () => {
-    const many = Array.from({ length: PAGE_SIZE + 5 }, (_, i) => ({
-      ...item({
-        id: `id-${String(i).padStart(5, '0')}`,
-        updated_at: `2026-01-01T00:00:${String(i % 60).padStart(2, '0')}.${String(i).padStart(3, '0')}Z`
-      })
-    }));
-    const f = fakeTransport({ items_v2: many });
-
-    await createSyncEngine(f.transport).pull(defFor('items'));
-
-    expect(await db.items.count()).toBe(PAGE_SIZE + 5);
-  });
-
-  it('advances the pulled cursor to the newest row seen', async () => {
-    const f = fakeTransport({
-      items_v2: [
-        { ...item({ id: 'a', updated_at: '2026-01-01T00:00:00.000Z' }) },
-        { ...item({ id: 'b', updated_at: '2026-01-04T00:00:00.000Z' }) }
-      ]
-    });
-    await createSyncEngine(f.transport).pull(defFor('items'));
-
-    expect((await getCursor('items')).pulled).toBe('2026-01-04T00:00:00.000Z');
-  });
-
-  it('writes append-only log rows without consulting the merge rule', async () => {
-    const f = fakeTransport({
-      logs_v2: [
-        {
-          id: 'log-1',
-          list_id: 'l',
-          actor_email: 'a@b.c',
-          item_name: 'milk',
-          action: 'created',
-          payload: '',
-          created_at: '2026-01-01T00:00:00.000Z'
-        }
-      ]
-    });
-    await createSyncEngine(f.transport).pull(defFor('logs'));
-
-    expect(await db.logs.count()).toBe(1);
-    expect((await getCursor('logs')).pulled).toBe('2026-01-01T00:00:00.000Z');
-  });
-});
-
-describe('runOnce', () => {
-  it('pushes rows before ops, so an op never precedes the item it references', async () => {
-    const order: string[] = [];
-    const f = fakeTransport();
-    const spy: SyncTransport = {
-      fetchSince: f.transport.fetchSince,
-      async upsertRows(t, r) {
-        order.push(`upsert:${t}`);
-        return f.transport.upsertRows(t, r);
-      },
-      async insertOp(o) {
-        order.push('op');
-        return f.transport.insertOp(o);
-      }
-    };
-
-    await db.items.add(item({ id: 'x' }));
-    await db.pendingOps.add({
-      id: 'op-1',
-      item_id: 'x',
-      list_id: 'list-1',
-      field: 'amount',
-      kind: 'set',
-      value: 2,
-      actor: null,
-      created_at: '2026-01-01T00:00:00.000Z'
-    });
-
-    await createSyncEngine(spy).runOnce();
-
-    expect(order.indexOf('upsert:items_v2')).toBeLessThan(order.indexOf('op'));
-  });
-});
-
-describe('runOnce after joining a list', () => {
-  const CURSOR = '2026-06-01T00:00:00.000Z';
-  const joined = {
-    lists_v2: [
-      { id: 'L', name: 'Shared', owner: 'alice', updated_at: '2026-01-01T00:00:00.000Z', deleted_at: null }
-    ],
-    items_v2: [item({ id: 'old-item', list_id: 'L', updated_at: '2026-01-02T00:00:00.000Z' }) as unknown as Row],
-    list_members: [
-      {
-        id: 'm-alice',
-        list_id: 'L',
-        user_id: 'alice',
-        email: 'alice@x.test',
-        name: null,
-        avatar: null,
-        role: 'admin',
-        updated_at: '2026-01-01T00:00:00.000Z',
-        deleted_at: null
-      },
-      {
-        id: 'm-bob',
-        list_id: 'L',
-        user_id: 'bob',
-        email: 'bob@x.test',
-        name: null,
-        avatar: null,
-        role: 'member',
-        updated_at: '2026-06-02T00:00:00.000Z',
-        deleted_at: null
-      }
-    ]
-  };
-
-  async function seedCursors(): Promise<void> {
-    for (const t of ['lists', 'list_members', 'items', 'logs', 'recipes']) {
-      await setCursor(t, { pulled: CURSOR, pushed: CURSOR });
+  it('pages past the row limit by seq', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const milk = await seededItem(server, 'Milk', 1);
+    for (let i = 0; i < 1005; i++) {
+      server.apply(BOB, [
+        { id: crypto.randomUUID() as CommandId, household_id: HOUSEHOLD, item_id: milk, at: '2026-11-03T00:00:00.000Z' as Instant, kind: 'dismiss' }
+      ]);
     }
-  }
 
-  it('back-fills a list whose rows predate the pull cursor', async () => {
-    await seedCursors();
-    const f = fakeTransport(joined);
+    await device.engine.sync('full');
 
-    await createSyncEngine(f.transport).runOnce();
-
-    expect(await db.lists.get('L')).toBeTruthy();
-    expect(await db.items.get('old-item')).toBeTruthy();
-    expect(await db.list_members.get('m-alice')).toBeTruthy();
+    expect(await device.db.events.count()).toBe(1005);
+    expect(await device.db.log.count()).toBe(1006);
   });
 
-  it('leaves cursors alone when every membership has its list', async () => {
-    await seedCursors();
-    await db.lists.add({ id: 'L', name: 'Shared', owner: 'alice', updated_at: CURSOR, deleted_at: null });
-    const f = fakeTransport(joined);
-    const sinces: (string | null)[] = [];
-    const spy: SyncTransport = {
-      ...f.transport,
-      fetchSince(table, field, since, offset, limit) {
-        sinces.push(since);
-        return f.transport.fetchSince(table, field, since, offset, limit);
-      }
+  it('never lets an older copy of a row replace a newer one', async () => {
+    const server = new FakeServer();
+    const real = server.transport(ALICE);
+    const milk = await seededItem(server, 'Milk', 5);
+    const stale = structuredClone(server.items.get(milk)!);
+    const transport: SyncTransport = {
+      ...real,
+      pull: async (def, h, after, limit) =>
+        def.store === 'items' ? ([stale] as never) : real.pull(def, h, after, limit)
     };
+    const device = await makeDevice(transport, HOUSEHOLD);
+    await device.ops.useUp(milk).catch(() => null);
+    await device.db.items.put({ ...stale, amount: 4, seq: stale.seq + 10 } as ItemRow);
 
-    await createSyncEngine(spy).runOnce();
+    await device.engine.sync('full');
 
-    expect(sinces).not.toContain(null);
+    expect((await device.db.items.get(milk))?.amount).toBe(4);
+  });
+});
+
+describe('membership', () => {
+  it('wipes household data and cursors when the server moved the user, and keeps recipes', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    await seededItem(server);
+    await device.engine.sync('full');
+    await device.db.recipes.put({
+      id: crypto.randomUUID(), user_id: ALICE, name: 'Soup', description: null, ingredients: [], instructions: null,
+      saved: true, updated_at: '2026-11-01T00:00:00.000Z', deleted_at: null
+    });
+    expect(await device.db.items.count()).toBe(1);
+
+    server.membership.set(ALICE, OTHER_HOUSEHOLD);
+    expect(await device.engine.syncMembership()).toBe('changed');
+
+    const state = await getSyncState(device.db);
+    expect(state).toMatchObject({ household_id: OTHER_HOUSEHOLD, cursors: {}, hydrated_at: null });
+    for (const store of ['households', 'members', 'items', 'bag', 'events', 'log', 'edits'] as const) {
+      expect(await device.db.table(store).count(), store).toBe(0);
+    }
+    expect(await device.db.recipes.count()).toBe(1);
+    expect(await device.engine.syncMembership()).toBe('same');
+  });
+
+  it('drains first, so commands for the old household are rejected and surfaced, not lost silently', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const milk = await seededItem(server, 'Milk', 2);
+    await device.engine.sync('full');
+    await device.ops.useUp(milk);
+
+    server.membership.set(ALICE, OTHER_HOUSEHOLD);
+    await device.engine.syncMembership();
+
+    expect(device.notices).toEqual([expect.objectContaining({ kind: 'use', reason: 'not_member', item_name: 'Milk' })]);
+    expect(await device.db.commands.count()).toBe(0);
+    expect((await getSyncState(device.db)).household_id).toBe(OTHER_HOUSEHOLD);
+  });
+
+  it('refuses to reset while commands cannot drain, and keeps the data', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const milk = await seededItem(server, 'Milk', 2);
+    await device.engine.sync('full');
+    await device.ops.useUp(milk);
+
+    server.membership.set(ALICE, OTHER_HOUSEHOLD);
+    server.failNextApply('before');
+    await expect(device.engine.syncMembership()).rejects.toBeInstanceOf(PendingCommandsError);
+
+    expect(await device.db.commands.count()).toBe(1);
+    expect(await device.db.items.count()).toBe(1);
+    expect((await getSyncState(device.db)).household_id).toBe(HOUSEHOLD);
+  });
+
+  it('adopts the household on first sight', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), null);
+    await seededItem(server);
+
+    expect(await device.engine.syncMembership()).toBe('changed');
+    await device.engine.sync('full');
+
+    expect((await getSyncState(device.db)).household_id).toBe(HOUSEHOLD);
+    expect(await device.db.items.count()).toBe(1);
+    expect((await getSyncState(device.db)).hydrated_at).not.toBeNull();
+  });
+});
+
+describe('metadata edits', () => {
+  it('pushes an edit only after the create it depends on has landed', async () => {
+    const server = new FakeServer();
+    const transport = server.transport(ALICE);
+    const device = await makeDevice(transport, HOUSEHOLD);
+    const id = (await device.ops.createItem({ name: 'Milk' }))!;
+    await device.ops.editItem(id, { name: 'Oat milk', tags: [{ kind: 'place', name: 'Fridge' }] });
+
+    await device.engine.sync('full');
+
+    expect(transport.calls.filter((c) => c.startsWith('apply') || c.startsWith('push'))).toEqual(['apply:1', 'push:1']);
+    expect(server.items.get(id)).toMatchObject({ name: 'Oat milk', tags: [{ kind: 'place', name: 'Fridge' }] });
+    expect(await device.db.edits.count()).toBe(0);
+    expect(await device.item(id)).toMatchObject({ name: 'Oat milk' });
+  });
+
+  it('lets the newer of two sheets win on every device', async () => {
+    const server = new FakeServer();
+    const milk = await seededItem(server);
+    const clock = (iso: string) => () => new Date(iso);
+    const alice = await makeDevice(server.transport(ALICE), HOUSEHOLD, clock('2026-11-05T10:00:00.000Z'));
+    const bob = await makeDevice(server.transport(BOB), HOUSEHOLD, clock('2026-11-05T11:00:00.000Z'));
+    await alice.engine.sync('full');
+    await bob.engine.sync('full');
+
+    await alice.ops.editItem(milk, { name: 'Alice milk' });
+    await bob.ops.editItem(milk, { name: 'Bob milk' });
+    await bob.engine.sync('full');
+    await alice.engine.sync('full');
+    await bob.engine.sync('full');
+
+    expect(server.items.get(milk)?.name).toBe('Bob milk');
+    expect((await alice.item(milk))?.name).toBe('Bob milk');
+    expect((await bob.item(milk))?.name).toBe('Bob milk');
+    expect(await alice.db.edits.count()).toBe(0);
+  });
+
+  it('drops the edits of an item whose create was rejected', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const id = crypto.randomUUID() as ItemId;
+    const create: QueuedCommand = {
+      id: crypto.randomUUID() as CommandId, household_id: HOUSEHOLD, item_id: id, at: '2026-11-05T00:00:00.000Z' as Instant,
+      kind: 'create', item: { name: '  ', aliases: [], tags: [], unit: 'count', default_amount: 1, shelf_life_days: null },
+      start: {}, created_seq: 1
+    };
+    await device.db.commands.add(create);
+    await device.db.edits.put({
+      id, household_id: HOUSEHOLD, name: 'Ghost', aliases: [], tags: [], unit: 'count', default_amount: 1,
+      shelf_life_days: null, deleted_at: null, updated_at: '2026-11-05T00:00:01.000Z' as Instant
+    });
+
+    await device.engine.sync('full');
+
+    expect(await device.db.edits.count()).toBe(0);
+    expect(device.notices).toEqual([expect.objectContaining({ kind: 'create', reason: 'invalid' })]);
+  });
+});
+
+describe('sync scheduling', () => {
+  it('runs one sync at a time and folds a burst of requests into one more run', async () => {
+    const server = new FakeServer();
+    const transport = server.transport(ALICE);
+    const device = await makeDevice(transport, HOUSEHOLD as HouseholdId);
+    await seededItem(server);
+
+    await Promise.all([device.engine.sync('push'), device.engine.sync('full'), device.engine.sync('full'), device.engine.sync('push')]);
+
+    expect(transport.calls.filter((c) => c === 'pull:items')).toHaveLength(1);
+    expect((await project(device.db)).snapshot.items.size).toBe(1);
   });
 });

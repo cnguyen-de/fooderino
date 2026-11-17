@@ -1,163 +1,108 @@
-import { describe, it, expect } from 'vitest';
-import { buildExportPayload, isValidPayload, planImport, EXPORT_VERSION, type ExportPayload } from '~~/utils/export';
-import type { ItemRecord, ListRecord, RecipeRecord } from '~~/types/sync';
+import { describe, expect, it } from 'vitest';
+import type { HouseholdId, Instant, Item, ItemId } from '~~/types/pantry';
+import type { RecipeRecord } from '~~/types/sync';
+import { buildExportPayload, EXPORT_VERSION, parseImport, planImport } from '~~/utils/export';
+import { FakeServer, HOUSEHOLD } from '../support/fake-server';
+import { makeDevice, project } from '../support/device';
 
 const ME = 'user-me';
 const NOW = '2026-11-16T12:00:00.000Z';
-const OLD = '2026-01-01T00:00:00.000Z';
 
-const list = (id: string, owner = ME): ListRecord => ({ id, name: 'Groceries', owner, updated_at: OLD, deleted_at: null });
-const item = (id: string, over: Partial<ItemRecord> = {}): ItemRecord => ({
-  id,
-  list_id: 'l1',
-  name: 'milk',
-  location: '',
-  store: '',
-  amount: 0,
-  amount_to_purchase: 0,
-  amount_type: 'count',
-  default_amount: 1,
-  created_by: null,
-  updated_at: OLD,
-  deleted_at: null,
-  ...over
+const item = (over: Partial<Item>): Item => ({
+  id: crypto.randomUUID() as ItemId, household_id: HOUSEHOLD as HouseholdId, name: 'Milk', aliases: [], tags: [],
+  unit: 'count', default_amount: 1, shelf_life_days: null, amount: 0, to_buy: 0, best_before: null,
+  merged_into: null, deleted_at: null, ...over
 });
 const recipe = (id: string, user_id = ME): RecipeRecord => ({
-  id,
-  user_id,
-  name: 'Soup',
-  description: null,
-  ingredients: [],
-  instructions: null,
-  saved: true,
-  updated_at: OLD,
-  deleted_at: null
+  id, user_id, name: 'Soup', description: null, ingredients: [], instructions: null, saved: true,
+  updated_at: '2026-01-01T00:00:00.000Z', deleted_at: null
 });
 
-const payload = (over: Partial<ExportPayload> = {}): ExportPayload => ({
-  version: EXPORT_VERSION,
-  lists: [],
-  items: [],
-  recipes: [],
-  ...over
-});
+const v1 = {
+  version: 1,
+  lists: [{ id: 'l1', name: 'Home', owner: ME, updated_at: NOW, deleted_at: null }],
+  items: [
+    { id: 'a', list_id: 'l1', name: 'Milk', location: ' Fridge ', store: 'Lidl', amount: 2, amount_to_purchase: 1,
+      amount_type: 'count', default_amount: 1, created_by: null, updated_at: NOW, deleted_at: null },
+    { id: 'b', list_id: 'l1', name: 'Flour', location: '', store: '', amount: '500', amount_to_purchase: 0,
+      amount_type: 'gram', default_amount: 1000, created_by: null, updated_at: NOW, deleted_at: null }
+  ],
+  recipes: [recipe('r1')]
+};
 
-const ctx = (over: Partial<Parameters<typeof planImport>[1]> = {}) => ({
-  userId: ME,
-  now: NOW,
-  existing: { lists: new Set<string>(), items: new Set<string>(), recipes: new Set<string>() },
-  liveListIds: new Set<string>(),
-  ...over
-});
-
-const count = (plan: ReturnType<typeof planImport>, label: string) => plan.summary.find((s) => s.label === label)!;
-
-describe('buildExportPayload', () => {
-  it('stamps the version and carries every collection', () => {
-    const p = buildExportPayload([list('l1')], [item('i1')], []);
-    expect(p.version).toBe(EXPORT_VERSION);
-    expect(p.lists).toHaveLength(1);
-    expect(p.items).toHaveLength(1);
-    expect(p.recipes).toEqual([]);
+describe('export v2', () => {
+  it('keeps live items with their counters as state, and drops tombstones', () => {
+    const payload = buildExportPayload({
+      household: { name: 'Home' },
+      items: [
+        item({ name: 'Milk', amount: 2, to_buy: 1, tags: [{ kind: 'place', name: 'Fridge' }] }),
+        item({ name: 'Gone', deleted_at: NOW as Instant }),
+        item({ name: 'Merged', merged_into: 'x' as ItemId })
+      ],
+      recipes: [recipe('r1'), { ...recipe('r2'), deleted_at: NOW }],
+      now: NOW
+    });
+    expect(payload.version).toBe(EXPORT_VERSION);
+    expect(payload.items).toEqual([
+      expect.objectContaining({ name: 'Milk', amount: 2, to_buy: 1, tags: [{ kind: 'place', name: 'Fridge' }] })
+    ]);
+    expect(payload.recipes.map((r) => r.id)).toEqual(['r1']);
   });
 
-  it('drops tombstoned rows, so an export is a clean snapshot', () => {
-    const dead = item('i2', { deleted_at: '2026-01-02T00:00:00.000Z' });
-    const p = buildExportPayload([list('l1')], [item('i1'), dead], []);
-    expect(p.items.map((i) => i.id)).toEqual(['i1']);
-  });
-});
-
-describe('isValidPayload', () => {
-  it('accepts a well-formed payload', () => {
-    expect(isValidPayload({ version: 1, lists: [], items: [], recipes: [] })).toBe(true);
-  });
-
-  it('rejects a non-object', () => {
-    expect(isValidPayload('nope')).toBe(false);
-    expect(isValidPayload(null)).toBe(false);
-  });
-
-  it('rejects a payload missing a collection', () => {
-    expect(isValidPayload({ version: 1, lists: [], items: [] })).toBe(false);
-  });
-
-  it('rejects a payload with no version', () => {
-    expect(isValidPayload({ lists: [], items: [], recipes: [] })).toBe(false);
-  });
-
-  it('rejects a version newer than this build understands', () => {
-    expect(isValidPayload({ version: EXPORT_VERSION + 1, lists: [], items: [], recipes: [] })).toBe(
-      false
-    );
-  });
-
-  it('rejects rows without a string id', () => {
-    expect(isValidPayload({ version: 1, lists: [{ name: 'x' }], items: [], recipes: [] })).toBe(false);
-    expect(isValidPayload({ version: 1, lists: [null], items: [], recipes: [] })).toBe(false);
+  it('round-trips through parseImport', () => {
+    const payload = buildExportPayload({ household: null, items: [item({ name: 'Rice', unit: 'gram', amount: 800 })], recipes: [], now: NOW });
+    expect(parseImport(JSON.parse(JSON.stringify(payload)))?.items).toEqual([
+      expect.objectContaining({ name: 'Rice', unit: 'gram', amount: 800, to_buy: 0, best_before: null })
+    ]);
   });
 });
 
-describe('planImport', () => {
-  it('adds what is new and skips what is already here', () => {
-    const plan = planImport(
-      payload({ lists: [list('l1'), list('l2')], items: [item('i1', { list_id: 'l2' })] }),
-      ctx({ existing: { ...ctx().existing, lists: new Set(['l1']) } })
-    );
-    expect(plan.lists.map((l) => l.id)).toEqual(['l2']);
-    expect(count(plan, 'lists')).toMatchObject({ total: 2, newCount: 1, skipCount: 1 });
-    expect(count(plan, 'items')).toMatchObject({ total: 1, newCount: 1, skipCount: 0 });
-  });
-
-  it('reports everything as skipped on a second import of the same file', () => {
-    const plan = planImport(
-      payload({ lists: [list('l1')] }),
-      ctx({ existing: { ...ctx().existing, lists: new Set(['l1']) } })
-    );
-    expect(plan.lists).toEqual([]);
-    expect(count(plan, 'lists')).toMatchObject({ newCount: 0, skipCount: 1 });
-  });
-
-  it('restamps updated_at so the push sweep picks imported rows up', () => {
-    const plan = planImport(payload({ lists: [list('l1')], recipes: [recipe('r1')] }), ctx());
-    expect(plan.lists[0]!.updated_at).toBe(NOW);
-    expect(plan.recipes[0]!.updated_at).toBe(NOW);
-  });
-
-  it('zeroes item counters and returns them as set ops, since pushes omit them', () => {
-    const plan = planImport(
-      payload({ lists: [list('l1')], items: [item('i1', { amount: 3, amount_to_purchase: 2 }), item('i2')] }),
-      ctx()
-    );
-    expect(plan.items.find((i) => i.id === 'i1')).toMatchObject({ amount: 0, amount_to_purchase: 0 });
-    expect(plan.counters).toEqual([
-      { item_id: 'i1', field: 'amount', value: 3 },
-      { item_id: 'i1', field: 'amount_to_purchase', value: 2 }
+describe('import', () => {
+  it('maps a v1 item location to a place tag and its store to a store tag', () => {
+    expect(parseImport(v1)?.items).toEqual([
+      { name: 'Milk', tags: [{ kind: 'place', name: 'Fridge' }, { kind: 'store', name: 'Lidl' }], unit: 'count', default_amount: 1, amount: 2, to_buy: 1 },
+      { name: 'Flour', tags: [], unit: 'gram', default_amount: 1000, amount: 500, to_buy: 0 }
     ]);
   });
 
-  it('skips items whose list is neither here nor being imported', () => {
-    const plan = planImport(payload({ items: [item('i1', { list_id: 'gone' })] }), ctx());
-    expect(plan.items).toEqual([]);
-    expect(count(plan, 'items')).toMatchObject({ newCount: 0, skipCount: 1 });
+  it('refuses unknown versions and shapes', () => {
+    expect(parseImport({ version: 3, items: [], recipes: [] })).toBeNull();
+    expect(parseImport({ version: 2, items: [] })).toBeNull();
+    expect(parseImport('nope')).toBeNull();
   });
 
-  it('imports items into a list that already lives on this device', () => {
-    const plan = planImport(payload({ items: [item('i1', { list_id: 'l9' })] }), ctx({ liveListIds: new Set(['l9']) }));
-    expect(plan.items.map((i) => i.id)).toEqual(['i1']);
-  });
-
-  it("skips lists and recipes belonging to another account, which RLS would reject", () => {
+  it('adds only items whose names are new here, and only my recipes not already here', () => {
     const plan = planImport(
-      payload({
-        lists: [list('l1', 'someone-else')],
-        items: [item('i1', { list_id: 'l1' })],
-        recipes: [recipe('r1', 'someone-else')]
-      }),
-      ctx()
+      {
+        items: [{ name: 'milk ' }, { name: 'Oat drink', aliases: ['Haferdrink'] }, { name: 'haferdrink' }, { name: 'Eggs' }],
+        recipes: [recipe('r1'), recipe('r2'), recipe('r3', 'someone-else')]
+      },
+      { userId: ME, now: NOW, items: [item({ name: 'Milk' })], recipeIds: new Set(['r1']) }
     );
-    expect(plan.lists).toEqual([]);
-    expect(plan.items).toEqual([]);
-    expect(plan.recipes).toEqual([]);
+    expect(plan.items.map((d) => d.name)).toEqual(['Oat drink', 'Eggs']);
+    expect(plan.recipes).toEqual([{ ...recipe('r2'), updated_at: NOW }]);
+    expect(plan.summary).toEqual([
+      { label: 'items', total: 4, newCount: 2, skipCount: 2 },
+      { label: 'recipes', total: 3, newCount: 1, skipCount: 2 }
+    ]);
+  });
+
+  it('creates each v1 item through a create command carrying its opening counters', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ME), HOUSEHOLD);
+    const plan = planImport(parseImport(v1)!, { userId: ME, now: NOW, items: [], recipeIds: new Set() });
+
+    for (const draft of plan.items) await device.ops.createItem(draft);
+
+    expect((await device.db.commands.toArray()).map((c) => c.kind)).toEqual(['create', 'create']);
+    const items = [...(await project(device.db)).snapshot.items.values()];
+    expect(items.map(({ name, tags, amount, to_buy }) => ({ name, tags, amount, to_buy }))).toEqual(
+      expect.arrayContaining([
+        { name: 'Milk', tags: [{ kind: 'place', name: 'Fridge' }, { kind: 'store', name: 'Lidl' }], amount: 2, to_buy: 1 },
+        { name: 'Flour', tags: [], amount: 500, to_buy: 0 }
+      ])
+    );
+    await device.engine.sync('full');
+    expect([...server.items.values()].map((i) => i.name).sort()).toEqual(['Flour', 'Milk']);
   });
 });

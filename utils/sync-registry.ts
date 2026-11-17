@@ -1,61 +1,44 @@
-import type { Table } from 'dexie';
-import { db } from '~~/utils/db';
-import type { SyncCollection } from '~~/utils/sync-hook';
+import type { HouseholdRows, HouseholdStore } from '~~/types/sync';
+import {
+  parseBagEntry,
+  parseCommandLog,
+  parseEvent,
+  parseHousehold,
+  parseItem,
+  parseMember
+} from '~~/utils/sync-wire';
 
-export interface SyncTableDef {
-  /** Dexie store name. */
-  local: SyncCollection;
-  /** Supabase table name. */
+export interface HouseholdTableDef<S extends HouseholdStore = HouseholdStore> {
+  /** Dexie store. */
+  store: S;
+  /** Server table. */
   remote: string;
-  /** Column the incremental pull and catch-up push page on. */
-  cursor: 'updated_at' | 'created_at';
-  /** Append-only tables never participate in LWW merge. */
-  appendOnly: boolean;
-  /** Columns stripped before push because the server owns them. */
-  pushOmit: string[];
+  /** The column that holds the household id; `households` is scoped by its own id. */
+  scope: 'id' | 'household_id';
+  /** The row's primary key, as the Dexie store keys it. */
+  key: (row: HouseholdRows[S]) => string;
+  parse: (raw: unknown) => HouseholdRows[S];
+}
+
+function def<S extends HouseholdStore>(d: HouseholdTableDef<S>): HouseholdTableDef<S> {
+  return d;
 }
 
 /**
- * Order matters: pushes walk this array in sequence, so a table must appear
- * after anything it holds a foreign key to. Items reference lists; members
- * reference lists.
+ * Pull order. The log comes last: a command commits its effects and its log row
+ * together, so any effect a pull saw has its receipt in the same pull, and replay
+ * never applies an accepted pending command on top of its own effect.
  */
-export const SYNC_TABLES: SyncTableDef[] = [
-  { local: 'lists', remote: 'lists_v2', cursor: 'updated_at', appendOnly: false, pushOmit: [] },
-  {
-    local: 'list_members',
-    remote: 'list_members',
-    cursor: 'updated_at',
-    appendOnly: false,
-    pushOmit: []
-  },
-  // `amount` and `amount_to_purchase` are owned by the item_ops trigger.
-  // Upserting them here would overwrite increments other devices folded in.
-  {
-    local: 'items',
-    remote: 'items_v2',
-    cursor: 'updated_at',
-    appendOnly: false,
-    pushOmit: ['amount', 'amount_to_purchase']
-  },
-  { local: 'logs', remote: 'logs_v2', cursor: 'created_at', appendOnly: true, pushOmit: [] },
-  {
-    local: 'recipes',
-    remote: 'recipes_v2',
-    cursor: 'updated_at',
-    appendOnly: false,
-    pushOmit: []
-  }
-];
+export const HOUSEHOLD_TABLES = [
+  def({ store: 'households', remote: 'households', scope: 'id', key: (r) => r.id, parse: parseHousehold }),
+  def({ store: 'members', remote: 'household_members', scope: 'household_id', key: (r) => r.id, parse: parseMember }),
+  def({ store: 'items', remote: 'items_v2', scope: 'household_id', key: (r) => r.id, parse: parseItem }),
+  def({ store: 'bag', remote: 'bag_entries', scope: 'household_id', key: (r) => r.id, parse: parseBagEntry }),
+  def({ store: 'events', remote: 'item_events', scope: 'household_id', key: (r) => r.id, parse: parseEvent }),
+  def({ store: 'log', remote: 'command_log', scope: 'household_id', key: (r) => r.command_id, parse: parseCommandLog })
+] as const;
 
-const BY_LOCAL = new Map(SYNC_TABLES.map((d) => [d.local, d]));
+export const HOUSEHOLD_STORES: readonly HouseholdStore[] = HOUSEHOLD_TABLES.map((d) => d.store);
 
-export function defFor(local: SyncCollection): SyncTableDef {
-  const def = BY_LOCAL.get(local);
-  if (!def) throw new Error(`No sync table registered for "${local}"`);
-  return def;
-}
-
-export function tableFor(local: SyncCollection): Table {
-  return db.table(local);
-}
+export const PAGE_SIZE = 1000;
+export const COMMAND_BATCH = 50;

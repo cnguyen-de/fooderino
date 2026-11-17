@@ -1,6 +1,5 @@
 import { liveQuery } from 'dexie';
-import { db } from '~~/utils/db';
-import { notifyLocalChange } from '~~/utils/sync-hook';
+import { db, notifyLocalChange } from '~~/utils/legacy-db';
 import { buildList, buildMember, type MemberIdentity } from '~~/utils/list-ops';
 import type { ListRecord, ListMemberRecord } from '~~/types/sync';
 

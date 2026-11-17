@@ -1,47 +1,66 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { createSyncEngine, type SyncEngine, type Row } from '~~/utils/sync-engine';
+import { createSyncEngine, type SyncEngine } from '~~/utils/sync-engine';
 import { createSupabaseTransport } from '~/utils/supabase-transport';
-import { SYNC_TABLES, defFor } from '~~/utils/sync-registry';
+import { HOUSEHOLD_TABLES } from '~~/utils/sync-registry';
 import { setLocalChangeHook } from '~~/utils/sync-hook';
+import { getSyncState } from '~~/utils/sync-state';
 import { db } from '~~/utils/db';
+import { recordRejections } from './usePantry';
 
-// Module-level, not function-local: SyncStatus and the bootstrap both call
-// useSyncEngine(), and a remount must be able to tear down the channel a
-// previous instance opened. Function-local state leaks duplicate
+// Module-level, not function-local: SyncStatus, the bootstrap and the household
+// composable all call useSyncEngine(), and a remount must be able to tear down the
+// channel a previous instance opened. Function-local state leaks duplicate
 // subscriptions on the same topic.
 let engine: SyncEngine | null = null;
-let channels: RealtimeChannel[] = [];
+let channel: RealtimeChannel | null = null;
+let channelKey: string | null = null;
 let startInFlight: Promise<void> | null = null;
+let onOnline: (() => void) | null = null;
 
 export function useSyncEngine() {
   const status = useState<'idle' | 'syncing' | 'offline' | 'error'>('sync-status', () => 'idle');
   const lastSyncedAt = useState<string | null>('sync-last', () => null);
   const supabase = useSupabaseClient();
+  const user = useSupabaseUser();
 
   function markFailure(context: string, err?: unknown): void {
     status.value = typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error';
     console.error(`[sync] ${context} failed`, err);
   }
 
-  async function syncNow(): Promise<void> {
-    if (!engine) return;
+  async function track(context: string, work: (e: SyncEngine) => Promise<unknown>): Promise<void> {
+    const current = engine;
+    if (!current) return;
     status.value = 'syncing';
     try {
-      await engine.runOnce();
+      await work(current);
       lastSyncedAt.value = new Date().toISOString();
       status.value = 'idle';
     } catch (e) {
-      markFailure('sync', e);
+      // Never leave the UI stuck on 'syncing'; the next sync clears this back to idle.
+      markFailure(context, e);
     }
   }
 
-  /** Push one record as soon as it changes, so edits land without waiting. */
+  const syncNow = () => track('sync', (e) => e.sync('full'));
+
+  /** Sends both outboxes without pulling. Resolves even when offline; check the outbox after. */
+  const flush = () => track('push', (e) => e.flush());
+
+  /** Asks the server which household this user is in, resets local data on a change, then pulls. */
+  async function checkMembership(): Promise<void> {
+    await track('membership', async (e) => {
+      await e.syncMembership();
+      await e.sync('full');
+    });
+    await subscribe();
+  }
+
+  /** Write-through: every local write is pushed as soon as it is queued. */
   function installChangeHook(): void {
-    setLocalChangeHook((collection) => {
-      if (!engine) return;
+    setLocalChangeHook(() => {
       engine
-        .pushDirty(defFor(collection))
-        .then(() => engine?.pushOutbox())
+        ?.sync('push')
         .then(() => {
           lastSyncedAt.value = new Date().toISOString();
           if (status.value !== 'syncing') status.value = 'idle';
@@ -50,47 +69,46 @@ export function useSyncEngine() {
     });
   }
 
-  function subscribeRealtime(): void {
-    for (const def of SYNC_TABLES) {
-      const channel = supabase
-        .channel(`sync:${def.remote}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: def.remote },
-          (payload) => {
-            const row = payload.new as Row;
-            engine
-              ?.applyRemote(def, row)
-              .then(async () => {
-                // A membership for a list this device has never seen means
-                // the user joined it elsewhere. Its rows predate the pull
-                // cursor, so only a full sync (which back-fills) brings them in.
-                if (def.local !== 'list_members' || row.deleted_at) return;
-                if (!(await db.lists.get(row.list_id as string))) await syncNow();
-              })
-              .catch((e) => markFailure(`realtime ${def.remote}`, e));
-          }
-        )
-        .subscribe();
-      channels.push(channel);
+  function unsubscribe(): void {
+    if (channel) void supabase.removeChannel(channel);
+    channel = null;
+    channelKey = null;
+  }
+
+  /** Realtime only nudges: a change triggers a pull, and a member change re-checks membership. */
+  async function subscribe(): Promise<void> {
+    const { household_id } = await getSyncState(db);
+    const userId = user.value?.id ?? null;
+    const key = `${household_id}:${userId}`;
+    if (!engine || !userId || key === channelKey) return;
+    unsubscribe();
+    channelKey = key;
+
+    let next = supabase.channel(`sync:${key}`);
+    const listen = (table: string, filter: string, on: () => void) => {
+      next = next.on('postgres_changes', { event: '*', schema: 'public', table, filter }, on);
+    };
+    if (household_id) {
+      for (const def of HOUSEHOLD_TABLES) {
+        const nudge = def.store === 'members' ? checkMembership : syncNow;
+        listen(def.remote, `${def.scope}=eq.${household_id}`, () => void nudge());
+      }
     }
+    listen('household_members', `user_id=eq.${userId}`, () => void checkMembership());
+    listen('recipes_v2', `user_id=eq.${userId}`, () => void syncNow());
+    // Changes made before the subscription went live reach this device only by a pull.
+    channel = next.subscribe((state) => {
+      if (state === 'SUBSCRIBED') void syncNow();
+    });
   }
 
   async function runStart(): Promise<void> {
     stop();
-    engine = createSyncEngine(createSupabaseTransport(supabase));
-    status.value = 'syncing';
+    engine = createSyncEngine({ db, transport: createSupabaseTransport(supabase), onRejection: recordRejections });
     installChangeHook();
-    try {
-      await engine.runOnce();
-      subscribeRealtime();
-      lastSyncedAt.value = new Date().toISOString();
-      status.value = 'idle';
-    } catch (e) {
-      // Never leave the UI stuck on 'syncing'. A later write-through push or
-      // a re-run of start() clears this back to idle.
-      markFailure('start', e);
-    }
+    onOnline = () => void checkMembership();
+    window.addEventListener('online', onOnline);
+    await checkMembership();
   }
 
   async function start(): Promise<void> {
@@ -103,12 +121,12 @@ export function useSyncEngine() {
 
   function stop(): void {
     setLocalChangeHook(null);
-    for (const c of channels) supabase.removeChannel(c);
-    channels = [];
+    unsubscribe();
+    if (onOnline) window.removeEventListener('online', onOnline);
+    onOnline = null;
     engine = null;
   }
 
-  return { status, lastSyncedAt, start, stop, syncNow };
+  return { status, lastSyncedAt, start, stop, syncNow, flush, checkMembership };
 }
 
-export { clearLocalData } from '~~/utils/account';

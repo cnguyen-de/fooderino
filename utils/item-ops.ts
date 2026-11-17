@@ -1,6 +1,5 @@
-import { db } from '~~/utils/db';
+import { db, notifyLocalChange } from '~~/utils/legacy-db';
 import { makeOp } from '~~/utils/ops';
-import { notifyLocalChange } from '~~/utils/sync-hook';
 import type { ItemRecord, OpField } from '~~/types/sync';
 
 /**
