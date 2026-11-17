@@ -55,6 +55,9 @@ const quickPicks = computed(() => {
 function use(item: PantryItem, bin = false) {
   return act(() => (bin ? ops.bin(item.id) : ops.useUp(item.id)), `${bin ? 'Binned' : 'Used'} ${item.name}`);
 }
+function restock(item: PantryItem) {
+  return act(() => ops.editItem(item.id, { amount: item.amount + 1 }), `Added one ${item.name}`);
+}
 async function action(item: PantryItem) {
   const handle = await (item.amount > 0 ? use(item) : act(() => ops.addToShopping(item.id), `Listed ${item.name}`));
   if (handle) query.value = '';
@@ -86,7 +89,8 @@ function matchText(hit: ReturnType<typeof search>[number]) {
           :item="hit.item"
           :matched="matchText(hit)"
           @edit="selected = hit.item.id"
-          @action="action(hit.item)" />
+          @action="action(hit.item)"
+          @add="restock(hit.item)" />
         <p v-if="!results.length">No matching items.</p>
       </section>
       <template v-else>
@@ -132,7 +136,8 @@ function matchText(hit: ReturnType<typeof search>[number]) {
             :key="item.id"
             :item="item"
             @edit="selected = item.id"
-            @action="action(item)" />
+            @action="action(item)"
+            @add="restock(item)" />
         </section>
         <section class="space-y-1">
           <h2 class="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Storage</h2>
@@ -163,7 +168,8 @@ function matchText(hit: ReturnType<typeof search>[number]) {
                   :key="item.id"
                   :item="item"
                   @edit="selected = item.id"
-                  @action="action(item)" /></CollapsibleContent
+                  @action="action(item)"
+                  @add="restock(item)" /></CollapsibleContent
             ></Collapsible>
           </div>
           <p v-if="!view.home.byPlace.length" class="py-4 text-muted-foreground">

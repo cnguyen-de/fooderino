@@ -136,7 +136,9 @@ export function suggest({ items, bag, events, today, rules, historyComplete }: S
         h.lastDismissDay !== null &&
         h.lastDismissAt > h.lastPurchaseAt &&
         daysBetween(h.lastDismissDay, today) < cadence.gap;
-      if (due && !snoozed && item.amount < cadence.qty) probablyNeed.push({ item, qty: cadence.qty });
+      // The median can land between purchases (2, 3 → 2.5); suggest a whole amount, rounded down.
+      if (due && !snoozed && item.amount < cadence.qty)
+        probablyNeed.push({ item, qty: Math.max(1, Math.floor(cadence.qty)) });
     } else if (h && item.amount === 0 && h.lastEmptiedAt > h.lastDismissAt) {
       ranOut.push(item);
     }

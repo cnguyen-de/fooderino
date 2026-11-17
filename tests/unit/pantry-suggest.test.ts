@@ -145,6 +145,19 @@ describe('suggest: probably need', () => {
     expect(needIds({ items: [item('eggs', { amount: 2 })], events })).toEqual([]);
   });
 
+  it('rounds a fractional median quantity down to a whole purchase', () => {
+    // Median of 2, 2, 3, 3 is 2.5; nobody buys half an egg box.
+    const events = [
+      purchase('eggs', -40, 2),
+      purchase('eggs', -30, 2),
+      purchase('eggs', -20, 3),
+      purchase('eggs', -10, 3)
+    ];
+    const need = (amount: number) => run({ items: [item('eggs', { amount })], events }).probablyNeed;
+    expect(need(1)).toMatchObject([{ item: { id: 'eggs' }, qty: 2 }]);
+    expect(need(2)).toMatchObject([{ item: { id: 'eggs' }, qty: 2 }]);
+  });
+
   it('needs at least three purchase days', () => {
     expect(needIds({ items: [item('milk')], events: [purchase('milk', -20), purchase('milk', -10)] })).toEqual([]);
   });

@@ -5,7 +5,7 @@ import ItemSheet from '~/components/pantry/ItemSheet.vue';
 import UnpackSheet from '~/components/pantry/UnpackSheet.vue';
 import type { UndoHandle } from '~/composables/usePantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
-import { X } from 'lucide-vue-next';
+import { House, X } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 const { view, search, ops, historyComplete } = usePantry();
 const act = usePantryAction();
@@ -22,6 +22,7 @@ async function perform(work: () => Promise<UndoHandle | null>, message?: string)
   if (handle) query.value = '';
   return handle;
 }
+const unit = (item: PantryItem) => (item.unit === 'gram' ? ' g' : '');
 function list(item: PantryItem) {
   return perform(() => ops.addToShopping(item.id), `Listed ${item.name}`);
 }
@@ -73,7 +74,7 @@ async function create() {
           shop
           @edit="selected = item.id"
           @action="perform(() => ops.tick(item.id), `Bought ${item.name}`)">
-          <template #trailing>
+          <template #leading>
             <Button
               variant="ghost"
               size="icon"
@@ -91,25 +92,41 @@ async function create() {
           <h2 class="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Probably need</h2>
           <span class="text-[10px] text-muted-foreground">From purchase history</span>
         </div>
-        <PantryRow
+        <div
           v-for="entry in view.shopping.probablyNeed"
           :key="entry.item.id"
-          :item="entry.item"
-          :qty="entry.qty"
-          shop
-          @edit="selected = entry.item.id"
-          @action="perform(() => ops.tick(entry.item.id, entry.qty), `Bought ${entry.item.name}`)">
-          <template #trailing
-            ><Button
-              variant="ghost"
-              size="xs"
-              class="shrink-0 text-xs text-muted-foreground"
-              :aria-label="`Skip ${entry.item.name}`"
-              @click="perform(() => ops.dismiss(entry.item.id))"
-              >Skip</Button
-            ></template
+          class="flex h-9 items-center gap-1 rounded-lg bg-muted/40 pl-2.5 pr-0.5 text-sm transition-colors focus-within:bg-muted/80 hover:bg-muted/80">
+          <button
+            type="button"
+            class="flex h-8 min-w-0 flex-1 items-center gap-2 text-left"
+            @click="selected = entry.item.id">
+            <span class="min-w-0 flex-1 truncate font-medium" :title="entry.item.name">{{ entry.item.name }}</span>
+            <span
+              class="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-muted-foreground"
+              :title="`${entry.item.amount}${unit(entry.item)} at home`"
+              ><House class="size-3" aria-hidden="true" /><span class="sr-only">At home: </span>{{ entry.item.amount
+              }}{{ unit(entry.item) }}</span
+            >
+            <span class="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+              ><span class="sr-only">Suggested: </span>×{{ entry.qty }}{{ unit(entry.item) }}</span
+            >
+          </button>
+          <Button
+            variant="ghost"
+            size="xs"
+            class="shrink-0 text-xs text-primary hover:bg-primary/10 hover:text-primary"
+            :aria-label="`Add ${entry.qty} ${entry.item.name} to shopping list`"
+            @click="perform(() => ops.addToShopping(entry.item.id, entry.qty), `Listed ${entry.item.name}`)"
+            >Add</Button
+          ><Button
+            variant="ghost"
+            size="xs"
+            class="shrink-0 text-xs text-muted-foreground"
+            :aria-label="`Skip ${entry.item.name}`"
+            @click="perform(() => ops.dismiss(entry.item.id))"
+            >Skip</Button
           >
-        </PantryRow>
+        </div>
       </section>
       <p v-if="!historyComplete" class="text-xs text-muted-foreground">
         Suggestions will appear after your history syncs.

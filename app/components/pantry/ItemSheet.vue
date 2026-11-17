@@ -27,6 +27,8 @@ const newItem = (name = ''): ItemMetadata => ({
 });
 const draft = ref(newItem());
 const amount = ref(0);
+const toBuy = ref(0);
+let loadedToBuy = 0;
 const best = ref('');
 const shelf = ref('');
 const alias = ref('');
@@ -60,6 +62,7 @@ watch([() => props.id, () => props.creating], ([id, creating]) => {
       }
     : newItem(props.initialName?.trim());
   amount.value = item?.amount ?? 1;
+  toBuy.value = loadedToBuy = item?.to_buy ?? 0;
   best.value = item?.best_before ?? '';
   shelf.value = item?.shelf_life_days?.toString() ?? '';
   alias.value = '';
@@ -69,6 +72,13 @@ watch([() => props.id, () => props.creating], ([id, creating]) => {
   deleting.value = false;
   mergeQuery.value = '';
 });
+// Follow the live list amount (e.g. after "Add to list") until the field is edited.
+watch(
+  () => (props.id ? view.value.byId(props.id)?.to_buy : undefined),
+  (live) => {
+    if (live !== undefined && Number(toBuy.value) === loadedToBuy) toBuy.value = loadedToBuy = live;
+  }
+);
 const matches = computed(() => search(mergeQuery.value).filter((h) => h.item.id !== props.id));
 function addAlias() {
   const value = alias.value.trim();
@@ -92,6 +102,7 @@ async function save() {
       default_amount: Number(draft.value.default_amount),
       shelf_life_days: shelf.value === '' ? null : Number(shelf.value),
       amount: Number(amount.value),
+      ...(Number(toBuy.value) !== loadedToBuy && { to_buy: Number(toBuy.value) }),
       best_before: best.value ? localDate(best.value) : null
     };
     if (props.creating) {
@@ -174,8 +185,8 @@ async function remove() {
             <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Quantity<span v-if="draft.unit === 'gram'"> · grams</span>
             </h3>
-            <div class="grid grid-cols-2 gap-3">
-              <label class="space-y-1 text-xs font-medium"
+            <div class="grid grid-cols-3 gap-3">
+              <label class="flex flex-col justify-end space-y-1 text-xs font-medium"
                 >At home<Input
                   v-model="amount"
                   aria-label="Amount at home"
@@ -185,7 +196,17 @@ async function remove() {
                   required
                   class="h-9 rounded-lg bg-background text-base"
               /></label>
-              <label class="space-y-1 text-xs font-medium"
+              <label class="flex flex-col justify-end space-y-1 text-xs font-medium"
+                >To buy<Input
+                  v-model="toBuy"
+                  aria-label="Amount to buy"
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  class="h-9 rounded-lg bg-background text-base"
+              /></label>
+              <label class="flex flex-col justify-end space-y-1 text-xs font-medium"
                 >Default amount<Input
                   v-model="draft.default_amount"
                   aria-label="Default amount"
