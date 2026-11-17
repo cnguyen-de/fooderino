@@ -27,7 +27,9 @@ async function join(): Promise<void> {
   }
   phase.value = 'joining';
   try {
-    const result = await household.join(token.value, { bring: hasItems.value && bring.value });
+    // Joining is valid before status loads. Keep the bring default so a failed
+    // status lookup cannot silently leave an existing household's items behind.
+    const result = await household.join(token.value, { bring: bring.value });
     clearPendingJoin(token.value);
     summary.value = { merged: result.merged, copied: result.copied };
     phase.value = 'done';
@@ -61,7 +63,7 @@ function signIn(): void {
         <Switch :checked="bring" @update:checked="bring = $event" />
         Bring my items along. Items with the same name are merged.
       </label>
-      <Button :disabled="current.kind === 'loading'" @click="join">Join</Button>
+      <Button @click="join">Join</Button>
     </template>
 
     <LoadingSpinner v-else-if="phase === 'joining'" message="Joining household..." />
