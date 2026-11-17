@@ -58,6 +58,11 @@ export const SERVER_OWNED_ITEM_FIELDS = [
   'merged_into'
 ] as const satisfies readonly (keyof Item)[];
 
+export type ServerOwnedItemField = (typeof SERVER_OWNED_ITEM_FIELDS)[number];
+
+/** The last-write-wins half of an item: everything a metadata push may write. */
+export type ItemSheet = Omit<Item, ServerOwnedItemField>;
+
 interface BagEntryBase {
   id: BagId;
   household_id: HouseholdId;
@@ -81,7 +86,8 @@ interface EventBase {
   id: EventId;
   household_id: HouseholdId;
   item_id: ItemId;
-  command_id: CommandId;
+  /** Null for backfilled and imported events, which no command produced. */
+  command_id: CommandId | null;
   occurred_at: Instant;
   actor: string | null;
   origin: EventOrigin;
@@ -146,11 +152,33 @@ export type Command = CommandBase &
 
 export type CommandKind = Command['kind'];
 
-export type RejectionReason = 'insufficient_stock' | 'bag_closed' | 'cannot_undo' | 'not_found' | 'invalid';
+export type RejectionReason =
+  | 'insufficient_stock'
+  | 'bag_closed'
+  | 'cannot_undo'
+  | 'not_found'
+  | 'invalid'
+  /** Server only: the actor is not a member of the command's household. */
+  | 'not_member'
+  /** Server only: the command had no usable id. */
+  | 'malformed';
 
 export interface Rejection {
   command: CommandId;
   reason: RejectionReason;
+}
+
+/** A `command_log` row: the receipt of an accepted command, and the inverse its undo applies. */
+export interface CommandLogRow {
+  command_id: CommandId;
+  household_id: HouseholdId;
+  kind: CommandKind;
+  actor: string;
+  item_ids: ItemId[];
+  at: Instant;
+  inverse: Inverse | null;
+  undone_by: CommandId | null;
+  seq: number;
 }
 
 /** What an accepted command recorded so that `undo` can apply its exact inverse. */

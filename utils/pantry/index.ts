@@ -4,7 +4,7 @@ export { newId, normName, normalizeTags, normalizeAliases } from './ids';
 export { isLocalDate, localDate, instant, localDateOf, addDays, daysBetween } from './dates';
 export { applyCommand, replayPending } from './reduce';
 export type { Applied, Replayed } from './reduce';
-export { planHouseholdMerge } from './merge';
+export { planHouseholdMerge, resolveItem, isLive } from './merge';
 export type { MergePlan } from './merge';
 export { suggest, DEFAULT_RULES } from './suggest';
 export type { SuggestRules, SuggestInput, Suggestions } from './suggest';
