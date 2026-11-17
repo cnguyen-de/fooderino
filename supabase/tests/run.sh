@@ -68,4 +68,5 @@ for test in "$here"/*.test.sql; do
   grep 'NOTICE:  ok - ' <<<"$out" | sed 's/.*NOTICE:  ok - /       /'
 done
 
+if [[ -z "$filter" ]]; then step "verify-v2.sql after live moves" supabase/verify-v2.sql; fi
 echo "PASS: $passed assertions"
