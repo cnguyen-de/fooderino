@@ -148,17 +148,26 @@ begin
   --    'updated' or 'inventory', its payload is exactly "a → b" (or "a -> b"),
   --    a <> b, and its item name matches exactly one item of the list.
   --    Every other row goes to legacy_log_audit with the first failing reason.
+  -- Normalize each item once. Repeating normalization for every log/item
+  -- pair makes a real household's history exceed the SQL editor timeout.
+  create temp table item_matches on commit drop as
+  select household_id, private.norm_name(name) as name,
+         array_agg(id order by id) as matches
+    from public.items_v2
+   group by household_id, private.norm_name(name);
+  create unique index on item_matches (household_id, name);
+  analyze item_matches;
+
   create temp table parsed on commit drop as
   select g.id, g.created_at, g.item, g.action, g.payload, h.id as household_id,
          (regexp_match(g.payload, '^\s*(-?\d+(\.\d+)?)\s*(→|->)\s*(-?\d+(\.\d+)?)\s*$')) as m,
-         array(select i.id from public.items_v2 i
-                where i.household_id = h.id and private.norm_name(i.name) = private.norm_name(g.item)
-                order by i.id) as matches,
+         coalesce(im.matches, '{}'::uuid[]) as matches,
          (select au.id from auth.users au
            where lower(btrim(au.email)) = lower(btrim(g."user"))
            order by au.created_at, au.id limit 1) as actor
     from public.logs g
-    left join public.households h on h.id = g.list_id;
+    left join public.households h on h.id = g.list_id
+    left join item_matches im on im.household_id = h.id and im.name = private.norm_name(g.item);
 
   create temp table classified on commit drop as
   select p.*,
