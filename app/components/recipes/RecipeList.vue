@@ -1,24 +1,13 @@
 <script setup lang="ts">
 import { useRecipeStore } from '~/store/recipes';
-import { useItemStore } from '~/store/item';
-import { toast } from 'vue-sonner';
-import { useListStore } from '~/store/list';
 import type { RecipeRecord } from '~~/types/sync';
 const recipeStore = useRecipeStore();
-const itemStore = useItemStore();
-const listStore = useListStore();
+const { addIngredients } = useRecipeShopping();
+const { state: householdState } = useHousehold();
 // No fetch: `useRecipes()` subscribes to Dexie and the sync engine keeps it fed.
 
-const onAddRecipeIngredientsToBuy = (recipe: RecipeRecord) => {
-  recipe.ingredients.forEach((ingredient) => {
-    if (recipeStore.hasIngredients(ingredient.name)) {
-      return;
-    }
-    const item = { ...ingredient, amount_to_purchase: ingredient.amount };
-    delete item.amount;
-    itemStore.insertItem(item);
-  });
-  toast('Added ingredients to buy list');
+const onAddRecipeIngredientsToBuy = async (recipe: RecipeRecord) => {
+  await addIngredients(recipe.ingredients);
 };
 
 // The legacy handler passed the recipe through unchanged, so `saved` stayed
@@ -38,7 +27,7 @@ const onDeleteRecipe = (recipe: RecipeRecord) => {
   <RecipeCard
     :recipe="recipe"
     v-for="recipe of recipeStore.savedRecipes"
-    :hide-add-to-cart="!listStore.selectedList"
+    :hide-add-to-cart="householdState.kind !== 'member'"
     @save-recipe="onSaveRecipe($event)"
     @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
     @delete="onDeleteRecipe($event)"

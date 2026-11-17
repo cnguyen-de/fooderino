@@ -1,19 +1,9 @@
-import { useItemStore } from './item';
-
 export const useRecipeStore = defineStore('recipes', () => {
-  const itemStore = useItemStore();
+  const pantry = usePantry();
   const repo = useRecipes();
 
-  const hasIngredients = (ingredient: string) => {
-    const normalize = (s: string) =>
-      s
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '');
-    return itemStore.inventoryItems.some(
-      (item) => normalize(item.name).includes(normalize(ingredient)) && item.amount > 0
-    );
-  };
+  const hasIngredients = (name: string) =>
+    pantry.search(name).some((hit) => hit.match === 'exact' && hit.via !== 'tag' && hit.item.amount > 0);
 
   return {
     recipes: repo.recipes,

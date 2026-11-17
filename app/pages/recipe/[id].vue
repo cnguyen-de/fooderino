@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useItemStore } from '~/store/item';
 import { useRecipeStore } from '~/store/recipes';
-import { toast } from 'vue-sonner';
 import type { RecipeRecord, RecipeIngredient } from '~~/types/sync';
 
 const recipeStore = useRecipeStore();
-const itemStore = useItemStore();
+const { addIngredients } = useRecipeShopping();
+const { state: householdState } = useHousehold();
 const route = useRoute();
 const router = useRouter();
 const { byId, update } = useRecipes();
@@ -19,16 +18,8 @@ const onSaveRecipe = async (r: RecipeRecord) => {
   router.push('/recipe');
 };
 
-const onAddRecipeIngredientsToBuy = async (r: RecipeRecord) => {
-  r.ingredients.forEach((ingredient: RecipeIngredient) => {
-    if (recipeStore.hasIngredients(ingredient.name)) {
-      return;
-    }
-    const item = { ...ingredient, amount_to_purchase: ingredient.amount };
-    delete item.amount;
-    itemStore.insertItem(item);
-  });
-  toast('Added ingredients to buy list');
+const onAddRecipeIngredientsToBuy = async (recipe: RecipeRecord) => {
+  await addIngredients(recipe.ingredients);
 };
 </script>
 
@@ -39,6 +30,7 @@ const onAddRecipeIngredientsToBuy = async (r: RecipeRecord) => {
         <RecipeCard
           v-if="recipe"
           :recipe="recipe"
+          :hide-add-to-cart="householdState.kind !== 'member'"
           @save-recipe="onSaveRecipe($event)"
           @add-recipe-ingredients-to-buy="onAddRecipeIngredientsToBuy($event)"
           hide-delete></RecipeCard>
