@@ -52,6 +52,7 @@ export interface UnpackLine {
 export interface PantryOps {
   /** Resolves with the new item's id, or null when the draft was refused. */
   createItem(draft: ItemDraft): Promise<ItemId | null>;
+  /** Throws a RangeError when the metadata is invalid, such as a blank name; the edit sheet validates first. */
   editItem(id: ItemId, edit: ItemEdit): Promise<UndoHandle | null>;
   /** Defaults to 1. */
   useUp(id: ItemId, qty?: number): Promise<UndoHandle | null>;

@@ -4,18 +4,24 @@ A local-first grocery list and recipe app built on Nuxt (`ssr: false`), Dexie an
 
 ## How data flows
 
-- **IndexedDB (Dexie) is the source of truth.** Components read through `liveQuery` and write
-  to Dexie synchronously, so the UI never waits on the network.
-- **Supabase syncs in the background.** `app/composables/useSyncEngine.ts` pushes dirty rows
-  and a durable op queue, pulls incrementally on `updated_at`, and subscribes to Realtime.
-  Conflicts resolve last-write-wins, except item `amount` / `amount_to_purchase`, which sync
-  as `delta` / `set` ops folded by a Postgres trigger so concurrent increments add up.
-- **Lists are shared by QR code.** `POST /api/list/share` mints a 24-hour, multi-use token;
-  `/join?t=…` redeems it through `POST /api/list/join`.
-- **Settings → Data** exports everything to JSON, imports an export additively, and can clear
-  local data and re-download it.
+- **The device holds one household.** Dexie keeps the confirmed server state of the user's
+  household plus two outboxes: `commands` (state changes such as "used one", "ticked",
+  "unpacked") and `edits` (item metadata sheets). `usePantry()` replays the outbox over the
+  confirmed state in memory, so every tap shows at once, offline included.
+- **Commands are applied by the server, in order.** `utils/sync-engine.ts` drains the outbox
+  through the `apply_commands` RPC, 50 at a time. Each command id is minted once, so a retry
+  is a no-op. A command the server refuses (say, two people used the last milk) is dropped and
+  shown as a toast; it never blocks the queue.
+- **Pulls follow the server's `seq`.** Every household write takes the next position on a
+  per-household clock, so each table pulls exactly `seq > cursor`. Realtime only nudges a pull.
+  Item metadata and recipes stay last-write-wins.
+- **Households are joined by QR code.** `POST /api/household/share` mints a 24-hour token, and
+  `/join?t=…` redeems it through `POST /api/household/join`, optionally bringing your items.
+  Create, pick and leave live beside it under `server/api/household/`.
+- **Settings → Data** exports the household and recipes to JSON, imports an export additively
+  (list-era v1 files included), and can clear local data and re-download it.
 
-The full design lives in `docs/superpowers/specs/2026-08-25-local-first-sync-design.md`.
+The design lives in `docs/superpowers/specs/2026-11-16-household-redesign-design.md`.
 
 ## Setup
 
@@ -28,7 +34,7 @@ Create `.env` with:
 | Variable | Purpose |
 |---|---|
 | `SUPABASE_URL`, `SUPABASE_KEY` | Project URL and anon key |
-| `SUPABASE_SERVICE_KEY` | Service-role key. Required by `/api/list/join`, the one route that bypasses RLS. **Never commit it.** |
+| `SUPABASE_SERVICE_KEY` | Service-role key. The household routes use it to call `move_household`, the only writer of memberships. **Never commit it.** |
 | `BASE_URL` | Public origin, used to build share links (defaults to `http://localhost:3000`) |
 
 Apply `supabase/schema-v2.sql` to the database before the first run. Migrating an existing
@@ -38,7 +44,8 @@ database also needs `supabase/backfill-v2.sql`, then `supabase/verify-v2.sql` to
 
 ```bash
 pnpm dev        # dev server on http://localhost:3000
-pnpm test       # sync engine and data-layer unit tests (Vitest + fake-indexeddb)
+pnpm test       # unit tests (Vitest + fake-indexeddb)
+pnpm test:e2e   # two devices against a local Supabase in Docker; never touches .env's project
 pnpm build      # production build
 pnpm preview    # preview the production build
 ```
