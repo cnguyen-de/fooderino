@@ -427,6 +427,14 @@ as $$
    where user_id = auth.uid() and deleted_at is null
 $$;
 
+-- For the items_v2 insert policy. A subquery on items_v2 inside its own
+-- policy is refused as infinite recursion, so the read runs as the owner.
+create function private.item_exists(p_id uuid) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (select 1 from public.items_v2 where id = p_id)
+$$;
+
 create function private.household_of(p_user uuid) returns uuid
 language sql stable set search_path = ''
 as $$
@@ -1240,9 +1248,10 @@ $$;
 -- Grants -------------------------------------------------------------------
 
 revoke all on all functions in schema private from public;
--- items_v2's CHECK constraints call these as the writing role, so a client's
--- metadata push needs EXECUTE on them. Both are pure.
-grant execute on function private.tags_valid(jsonb), private.aliases_valid(text[]) to authenticated;
+-- items_v2's CHECK constraints and insert policy call these as the writing
+-- role, so a client's metadata push needs EXECUTE on them.
+grant execute on function private.tags_valid(jsonb), private.aliases_valid(text[]),
+                          private.item_exists(uuid) to authenticated;
 revoke all on function public.my_household() from public, anon, authenticated, service_role;
 revoke all on function public.apply_commands(jsonb) from public, anon, authenticated, service_role;
 revoke all on function public.move_household(uuid, uuid, text, jsonb) from public, anon, authenticated, service_role;
@@ -1321,8 +1330,7 @@ create policy "members read items" on public.items_v2
 -- row that already exists.
 create policy "members upsert existing items" on public.items_v2
   for insert to authenticated
-  with check (household_id = (select public.my_household())
-              and exists (select 1 from public.items_v2 e where e.id = items_v2.id));
+  with check (household_id = (select public.my_household()) and private.item_exists(id));
 create policy "members edit item metadata" on public.items_v2
   for update to authenticated
   using (household_id = (select public.my_household()))
