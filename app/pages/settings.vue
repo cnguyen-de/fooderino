@@ -10,8 +10,8 @@ const logout = async () => {
 </script>
 <template>
   <NuxtLayout name="app">
-    <div class="relative h-full w-full">
-      <div class="h-[calc(100%_-_4rem)] w-full overflow-auto p-4">
+    <div class="relative w-full">
+      <div class="w-full p-4">
         <div class="flex flex-row items-center justify-between">
           <h1 class="mt-2 text-2xl font-bold">Account</h1>
           <SyncStatus />

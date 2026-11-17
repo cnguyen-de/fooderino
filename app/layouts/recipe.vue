@@ -8,8 +8,7 @@
       </div>
     </FooterLink>
   </div>
-  <div
-    class="relative mx-auto flex h-[calc(100%_-_7rem)] w-full flex-col items-start justify-start gap-4 overflow-y-scroll p-4">
+  <div class="relative mx-auto flex w-full flex-col items-start justify-start gap-4 p-4">
     <slot />
   </div>
 </template>

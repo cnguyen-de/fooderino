@@ -7,6 +7,25 @@ const act = usePantryAction();
 const query = ref('');
 const selected = ref<ItemId | null>(null);
 const results = computed(() => search(query.value));
+const quickPicks = computed(() => {
+  const home = view.value.home;
+  const excluded = new Set(home.useSoon.map(({ item }) => item.id));
+  const picks = home.mostUsed.filter((item) => item.amount > 0 && !excluded.has(item.id)).slice(0, 10);
+  for (const item of picks) excluded.add(item.id);
+  const candidates = home.byPlace
+    .flatMap((group) => group.items)
+    .filter((item) => item.amount > 0 && !excluded.has(item.id))
+    .map((item) => ({
+      item,
+      purchasedAt: view.value.history(item.id).find((event) => event.kind === 'purchase')?.occurred_at
+    }))
+    .sort(
+      (a, b) =>
+        (b.purchasedAt ? Date.parse(b.purchasedAt) : 0) - (a.purchasedAt ? Date.parse(a.purchasedAt) : 0) ||
+        a.item.name.localeCompare(b.item.name)
+    );
+  return [...picks, ...candidates.slice(0, 10 - picks.length).map(({ item }) => item)];
+});
 function use(item: PantryItem, bin = false) {
   return act(() => (bin ? ops.bin(item.id) : ops.useUp(item.id)), `${bin ? 'Binned' : 'Used'} ${item.name}`);
 }
@@ -55,10 +74,10 @@ function matchText(hit: ReturnType<typeof search>[number]) {
             </div>
           </div>
         </section>
-        <section v-if="view.home.mostUsed.length" class="space-y-2">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">You use these most</h2>
+        <section v-if="quickPicks.length" class="space-y-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Quick picks</h2>
           <PantryRow
-            v-for="item in view.home.mostUsed"
+            v-for="item in quickPicks"
             :key="item.id"
             :item="item"
             @edit="selected = item.id"
@@ -66,7 +85,11 @@ function matchText(hit: ReturnType<typeof search>[number]) {
         </section>
         <section class="space-y-2">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Places</h2>
-          <Collapsible v-for="group in view.home.byPlace" :key="group.name ?? 'unsorted'" class="rounded-xl border p-3"
+          <Collapsible
+            v-for="group in view.home.byPlace"
+            :key="group.name ?? 'unsorted'"
+            :default-open="view.home.byPlace.length === 1"
+            class="rounded-xl border p-3"
             ><CollapsibleTrigger class="flex min-h-11 w-full items-center justify-between text-left font-medium"
               ><span>{{ group.name ?? 'Unsorted' }}</span
               ><span class="text-muted-foreground">{{ group.items.length }} · ⌄</span></CollapsibleTrigger

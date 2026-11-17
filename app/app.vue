@@ -17,5 +17,5 @@ colorMode.value = userColor.value ? userColor.value : isPreferredDark.value ? 'd
       <NuxtPage />
     </NuxtLayout>
   </div>
-  <Toaster />
+  <Toaster position="top-center" :visible-toasts="2" />
 </template>

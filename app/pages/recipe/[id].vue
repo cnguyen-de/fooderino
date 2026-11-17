@@ -25,8 +25,8 @@ const onAddRecipeIngredientsToBuy = async (recipe: RecipeRecord) => {
 
 <template>
   <NuxtLayout name="app">
-    <div class="relative h-full w-full">
-      <div class="h-[calc(100%_-_4rem)] w-full overflow-auto p-4">
+    <div class="relative w-full">
+      <div class="w-full p-4">
         <RecipeCard
           v-if="recipe"
           :recipe="recipe"
