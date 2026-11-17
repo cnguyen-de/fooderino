@@ -64,7 +64,8 @@ export default defineNuxtConfig({
     }
   },
   pwa: {
-    registerType: 'autoUpdate',
+    // 'prompt' lets UpdateBanner ask before swapping in a new version, instead of reloading mid-use.
+    registerType: 'prompt',
     manifest: {
       name: 'Fooderino',
       short_name: 'Fooderino',
