@@ -1,0 +1,873 @@
+{
+  "conventions": [
+    "Each case starts from `initial`, fills absent fields from `defaults`, then applies `commands` in order through receipt-aware replay with `receipts` (default []).",
+    "Every command carries household_id and at from defaults.command unless it sets them.",
+    "A live event's id equals the id of the command that emitted it, so `reverses` names that command id.",
+    "expect.items and expect.bag check only the fields they list. expect.events and expect.rejections are exact and default to [].",
+    "An event is summarized by every field except household_id, command_id, occurred_at, actor and origin."
+  ],
+  "defaults": {
+    "item": {
+      "household_id": "h1",
+      "aliases": [],
+      "tags": [],
+      "unit": "count",
+      "default_amount": 1,
+      "shelf_life_days": null,
+      "amount": 0,
+      "to_buy": 0,
+      "best_before": null,
+      "merged_into": null,
+      "deleted_at": null
+    },
+    "bag_entry": {
+      "household_id": "h1",
+      "from_list": 0,
+      "state": "open",
+      "bought_at": "2026-11-16T10:00:00.000Z",
+      "closed_by_command": null
+    },
+    "command": { "household_id": "h1", "at": "2026-11-16T12:00:00.000Z" }
+  },
+  "cases": [
+    {
+      "name": "create normalizes tags and aliases and sets the opening stock",
+      "initial": { "items": [], "bag": [] },
+      "commands": [
+        {
+          "id": "c1",
+          "kind": "create",
+          "item_id": "oat",
+          "item": {
+            "name": "  Oat   milk ",
+            "aliases": ["Oatly", "oatly", " ", "oat milk"],
+            "tags": [
+              { "kind": "place", "name": "Fridge" },
+              { "kind": "place", "name": " fridge" },
+              { "kind": "store", "name": "Lidl" }
+            ],
+            "unit": "count",
+            "default_amount": 1,
+            "shelf_life_days": 7
+          },
+          "start": { "amount": 2, "to_buy": 1, "best_before": "2026-11-20" }
+        }
+      ],
+      "expect": {
+        "items": {
+          "oat": {
+            "name": "Oat milk",
+            "aliases": ["Oatly"],
+            "tags": [
+              { "kind": "place", "name": "Fridge" },
+              { "kind": "store", "name": "Lidl" }
+            ],
+            "shelf_life_days": 7,
+            "amount": 2,
+            "to_buy": 1,
+            "best_before": "2026-11-20",
+            "merged_into": null
+          }
+        }
+      }
+    },
+    {
+      "name": "create defaults the opening stock to empty",
+      "initial": { "items": [], "bag": [] },
+      "commands": [
+        {
+          "id": "c1",
+          "kind": "create",
+          "item_id": "salt",
+          "item": {
+            "name": "Salt",
+            "aliases": [],
+            "tags": [],
+            "unit": "gram",
+            "default_amount": 500,
+            "shelf_life_days": null
+          },
+          "start": {}
+        }
+      ],
+      "expect": { "items": { "salt": { "unit": "gram", "amount": 0, "to_buy": 0, "best_before": null } } }
+    },
+    {
+      "name": "create rejects an id that already exists and a blank name",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 1 }], "bag": [] },
+      "commands": [
+        {
+          "id": "c1",
+          "kind": "create",
+          "item_id": "milk",
+          "item": {
+            "name": "Milk",
+            "aliases": [],
+            "tags": [],
+            "unit": "count",
+            "default_amount": 1,
+            "shelf_life_days": null
+          },
+          "start": { "amount": 5 }
+        },
+        {
+          "id": "c2",
+          "kind": "create",
+          "item_id": "blank",
+          "item": {
+            "name": "   ",
+            "aliases": [],
+            "tags": [],
+            "unit": "count",
+            "default_amount": 1,
+            "shelf_life_days": null
+          },
+          "start": {}
+        }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 1 } },
+        "rejections": [
+          { "command": "c1", "reason": "invalid" },
+          { "command": "c2", "reason": "invalid" }
+        ]
+      }
+    },
+    {
+      "name": "use consumes stock and records the amount left",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 3 }], "bag": [] },
+      "commands": [{ "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": false }],
+      "expect": {
+        "items": { "milk": { "amount": 2 } },
+        "events": [{ "id": "c1", "kind": "consume", "item_id": "milk", "qty": 1, "after": 2 }]
+      }
+    },
+    {
+      "name": "use with waste records a waste event",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 1 }], "bag": [] },
+      "commands": [{ "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": true }],
+      "expect": {
+        "items": { "milk": { "amount": 0 } },
+        "events": [{ "id": "c1", "kind": "waste", "item_id": "milk", "qty": 1, "after": 0 }]
+      }
+    },
+    {
+      "name": "use beyond stock is rejected, not clipped",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 1 }], "bag": [] },
+      "commands": [{ "id": "c1", "kind": "use", "item_id": "milk", "qty": 2, "waste": false }],
+      "expect": {
+        "items": { "milk": { "amount": 1 } },
+        "rejections": [{ "command": "c1", "reason": "insufficient_stock" }]
+      }
+    },
+    {
+      "name": "use rejects a quantity that is not positive",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 3 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "use", "item_id": "milk", "qty": 0, "waste": false },
+        { "id": "c2", "kind": "use", "item_id": "milk", "qty": -1, "waste": false }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 3 } },
+        "rejections": [
+          { "command": "c1", "reason": "invalid" },
+          { "command": "c2", "reason": "invalid" }
+        ]
+      }
+    },
+    {
+      "name": "commands on a missing, deleted or other household's item are not found",
+      "initial": {
+        "items": [
+          { "id": "milk", "name": "Milk", "amount": 2, "deleted_at": "2026-11-01T00:00:00.000Z" },
+          { "id": "theirs", "name": "Bread", "amount": 2, "household_id": "h2" }
+        ],
+        "bag": []
+      },
+      "commands": [
+        { "id": "c1", "kind": "use", "item_id": "ghost", "qty": 1, "waste": false },
+        { "id": "c2", "kind": "use", "item_id": "milk", "qty": 1, "waste": false },
+        { "id": "c3", "kind": "use", "item_id": "theirs", "qty": 1, "waste": false }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 2 }, "theirs": { "amount": 2 } },
+        "rejections": [
+          { "command": "c1", "reason": "not_found" },
+          { "command": "c2", "reason": "not_found" },
+          { "command": "c3", "reason": "not_found" }
+        ]
+      }
+    },
+    {
+      "name": "applying the same command id twice is a no-op",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 3 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": false },
+        { "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": false }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 2 } },
+        "events": [{ "id": "c1", "kind": "consume", "item_id": "milk", "qty": 1, "after": 2 }]
+      }
+    },
+    {
+      "name": "a rejection does not stop the commands after it",
+      "initial": { "items": [{ "id": "milk", "name": "Milk" }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": false },
+        { "id": "c2", "kind": "want", "item_id": "milk", "qty": 2 }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 0, "to_buy": 2 } },
+        "rejections": [{ "command": "c1", "reason": "insufficient_stock" }]
+      }
+    },
+    {
+      "name": "want sets an absolute to_buy and rejects a negative one",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "to_buy": 1 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "want", "item_id": "milk", "qty": 3 },
+        { "id": "c2", "kind": "want", "item_id": "milk", "qty": -1 }
+      ],
+      "expect": {
+        "items": { "milk": { "to_buy": 3 } },
+        "rejections": [{ "command": "c2", "reason": "invalid" }]
+      }
+    },
+    {
+      "name": "tick moves the listed quantity into an open bag entry and records a purchase",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "to_buy": 2 }], "bag": [] },
+      "commands": [
+        {
+          "id": "c1",
+          "kind": "tick",
+          "item_id": "milk",
+          "bag_id": "b1",
+          "qty": 3,
+          "from_list": 2,
+          "at": "2026-11-16T09:30:00.000Z"
+        }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 0, "to_buy": 0 } },
+        "bag": {
+          "b1": {
+            "item_id": "milk",
+            "state": "open",
+            "qty": 3,
+            "from_list": 2,
+            "bought_at": "2026-11-16T09:30:00.000Z",
+            "purchase_event": "c1",
+            "closed_by_command": null
+          }
+        },
+        "events": [{ "id": "c1", "kind": "purchase", "item_id": "milk", "qty": 3 }]
+      }
+    },
+    {
+      "name": "tick takes no more off the list than is still listed",
+      "initial": {
+        "items": [
+          { "id": "milk", "name": "Milk", "to_buy": 1 },
+          { "id": "eggs", "name": "Eggs" }
+        ],
+        "bag": []
+      },
+      "commands": [
+        { "id": "c1", "kind": "tick", "item_id": "milk", "bag_id": "b1", "qty": 2, "from_list": 2 },
+        { "id": "c2", "kind": "tick", "item_id": "eggs", "bag_id": "b2", "qty": 1, "from_list": 1 }
+      ],
+      "expect": {
+        "items": { "milk": { "to_buy": 0 }, "eggs": { "to_buy": 0 } },
+        "bag": {
+          "b1": { "item_id": "milk", "state": "open", "qty": 2, "from_list": 1 },
+          "b2": { "item_id": "eggs", "state": "open", "qty": 1, "from_list": 0 }
+        },
+        "events": [
+          { "id": "c1", "kind": "purchase", "item_id": "milk", "qty": 2 },
+          { "id": "c2", "kind": "purchase", "item_id": "eggs", "qty": 1 }
+        ]
+      }
+    },
+    {
+      "name": "tick rejects taking more off the list than it bought, and a reused bag id",
+      "initial": {
+        "items": [
+          { "id": "milk", "name": "Milk", "to_buy": 1 },
+          { "id": "eggs", "name": "Eggs", "to_buy": 3 }
+        ],
+        "bag": []
+      },
+      "commands": [
+        { "id": "c1", "kind": "tick", "item_id": "eggs", "bag_id": "b1", "qty": 1, "from_list": 2 },
+        { "id": "c2", "kind": "tick", "item_id": "milk", "bag_id": "b1", "qty": 1, "from_list": 1 },
+        { "id": "c3", "kind": "tick", "item_id": "eggs", "bag_id": "b1", "qty": 1, "from_list": 1 }
+      ],
+      "expect": {
+        "items": { "milk": { "to_buy": 0 }, "eggs": { "to_buy": 3 } },
+        "bag": { "b1": { "item_id": "milk", "state": "open", "qty": 1 } },
+        "events": [{ "id": "c2", "kind": "purchase", "item_id": "milk", "qty": 1 }],
+        "rejections": [
+          { "command": "c1", "reason": "invalid" },
+          { "command": "c3", "reason": "invalid" }
+        ]
+      }
+    },
+    {
+      "name": "two shoppers ticking the same item both get a bag entry and a purchase",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "to_buy": 2 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "tick", "item_id": "milk", "bag_id": "b1", "qty": 2, "from_list": 2 },
+        { "id": "c2", "kind": "tick", "item_id": "milk", "bag_id": "b2", "qty": 2, "from_list": 2 },
+        { "id": "c3", "kind": "undo", "item_id": "milk", "target": "c2" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 0, "to_buy": 0 } },
+        "bag": {
+          "b1": { "state": "open", "qty": 2, "from_list": 2 },
+          "b2": { "state": "cancelled", "qty": 2, "from_list": 0, "closed_by_command": "c3" }
+        },
+        "events": [
+          { "id": "c1", "kind": "purchase", "item_id": "milk", "qty": 2 },
+          { "id": "c2", "kind": "purchase", "item_id": "milk", "qty": 2 },
+          {
+            "id": "c3",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 0, "to_buy": 0, "best_before": null },
+            "after": { "amount": 0, "to_buy": 0, "best_before": null },
+            "reverses": "c2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "cancel_bag gives the listed part back and reverses the purchase",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "amount": 1 }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 2, "from_list": 1, "purchase_event": "e0" }]
+      },
+      "commands": [{ "id": "c1", "kind": "cancel_bag", "item_id": "milk", "bag_id": "b1" }],
+      "expect": {
+        "items": { "milk": { "amount": 1, "to_buy": 1 } },
+        "bag": { "b1": { "state": "cancelled", "closed_by_command": "c1" } },
+        "events": [
+          {
+            "id": "c1",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 1, "to_buy": 0, "best_before": null },
+            "after": { "amount": 1, "to_buy": 1, "best_before": null },
+            "reverses": "e0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "cancel after unpack loses the race",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 2, "from_list": 2, "purchase_event": "e0" }]
+      },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1" },
+        { "id": "c2", "kind": "cancel_bag", "item_id": "milk", "bag_id": "b1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 2, "to_buy": 0 } },
+        "bag": { "b1": { "state": "unpacked", "closed_by_command": "c1" } },
+        "rejections": [{ "command": "c2", "reason": "bag_closed" }]
+      }
+    },
+    {
+      "name": "unpack after cancel loses the race",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 2, "from_list": 2, "purchase_event": "e0" }]
+      },
+      "commands": [
+        { "id": "c1", "kind": "cancel_bag", "item_id": "milk", "bag_id": "b1" },
+        { "id": "c2", "kind": "unpack", "item_id": "milk", "bag_id": "b1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 0, "to_buy": 2 } },
+        "bag": { "b1": { "state": "cancelled", "closed_by_command": "c1" } },
+        "events": [
+          {
+            "id": "c1",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 0, "to_buy": 0, "best_before": null },
+            "after": { "amount": 0, "to_buy": 2, "best_before": null },
+            "reverses": "e0"
+          }
+        ],
+        "rejections": [{ "command": "c2", "reason": "bag_closed" }]
+      }
+    },
+    {
+      "name": "a bag entry that does not exist is not found",
+      "initial": { "items": [{ "id": "milk", "name": "Milk" }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b9" },
+        { "id": "c2", "kind": "cancel_bag", "item_id": "milk", "bag_id": "b9" }
+      ],
+      "expect": {
+        "rejections": [
+          { "command": "c1", "reason": "not_found" },
+          { "command": "c2", "reason": "not_found" }
+        ]
+      }
+    },
+    {
+      "name": "unpack into empty stock replaces a stale date",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "best_before": "2026-10-01" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 2, "purchase_event": "e0" }]
+      },
+      "commands": [{ "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "best_before": "2026-11-25" }],
+      "expect": { "items": { "milk": { "amount": 2, "best_before": "2026-11-25" } } }
+    },
+    {
+      "name": "unpack into existing stock keeps the sooner date",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "amount": 1, "best_before": "2026-11-20" }],
+        "bag": [
+          { "id": "b1", "item_id": "milk", "qty": 1, "purchase_event": "e1" },
+          { "id": "b2", "item_id": "milk", "qty": 1, "purchase_event": "e2" }
+        ]
+      },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "best_before": "2026-11-25" },
+        { "id": "c2", "kind": "unpack", "item_id": "milk", "bag_id": "b2", "best_before": "2026-11-18" }
+      ],
+      "expect": { "items": { "milk": { "amount": 3, "best_before": "2026-11-18" } } }
+    },
+    {
+      "name": "unpack into stock with no date takes the given date",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "amount": 1 }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 1, "purchase_event": "e1" }]
+      },
+      "commands": [{ "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "best_before": "2026-11-25" }],
+      "expect": { "items": { "milk": { "amount": 2, "best_before": "2026-11-25" } } }
+    },
+    {
+      "name": "unpack without a date keeps the date of existing stock",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "amount": 1, "best_before": "2026-11-20" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 1, "purchase_event": "e1" }]
+      },
+      "commands": [{ "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1" }],
+      "expect": { "items": { "milk": { "amount": 2, "best_before": "2026-11-20" } } }
+    },
+    {
+      "name": "unpack without a date into empty stock clears the stale date",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "best_before": "2026-10-01" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 1, "purchase_event": "e1" }]
+      },
+      "commands": [{ "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1" }],
+      "expect": { "items": { "milk": { "amount": 1, "best_before": null } } }
+    },
+    {
+      "name": "unpack adds a missing place tag once",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "tags": [{ "kind": "store", "name": "Lidl" }] }],
+        "bag": [
+          { "id": "b1", "item_id": "milk", "qty": 1, "purchase_event": "e1" },
+          { "id": "b2", "item_id": "milk", "qty": 1, "purchase_event": "e2" }
+        ]
+      },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "place": "Fridge" },
+        { "id": "c2", "kind": "unpack", "item_id": "milk", "bag_id": "b2", "place": " FRIDGE" }
+      ],
+      "expect": {
+        "items": {
+          "milk": {
+            "amount": 2,
+            "tags": [
+              { "kind": "store", "name": "Lidl" },
+              { "kind": "place", "name": "Fridge" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "unpack rejects a date that does not exist",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 1, "purchase_event": "e1" }]
+      },
+      "commands": [{ "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "best_before": "2026-02-30" }],
+      "expect": {
+        "items": { "milk": { "amount": 0 } },
+        "bag": { "b1": { "state": "open" } },
+        "rejections": [{ "command": "c1", "reason": "invalid" }]
+      }
+    },
+    {
+      "name": "set writes absolute values and records a correction",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "amount": 3, "to_buy": 1, "best_before": "2026-11-20" }],
+        "bag": []
+      },
+      "commands": [
+        { "id": "c1", "kind": "set", "item_id": "milk", "amount": 5, "best_before": "2026-12-01" },
+        { "id": "c2", "kind": "set", "item_id": "milk", "best_before": null }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 5, "to_buy": 1, "best_before": null } },
+        "events": [
+          {
+            "id": "c1",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 3, "to_buy": 1, "best_before": "2026-11-20" },
+            "after": { "amount": 5, "to_buy": 1, "best_before": "2026-12-01" },
+            "reverses": null
+          },
+          {
+            "id": "c2",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 5, "to_buy": 1, "best_before": "2026-12-01" },
+            "after": { "amount": 5, "to_buy": 1, "best_before": null },
+            "reverses": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "set rejects an empty or invalid change",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 3 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "set", "item_id": "milk" },
+        { "id": "c2", "kind": "set", "item_id": "milk", "amount": -1 },
+        { "id": "c3", "kind": "set", "item_id": "milk", "best_before": "2026-13-01" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 3 } },
+        "rejections": [
+          { "command": "c1", "reason": "invalid" },
+          { "command": "c2", "reason": "invalid" },
+          { "command": "c3", "reason": "invalid" }
+        ]
+      }
+    },
+    {
+      "name": "undo after use restores the stock and reverses the event",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 2 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": false },
+        { "id": "c2", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 2 } },
+        "events": [
+          { "id": "c1", "kind": "consume", "item_id": "milk", "qty": 1, "after": 1 },
+          {
+            "id": "c2",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 1, "to_buy": 0, "best_before": null },
+            "after": { "amount": 2, "to_buy": 0, "best_before": null },
+            "reverses": "c1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "undo twice is rejected the second time",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 2 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": false },
+        { "id": "c2", "kind": "undo", "item_id": "milk", "target": "c1" },
+        { "id": "c3", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 2 } },
+        "events": [
+          { "id": "c1", "kind": "consume", "item_id": "milk", "qty": 1, "after": 1 },
+          {
+            "id": "c2",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 1, "to_buy": 0, "best_before": null },
+            "after": { "amount": 2, "to_buy": 0, "best_before": null },
+            "reverses": "c1"
+          }
+        ],
+        "rejections": [{ "command": "c3", "reason": "cannot_undo" }]
+      }
+    },
+    {
+      "name": "undo of want restores the previous to_buy",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "to_buy": 1 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "want", "item_id": "milk", "qty": 4 },
+        { "id": "c2", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": { "items": { "milk": { "to_buy": 1 } } }
+    },
+    {
+      "name": "undo of set restores only the fields it changed",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 3, "best_before": "2026-11-20" }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "set", "item_id": "milk", "amount": 5 },
+        { "id": "c2", "kind": "set", "item_id": "milk", "best_before": "2026-11-30" },
+        { "id": "c3", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 3, "best_before": "2026-11-30" } },
+        "events": [
+          {
+            "id": "c1",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 3, "to_buy": 0, "best_before": "2026-11-20" },
+            "after": { "amount": 5, "to_buy": 0, "best_before": "2026-11-20" },
+            "reverses": null
+          },
+          {
+            "id": "c2",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 5, "to_buy": 0, "best_before": "2026-11-20" },
+            "after": { "amount": 5, "to_buy": 0, "best_before": "2026-11-30" },
+            "reverses": null
+          },
+          {
+            "id": "c3",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 5, "to_buy": 0, "best_before": "2026-11-30" },
+            "after": { "amount": 3, "to_buy": 0, "best_before": "2026-11-30" },
+            "reverses": "c1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "undo of tick cancels its bag entry",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "to_buy": 1 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "tick", "item_id": "milk", "bag_id": "b1", "qty": 1, "from_list": 1 },
+        { "id": "c2", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": {
+        "items": { "milk": { "to_buy": 1 } },
+        "bag": { "b1": { "state": "cancelled", "closed_by_command": "c2" } },
+        "events": [
+          { "id": "c1", "kind": "purchase", "item_id": "milk", "qty": 1 },
+          {
+            "id": "c2",
+            "kind": "correction",
+            "item_id": "milk",
+            "before": { "amount": 0, "to_buy": 0, "best_before": null },
+            "after": { "amount": 0, "to_buy": 1, "best_before": null },
+            "reverses": "c1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "undo of tick after unpack is rejected because the bag is closed",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "to_buy": 1 }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "tick", "item_id": "milk", "bag_id": "b1", "qty": 1, "from_list": 1 },
+        { "id": "c2", "kind": "unpack", "item_id": "milk", "bag_id": "b1" },
+        { "id": "c3", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 1, "to_buy": 0 } },
+        "bag": { "b1": { "state": "unpacked" } },
+        "events": [{ "id": "c1", "kind": "purchase", "item_id": "milk", "qty": 1 }],
+        "rejections": [{ "command": "c3", "reason": "bag_closed" }]
+      }
+    },
+    {
+      "name": "undo of unpack reopens the bag entry, takes the stock back and restores the date",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "amount": 1, "best_before": "2026-11-20" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 2, "purchase_event": "e1" }]
+      },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "best_before": "2026-11-18" },
+        { "id": "c2", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 1, "best_before": "2026-11-20" } },
+        "bag": { "b1": { "state": "open", "closed_by_command": null } }
+      }
+    },
+    {
+      "name": "a bag entry reopened by undo can be unpacked again",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk", "amount": 1, "best_before": "2026-11-20" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 2, "purchase_event": "e1" }]
+      },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "best_before": "2026-11-18" },
+        { "id": "c2", "kind": "undo", "item_id": "milk", "target": "c1" },
+        { "id": "c3", "kind": "unpack", "item_id": "milk", "bag_id": "b1", "best_before": "2026-11-25" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 3, "best_before": "2026-11-20" } },
+        "bag": { "b1": { "state": "unpacked", "closed_by_command": "c3" } }
+      }
+    },
+    {
+      "name": "undo of unpack is rejected once the stock was used",
+      "initial": {
+        "items": [{ "id": "milk", "name": "Milk" }],
+        "bag": [{ "id": "b1", "item_id": "milk", "qty": 2, "purchase_event": "e1" }]
+      },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "milk", "bag_id": "b1" },
+        { "id": "c2", "kind": "use", "item_id": "milk", "qty": 1, "waste": false },
+        { "id": "c3", "kind": "undo", "item_id": "milk", "target": "c1" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 1 } },
+        "bag": { "b1": { "state": "unpacked", "closed_by_command": "c1" } },
+        "events": [{ "id": "c2", "kind": "consume", "item_id": "milk", "qty": 1, "after": 1 }],
+        "rejections": [{ "command": "c3", "reason": "cannot_undo" }]
+      }
+    },
+    {
+      "name": "dismiss records a dismiss event, and undo of it or of an unknown command is rejected",
+      "initial": { "items": [{ "id": "milk", "name": "Milk" }], "bag": [] },
+      "commands": [
+        { "id": "c1", "kind": "dismiss", "item_id": "milk" },
+        { "id": "c2", "kind": "undo", "item_id": "milk", "target": "c1" },
+        { "id": "c3", "kind": "undo", "item_id": "milk", "target": "nope" },
+        { "id": "c4", "kind": "dismiss", "item_id": "ghost" }
+      ],
+      "expect": {
+        "events": [{ "id": "c1", "kind": "dismiss", "item_id": "milk" }],
+        "rejections": [
+          { "command": "c2", "reason": "cannot_undo" },
+          { "command": "c3", "reason": "cannot_undo" },
+          { "command": "c4", "reason": "not_found" }
+        ]
+      }
+    },
+    {
+      "name": "merge folds the source into the target and later commands on the source land there",
+      "initial": {
+        "items": [
+          {
+            "id": "milk",
+            "name": "Milk",
+            "aliases": ["melk"],
+            "tags": [
+              { "kind": "place", "name": "fridge" },
+              { "kind": "store", "name": "Lidl" }
+            ],
+            "amount": 1,
+            "to_buy": 1,
+            "best_before": "2026-11-20"
+          },
+          {
+            "id": "whole",
+            "name": "Whole milk",
+            "tags": [{ "kind": "place", "name": "Fridge" }],
+            "amount": 2,
+            "best_before": "2026-11-25"
+          }
+        ],
+        "bag": []
+      },
+      "commands": [
+        { "id": "c1", "kind": "merge", "item_id": "milk", "into": "whole" },
+        { "id": "c2", "kind": "use", "item_id": "milk", "qty": 1, "waste": false }
+      ],
+      "expect": {
+        "items": {
+          "whole": {
+            "amount": 2,
+            "to_buy": 1,
+            "best_before": "2026-11-20",
+            "aliases": ["Milk", "melk"],
+            "tags": [
+              { "kind": "place", "name": "Fridge" },
+              { "kind": "store", "name": "Lidl" }
+            ],
+            "merged_into": null
+          },
+          "milk": { "merged_into": "whole", "amount": 0, "to_buy": 0 }
+        },
+        "events": [{ "id": "c2", "kind": "consume", "item_id": "whole", "qty": 1, "after": 2 }]
+      }
+    },
+    {
+      "name": "commands and bag entries on an already merged item resolve to the item it merged into",
+      "initial": {
+        "items": [
+          { "id": "a", "name": "Semi skimmed", "merged_into": "b" },
+          { "id": "b", "name": "Milk", "amount": 2 }
+        ],
+        "bag": [{ "id": "b1", "item_id": "a", "qty": 1, "purchase_event": "e1" }]
+      },
+      "commands": [
+        { "id": "c1", "kind": "unpack", "item_id": "a", "bag_id": "b1" },
+        { "id": "c2", "kind": "want", "item_id": "a", "qty": 2 }
+      ],
+      "expect": {
+        "items": { "a": { "amount": 0, "to_buy": 0 }, "b": { "amount": 3, "to_buy": 2 } },
+        "bag": { "b1": { "state": "unpacked" } }
+      }
+    },
+    {
+      "name": "merge rejects itself, a different unit and a missing target",
+      "initial": {
+        "items": [
+          { "id": "milk", "name": "Milk", "amount": 1 },
+          { "id": "flour", "name": "Flour", "unit": "gram", "amount": 500 }
+        ],
+        "bag": []
+      },
+      "commands": [
+        { "id": "c1", "kind": "merge", "item_id": "milk", "into": "milk" },
+        { "id": "c2", "kind": "merge", "item_id": "milk", "into": "flour" },
+        { "id": "c3", "kind": "merge", "item_id": "milk", "into": "ghost" }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 1, "merged_into": null }, "flour": { "amount": 500 } },
+        "rejections": [
+          { "command": "c1", "reason": "invalid" },
+          { "command": "c2", "reason": "invalid" },
+          { "command": "c3", "reason": "not_found" }
+        ]
+      }
+    },
+    {
+      "name": "merge ignores the date of an empty side",
+      "initial": {
+        "items": [
+          { "id": "milk", "name": "Milk", "amount": 1, "best_before": "2026-11-30" },
+          { "id": "whole", "name": "Whole milk", "best_before": "2026-10-01" }
+        ],
+        "bag": []
+      },
+      "commands": [{ "id": "c1", "kind": "merge", "item_id": "milk", "into": "whole" }],
+      "expect": { "items": { "whole": { "amount": 1, "best_before": "2026-11-30" } } }
+    },
+    {
+      "name": "replay skips a pending command the server already has a receipt for",
+      "initial": { "items": [{ "id": "milk", "name": "Milk", "amount": 3 }], "bag": [] },
+      "receipts": ["c1"],
+      "commands": [
+        { "id": "c1", "kind": "use", "item_id": "milk", "qty": 1, "waste": false },
+        { "id": "c2", "kind": "use", "item_id": "milk", "qty": 1, "waste": false }
+      ],
+      "expect": {
+        "items": { "milk": { "amount": 2 } },
+        "events": [{ "id": "c2", "kind": "consume", "item_id": "milk", "qty": 1, "after": 2 }]
+      }
+    }
+  ]
+}
