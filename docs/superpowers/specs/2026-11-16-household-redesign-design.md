@@ -202,9 +202,9 @@ service role, and pass the authenticated user id from the verified JWT.
 `suggest({ items, bag, events, today, rules }) -> { probablyNeed, ranOut, useSoon }`
 
 - **Purchase history.** Purchase events whose `occurred_at` is in the last `rules.windowDays`
-  (182), excluding those reversed. Events are resolved through `merged_into`, and aggregated
+  (365), excluding those reversed. Events are resolved through `merged_into`, and aggregated
   per local calendar day (quantities summed).
-- **Probably need.** At least `rules.minPurchaseDays` (2) purchase days. Let `gap` be the
+- **Probably need.** At least `rules.minPurchaseDays` (4) purchase days. Let `gap` be the
   median gap in days between consecutive purchase days, and `qty` the median daily quantity.
   The item is due when `today - lastPurchaseDay >= ceil(rules.dueFraction (0.6) * gap)`. It is
   held back when `amount >= qty`, `to_buy > 0`, or an open bag entry exists. It is snoozed
