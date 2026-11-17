@@ -72,25 +72,33 @@ export function projectPantry(rows: DeviceRows): Projection {
   };
 }
 
-/** Reads every store the projection needs. Inside a liveQuery or transaction, the read is one consistent snapshot. */
-export async function readDeviceRows(db: FooderinoDb, { events }: { events: boolean }): Promise<DeviceRows> {
-  const [sync, items, bag, log, commands, edits, history] = await Promise.all([
-    readSyncState(db),
-    db.items.toArray(),
-    db.bag.toArray(),
-    db.log.toArray(),
-    db.commands.orderBy('created_seq').toArray(),
-    db.edits.toArray(),
-    events ? db.events.toArray() : undefined
-  ]);
-  return {
-    household_id: sync.household_id,
-    hydrated: sync.hydrated_at !== null,
-    items,
-    bag,
-    log,
-    commands,
-    edits,
-    ...(history ? { events: history } : {})
-  };
+/**
+ * Reads every store the projection needs in one read transaction. IndexedDB orders it after
+ * any overlapping write, so a sync that retires a command and writes its effect is seen whole
+ * or not at all, and replay never counts that command twice. Inside a write transaction that
+ * covers these stores, it joins that transaction.
+ */
+export function readDeviceRows(db: FooderinoDb, { events }: { events: boolean }): Promise<DeviceRows> {
+  const tables = [db.syncState, db.items, db.bag, db.log, db.commands, db.edits, ...(events ? [db.events] : [])];
+  return db.transaction('r', tables, async () => {
+    const [sync, items, bag, log, commands, edits, history] = await Promise.all([
+      readSyncState(db),
+      db.items.toArray(),
+      db.bag.toArray(),
+      db.log.toArray(),
+      db.commands.orderBy('created_seq').toArray(),
+      db.edits.toArray(),
+      events ? db.events.toArray() : undefined
+    ]);
+    return {
+      household_id: sync.household_id,
+      hydrated: sync.hydrated_at !== null,
+      items,
+      bag,
+      log,
+      commands,
+      edits,
+      ...(history ? { events: history } : {})
+    };
+  });
 }
