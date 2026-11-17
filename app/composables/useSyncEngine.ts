@@ -16,6 +16,7 @@ let channel: RealtimeChannel | null = null;
 let channelKey: string | null = null;
 let startInFlight: Promise<void> | null = null;
 let onOnline: (() => void) | null = null;
+let onVisible: (() => void) | null = null;
 
 export function useSyncEngine() {
   const status = useState<'idle' | 'syncing' | 'offline' | 'error'>('sync-status', () => 'idle');
@@ -108,6 +109,12 @@ export function useSyncEngine() {
     installChangeHook();
     onOnline = () => void checkMembership();
     window.addEventListener('online', onOnline);
+    // A phone suspends the socket in the background, and a Realtime that just came up can
+    // drop its first changes, so coming back to the app always pulls.
+    onVisible = () => {
+      if (document.visibilityState === 'visible') void syncNow();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     await checkMembership();
   }
 
@@ -123,7 +130,9 @@ export function useSyncEngine() {
     setLocalChangeHook(null);
     unsubscribe();
     if (onOnline) window.removeEventListener('online', onOnline);
+    if (onVisible) document.removeEventListener('visibilitychange', onVisible);
     onOnline = null;
+    onVisible = null;
     engine = null;
   }
 
