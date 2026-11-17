@@ -6,7 +6,7 @@ const redirectTo = `${useRuntimeConfig().public.baseUrl}/confirm`;
 
 watch(user?.value, () => {
   if (user.value) {
-    navigateTo('/inventory');
+    navigateTo('/home');
   }
 });
 </script>

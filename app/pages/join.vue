@@ -4,6 +4,7 @@ import { clearPendingJoin, savePendingJoin } from '~~/utils/pending-join';
 
 const route = useRoute();
 const user = useSupabaseUser();
+useSyncBootstrap();
 const household = useHousehold();
 
 const phase = ref<'ready' | 'joining' | 'done' | 'failed'>('ready');
@@ -70,13 +71,13 @@ function signIn(): void {
       <p v-if="summary && summary.merged + summary.copied > 0" class="text-sm">
         {{ summary.copied }} item(s) came along and {{ summary.merged }} merged into ones already there.
       </p>
-      <NuxtLink to="/inventory"><Button>Open it</Button></NuxtLink>
+      <NuxtLink to="/home"><Button>Open it</Button></NuxtLink>
     </template>
 
     <template v-else-if="phase === 'failed'">
       <p class="text-red-500">{{ message }}</p>
       <Button variant="outline" @click="phase = 'ready'">Try again</Button>
-      <NuxtLink to="/inventory"><Button variant="ghost">Go back</Button></NuxtLink>
+      <NuxtLink to="/home"><Button variant="ghost">Go back</Button></NuxtLink>
     </template>
   </div>
 </template>

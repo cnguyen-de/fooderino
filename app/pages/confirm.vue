@@ -9,7 +9,7 @@ watch(
     if (!user.value) return;
     // Signing in from a scanned share link: finish joining before anything else.
     const token = peekPendingJoin();
-    return navigateTo(token ? { path: '/join', query: { t: token } } : '/inventory');
+    return navigateTo(token ? { path: '/join', query: { t: token } } : '/home');
   },
   { immediate: true }
 );

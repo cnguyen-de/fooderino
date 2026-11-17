@@ -6,14 +6,14 @@ export default defineNuxtRouteMiddleware((to) => {
   if (to.path === '/join') return;
 
   const user = useSupabaseUser();
-  const protectedAppRoutes = ['/inventory', 'buy', '/settings', '/recipe'];
-  if (protectedAppRoutes?.includes(to.path) && !user.value) {
+  const protectedAppRoutes = ['/home', '/shop', '/household', '/settings', '/recipe'];
+  if (protectedAppRoutes.some(path => to.path === path || to.path.startsWith(path + '/')) && !user.value) {
     return navigateTo('/');
   }
   const navigateToAppRoutes = ['/', '/login', '/confirm'];
   if (navigateToAppRoutes?.includes(to.path) && user.value) {
     // Signed in from a scanned share link: finish joining before anything else.
     const token = peekPendingJoin();
-    return navigateTo(token ? { path: '/join', query: { t: token } } : '/inventory');
+    return navigateTo(token ? { path: '/join', query: { t: token } } : '/home');
   }
 });

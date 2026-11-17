@@ -87,7 +87,7 @@ onBeforeUnmount(stop);
   <Drawer :open="open" @update:open="emit('update:open', $event)">
     <DrawerContent>
       <DrawerHeader>
-        <DrawerTitle>Join a list</DrawerTitle>
+        <DrawerTitle>Join a household</DrawerTitle>
         <DrawerDescription>Point your camera at a Fooderino share code.</DrawerDescription>
       </DrawerHeader>
       <div class="flex flex-col items-center gap-3 px-4 pb-6">
