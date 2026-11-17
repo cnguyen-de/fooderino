@@ -4,13 +4,14 @@ import PantryNotices from '~/components/pantry/PantryNotices.vue';
 import { BookOpen, History, House, Settings, ShoppingBasket } from 'lucide-vue-next';
 const hydrated = useState<boolean>('sync-hydrated', () => false);
 const route = useRoute();
-const hasDock = computed(() => ['/home', '/shop'].includes(route.path));
+const hasDock = computed(() => route.name === 'home' || route.name === 'shop');
 const viewport = ref<{ height: string; top: string }>();
 onMounted(() => {
   const visible = window.visualViewport;
   if (!visible) return;
   const resize = () => {
-    viewport.value = visible.scale === 1 ? { height: `${visible.height}px`, top: `${visible.offsetTop}px` } : undefined;
+    viewport.value =
+      visible.scale === 1 ? { height: `min(100dvh, ${visible.height}px)`, top: `${visible.offsetTop}px` } : undefined;
   };
   resize();
   visible.addEventListener('resize', resize);
@@ -85,7 +86,8 @@ onMounted(() => {
         >
       </nav>
     </header>
-    <main :class="hasDock ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'">
+    <main
+      :class="hasDock ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'">
       <p v-if="!hydrated" class="p-4" role="status">Loading your household…</p>
       <HouseholdGate v-else-if="['/home', '/shop', '/household', '/logs'].includes(route.path)"><slot /></HouseholdGate>
       <slot v-else />

@@ -13,18 +13,19 @@ import {
   AlertDialogDescription,
   AlertDialogCancel
 } from 'radix-vue';
-const props = defineProps<{ id: ItemId | null }>();
+const props = defineProps<{ id: ItemId | null; creating?: boolean; initialName?: string }>();
 const emit = defineEmits<{ close: []; changed: [] }>();
 const { view, search, ops, tagOptions } = usePantry();
 const act = usePantryAction();
-const draft = ref<ItemMetadata>({
-  name: '',
+const newItem = (name = ''): ItemMetadata => ({
+  name,
   aliases: [],
   tags: [],
   unit: 'count',
   default_amount: 1,
   shelf_life_days: null
 });
+const draft = ref(newItem());
 const amount = ref(0);
 const best = ref('');
 const shelf = ref('');
@@ -45,30 +46,29 @@ const deleting = ref(false);
 const removing = ref(false);
 const busy = ref(false);
 const more = ref(false);
-watch(
-  () => props.id,
-  (id) => {
-    const item = id ? view.value.byId(id) : null;
-    if (!item) return;
-    draft.value = {
-      name: item.name,
-      aliases: [...item.aliases],
-      tags: item.tags.map((t) => ({ ...t })),
-      unit: item.unit,
-      default_amount: item.default_amount,
-      shelf_life_days: item.shelf_life_days
-    };
-    amount.value = item.amount;
-    best.value = item.best_before ?? '';
-    shelf.value = item.shelf_life_days?.toString() ?? '';
-    alias.value = '';
-    tag.value = '';
-    more.value = false;
-    merging.value = false;
-    deleting.value = false;
-    mergeQuery.value = '';
-  }
-);
+watch([() => props.id, () => props.creating], ([id, creating]) => {
+  const item = id ? view.value.byId(id) : null;
+  if (!item && !creating) return;
+  draft.value = item
+    ? {
+        name: item.name,
+        aliases: [...item.aliases],
+        tags: item.tags.map((t) => ({ ...t })),
+        unit: item.unit,
+        default_amount: item.default_amount,
+        shelf_life_days: item.shelf_life_days
+      }
+    : newItem(props.initialName?.trim());
+  amount.value = item?.amount ?? 1;
+  best.value = item?.best_before ?? '';
+  shelf.value = item?.shelf_life_days?.toString() ?? '';
+  alias.value = '';
+  tag.value = '';
+  more.value = false;
+  merging.value = false;
+  deleting.value = false;
+  mergeQuery.value = '';
+});
 const matches = computed(() => search(mergeQuery.value).filter((h) => h.item.id !== props.id));
 function addAlias() {
   const value = alias.value.trim();
@@ -82,19 +82,24 @@ function addTag() {
   tag.value = '';
 }
 async function save() {
-  if (!props.id) return;
+  if (busy.value) return;
   busy.value = true;
   try {
     addAlias();
     addTag();
-    const handle = await ops.editItem(props.id, {
+    const fields = {
       ...draft.value,
       default_amount: Number(draft.value.default_amount),
       shelf_life_days: shelf.value === '' ? null : Number(shelf.value),
       amount: Number(amount.value),
       best_before: best.value ? localDate(best.value) : null
-    });
-    if (handle) toast('Item saved');
+    };
+    if (props.creating) {
+      if (!(await ops.createItem(fields))) return;
+      toast('Added to Home');
+    } else if (props.id) {
+      if (await ops.editItem(props.id, fields)) toast('Item saved');
+    }
     emit('changed');
     emit('close');
   } catch (e) {
@@ -125,12 +130,12 @@ async function remove() {
 }
 </script>
 <template>
-  <Drawer :open="!!id" @update:open="!$event && emit('close')">
+  <Drawer :open="!!id || !!creating" @update:open="!$event && emit('close')">
     <DrawerContent class="mx-auto max-h-[90dvh] max-w-xl rounded-t-2xl">
       <DrawerHeader class="flex items-center justify-between px-5 pb-3 pt-3 text-left">
         <div>
-          <DrawerTitle class="text-base">Item details</DrawerTitle>
-          <DrawerDescription class="sr-only">Edit the name, quantity and storage for this item.</DrawerDescription>
+          <DrawerTitle class="text-base">{{ creating ? 'Add item at home' : 'Item details' }}</DrawerTitle>
+          <DrawerDescription class="sr-only">Name, quantity and storage for this item.</DrawerDescription>
         </div>
         <button
           type="button"
@@ -149,7 +154,7 @@ async function remove() {
               required
               class="mt-1 h-10 rounded-lg border-0 bg-muted/50 text-base font-semibold shadow-none" />
           </label>
-          <div class="flex items-center justify-between gap-2">
+          <div v-if="id" class="flex items-center justify-between gap-2">
             <NuxtLink
               :to="{ path: '/logs', query: { item: id } }"
               class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
@@ -294,7 +299,7 @@ async function remove() {
                   /></Button>
                 </div>
               </div>
-              <div class="flex gap-2">
+              <div v-if="id" class="flex gap-2">
                 <Button type="button" variant="ghost" size="xs" @click="merging = !merging">Merge into…</Button
                 ><Button type="button" variant="ghost" size="xs" class="text-destructive" @click="deleting = !deleting"
                   >Delete item…</Button
@@ -326,7 +331,7 @@ async function remove() {
             >Cancel</Button
           >
           <Button type="submit" :disabled="busy" class="h-10 flex-1 rounded-lg">{{
-            busy ? 'Saving…' : 'Save changes'
+            busy ? 'Saving…' : creating ? 'Add item' : 'Save changes'
           }}</Button>
         </footer>
       </form>

@@ -14,7 +14,7 @@ import { notifyLocalChange } from '~~/utils/sync-hook';
 import { clearLocalData, countPendingChanges } from '~~/utils/account';
 
 const user = useSupabaseUser();
-const { flush, checkMembership } = useSyncEngine();
+const { status, flush, checkMembership } = useSyncEngine();
 const { ops } = usePantry();
 const household = useHousehold();
 

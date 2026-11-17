@@ -2,7 +2,17 @@
 import PantryRow from '~/components/pantry/PantryRow.vue';
 import SearchDock from '~/components/pantry/SearchDock.vue';
 import ItemSheet from '~/components/pantry/ItemSheet.vue';
-import { Archive, Bath, Box, ChevronDown, DoorOpen, Refrigerator, Snowflake, WashingMachine } from 'lucide-vue-next';
+import {
+  Archive,
+  Bath,
+  Box,
+  ChevronDown,
+  DoorOpen,
+  Plus,
+  Refrigerator,
+  Snowflake,
+  WashingMachine
+} from 'lucide-vue-next';
 import { normName } from '~~/utils/pantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
 const { view, search, ops, ready } = usePantry();
@@ -10,6 +20,7 @@ const act = usePantryAction();
 const query = ref('');
 const listPane = ref<HTMLElement | null>(null);
 watch(query, () => listPane.value?.scrollTo({ top: 0 }), { flush: 'post' });
+const creating = ref(false);
 const selected = ref<ItemId | null>(null);
 const results = computed(() => search(query.value));
 function storageIcon(name: string | null) {
@@ -59,9 +70,12 @@ function matchText(hit: ReturnType<typeof search>[number]) {
     ><div ref="listPane" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
       <div class="flex items-baseline justify-between gap-2">
         <h1 class="text-xl font-semibold tracking-tight">At home<span class="text-primary">.</span></h1>
-        <span v-if="ready" class="text-xs tabular-nums text-muted-foreground"
-          >{{ view.home.byPlace.reduce((n, group) => n + group.items.length, 0) }} items</span
-        >
+        <div class="flex items-center gap-2">
+          <span v-if="ready" class="text-xs tabular-nums text-muted-foreground"
+            >{{ view.home.byPlace.reduce((n, group) => n + group.items.length, 0) }} items</span
+          >
+          <Button size="sm" class="h-8 gap-1" @click="creating = true"><Plus class="size-4" />Add item</Button>
+        </div>
       </div>
       <p v-if="!ready" role="status">Loading your items…</p>
       <section v-else-if="query.trim()" class="space-y-1">
@@ -73,7 +87,7 @@ function matchText(hit: ReturnType<typeof search>[number]) {
           :matched="matchText(hit)"
           @edit="selected = hit.item.id"
           @action="action(hit.item)" />
-        <p v-if="!results.length">Nothing found. Add new items in Shopping.</p>
+        <p v-if="!results.length">No matching items.</p>
       </section>
       <template v-else>
         <section v-if="view.home.useSoon.length" class="space-y-1">
@@ -153,12 +167,20 @@ function matchText(hit: ReturnType<typeof search>[number]) {
             ></Collapsible>
           </div>
           <p v-if="!view.home.byPlace.length" class="py-4 text-muted-foreground">
-            Your home is empty. Add items in Shopping, then unpack them here.
+            Your home is empty. Add your first item to track it here.
           </p>
         </section>
       </template>
     </div>
     <SearchDock v-model="query" label="Find something at home" placeholder="Find by name or tag…" />
-    <ItemSheet :id="selected" @changed="query = ''" @close="selected = null"
+    <ItemSheet
+      :id="selected"
+      :creating="creating"
+      :initial-name="query"
+      @changed="query = ''"
+      @close="
+        selected = null;
+        creating = false;
+      "
   /></NuxtLayout>
 </template>

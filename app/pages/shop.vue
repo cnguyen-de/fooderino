@@ -5,6 +5,7 @@ import ItemSheet from '~/components/pantry/ItemSheet.vue';
 import UnpackSheet from '~/components/pantry/UnpackSheet.vue';
 import type { UndoHandle } from '~/composables/usePantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
+import { X } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 const { view, search, ops, historyComplete } = usePantry();
 const act = usePantryAction();
@@ -71,7 +72,18 @@ async function create() {
           :item="item"
           shop
           @edit="selected = item.id"
-          @action="perform(() => ops.tick(item.id), `Bought ${item.name}`)" />
+          @action="perform(() => ops.tick(item.id), `Bought ${item.name}`)">
+          <template #trailing>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8 shrink-0 text-muted-foreground"
+              :aria-label="`Remove ${item.name} from shopping list`"
+              @click="act(() => ops.editItem(item.id, { to_buy: 0 }), `Removed ${item.name} from shopping list`)">
+              <X class="size-4" aria-hidden="true" />
+            </Button>
+          </template>
+        </PantryRow>
       </section>
       <p v-if="!view.shopping.byStore.length" class="text-muted-foreground">Your list is clear. Add something below.</p>
       <section v-if="view.shopping.probablyNeed.length" class="space-y-1">

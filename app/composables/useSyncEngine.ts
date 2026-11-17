@@ -15,6 +15,7 @@ let engine: SyncEngine | null = null;
 let channel: RealtimeChannel | null = null;
 let channelKey: string | null = null;
 let startInFlight: Promise<void> | null = null;
+let onOffline: (() => void) | null = null;
 let onOnline: (() => void) | null = null;
 let onVisible: (() => void) | null = null;
 let realtimeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -30,18 +31,20 @@ export function useSyncEngine() {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
 
-  function clearRetry(): void {
+  function clearTimer(): void {
     if (retryTimer) clearTimeout(retryTimer);
     retryTimer = null;
   }
 
-  function retryLater(): void {
-    if (retryTimer || !navigator.onLine || document.visibilityState === 'hidden') return;
+  // Reconcile occasionally even with a connected socket: a missed notification
+  // on a quiet household may otherwise leave a foreground device stale indefinitely.
+  function scheduleCheck(delay: number): void {
+    clearTimer();
+    if (!navigator.onLine || document.visibilityState === 'hidden') return;
     retryTimer = setTimeout(() => {
       retryTimer = null;
-      void checkMembership();
-    }, retryDelay);
-    retryDelay = Math.min(retryDelay * 2, 60_000);
+      if (document.visibilityState !== 'hidden') void checkMembership();
+    }, delay);
   }
 
   async function track(context: string, work: (e: SyncEngine) => Promise<unknown>): Promise<void> {
@@ -56,13 +59,16 @@ export function useSyncEngine() {
       lastSyncedAt.value = new Date().toISOString();
       if (context === 'membership') {
         needsRecovery = false;
-        clearRetry();
+        scheduleCheck(60_000);
         retryDelay = 2_000;
       }
     } catch (err) {
       if (current !== engine) return;
+      if (!needsRecovery || !retryTimer) {
+        scheduleCheck(retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 60_000);
+      }
       needsRecovery = true;
-      retryLater();
       if (navigator.onLine) console.error(`[sync] ${context} failed`, err);
     } finally {
       if (current === engine) {
@@ -143,6 +149,11 @@ export function useSyncEngine() {
     stop();
     engine = createSyncEngine({ db, transport: createSupabaseTransport(supabase), onRejection: recordRejections });
     installChangeHook();
+    onOffline = () => {
+      clearTimer();
+      status.value = 'offline';
+    };
+    window.addEventListener('offline', onOffline);
     onOnline = () => void checkMembership();
     window.addEventListener('online', onOnline);
     // A phone suspends the socket in the background, and a Realtime that just came up can
@@ -168,12 +179,14 @@ export function useSyncEngine() {
     membershipChanged = false;
     setLocalChangeHook(null);
     unsubscribe();
+    if (onOffline) window.removeEventListener('offline', onOffline);
+    onOffline = null;
     if (onOnline) window.removeEventListener('online', onOnline);
     if (onVisible) document.removeEventListener('visibilitychange', onVisible);
     onOnline = null;
     onVisible = null;
     engine = null;
-    clearRetry();
+    clearTimer();
     retryDelay = 2_000;
     needsRecovery = false;
     active = 0;
