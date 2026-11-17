@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { takePendingJoin } from '~~/utils/pending-join';
+import { peekPendingJoin } from '~~/utils/pending-join';
 
 const user = useSupabaseUser();
 
@@ -8,7 +8,7 @@ watch(
   () => {
     if (!user.value) return;
     // Signing in from a scanned share link: finish joining before anything else.
-    const token = takePendingJoin();
+    const token = peekPendingJoin();
     return navigateTo(token ? { path: '/join', query: { t: token } } : '/inventory');
   },
   { immediate: true }

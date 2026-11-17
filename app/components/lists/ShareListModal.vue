@@ -39,7 +39,7 @@ watch(
       // A list created offline exists only in Dexie until it is pushed, and
       // the token row carries a foreign key to it — push first.
       await syncNow();
-      const res = await $fetch('/api/list/share', { method: 'POST', body: { listId } });
+      const res = await $fetch('/api/household/share', { method: 'POST' });
       token.value = res.token;
       shareUrl.value = res.url;
       expiresAt.value = res.expiresAt;

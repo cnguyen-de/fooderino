@@ -1,9 +1,9 @@
 /**
  * Holds a share token across the OAuth round trip. Sign-in leaves the app for
  * the provider and comes back on /confirm, which knows nothing about the code
- * the user scanned — without this, joining would silently become "go to the
- * inventory". Storage can throw (private mode, blocked site data), in which
- * case the user simply re-scans after signing in.
+ * the user scanned. The token stays until the join succeeds or the server rules
+ * it out, so a failed or interrupted join can be retried. Storage can throw
+ * (private mode, blocked site data), in which case the user re-scans.
  */
 const KEY = 'fooderino:pending-join';
 
@@ -15,13 +15,19 @@ export function savePendingJoin(token: string): void {
   }
 }
 
-/** Reads and clears in one step, so a stale token can never fire twice. */
-export function takePendingJoin(): string | null {
+export function peekPendingJoin(): string | null {
   try {
-    const token = localStorage.getItem(KEY);
-    localStorage.removeItem(KEY);
-    return token;
+    return localStorage.getItem(KEY);
   } catch {
     return null;
+  }
+}
+
+/** Clears only `token`, so finishing an old join never drops a newer code. */
+export function clearPendingJoin(token: string): void {
+  try {
+    if (localStorage.getItem(KEY) === token) localStorage.removeItem(KEY);
+  } catch {
+    /* best effort */
   }
 }

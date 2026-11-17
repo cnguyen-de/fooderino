@@ -16,6 +16,7 @@ import { clearLocalData, countPendingChanges } from '~~/utils/account';
 const user = useSupabaseUser();
 const { status, syncNow, flush, checkMembership } = useSyncEngine();
 const { ops } = usePantry();
+const household = useHousehold();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isImportOpen = ref(false);
@@ -70,6 +71,10 @@ async function onFileSelected(event: Event): Promise<void> {
   }
   if (!parsed) {
     toast('Import failed: unrecognised format');
+    return;
+  }
+  if (household.state.value.kind !== 'member') {
+    toast('Create or join a household before importing');
     return;
   }
 

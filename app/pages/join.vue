@@ -1,40 +1,40 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner';
-import { useListStore } from '~/store/list';
-import { savePendingJoin } from '~~/utils/pending-join';
+import { clearPendingJoin, savePendingJoin } from '~~/utils/pending-join';
 
 const route = useRoute();
 const user = useSupabaseUser();
-const listStore = useListStore();
-const { syncNow } = useSyncEngine();
+const household = useHousehold();
 
-const state = ref<'idle' | 'joining' | 'done' | 'failed'>('idle');
+const phase = ref<'ready' | 'joining' | 'done' | 'failed'>('ready');
+const bring = ref(true);
 const message = ref('');
-const listName = ref('');
-const joinedListId = ref<string | null>(null);
+const summary = ref<{ merged: number; copied: number } | null>(null);
 
 const token = computed(() => (typeof route.query.t === 'string' ? route.query.t : ''));
+const current = computed(() => household.state.value);
+const hasItems = computed(() => current.value.kind === 'member');
+
+/** Statuses where the server ruled the code out for good, so keeping it would only fail again. */
+const FINAL = new Set([404, 410]);
 
 async function join(): Promise<void> {
   if (!token.value) {
-    state.value = 'failed';
+    phase.value = 'failed';
     message.value = 'That link is missing its share code.';
     return;
   }
-
-  state.value = 'joining';
+  phase.value = 'joining';
   try {
-    const res = await $fetch('/api/list/join', { method: 'POST', body: { token: token.value } });
-    listName.value = res.listName;
-    joinedListId.value = res.listId;
-    // Pull the newly visible list and its items now if the engine is
-    // already running; otherwise the app layout's first sync back-fills it.
-    await syncNow();
-    state.value = 'done';
-    toast(`Joined ${res.listName}`);
+    const result = await household.join(token.value, { bring: hasItems.value && bring.value });
+    clearPendingJoin(token.value);
+    summary.value = { merged: result.merged, copied: result.copied };
+    phase.value = 'done';
+    toast('Joined the household');
   } catch (e: any) {
-    state.value = 'failed';
-    message.value = e?.data?.message ?? 'Could not join that list.';
+    if (FINAL.has(e?.statusCode ?? e?.status)) clearPendingJoin(token.value);
+    phase.value = 'failed';
+    message.value = household.error.value ?? e?.message ?? 'Could not join that household.';
   }
 }
 
@@ -42,40 +42,41 @@ function signIn(): void {
   if (token.value) savePendingJoin(token.value);
   navigateTo('/login');
 }
-
-function openList(): void {
-  // The list may still be arriving; the store falls back to the first list
-  // until it does, then switches to it.
-  if (joinedListId.value) listStore.selectedListId = joinedListId.value;
-  navigateTo('/inventory');
-}
-
-watch(
-  user,
-  (u) => {
-    if (u && state.value === 'idle') void join();
-  },
-  { immediate: true }
-);
 </script>
 
 <template>
   <div class="flex h-screen flex-col items-center justify-center gap-4 p-6 text-center">
     <template v-if="!user">
-      <p>Sign in to join this list.</p>
+      <p>Sign in to join this household.</p>
       <Button @click="signIn">Sign in</Button>
     </template>
 
-    <LoadingSpinner v-else-if="state === 'joining' || state === 'idle'" message="Joining list..." />
-
-    <template v-else-if="state === 'done'">
-      <p class="text-lg font-medium">You've joined {{ listName }}.</p>
-      <Button @click="openList">Open it</Button>
+    <template v-else-if="phase === 'ready'">
+      <p class="text-lg font-medium">Join this household?</p>
+      <p v-if="current.kind === 'member'" class="text-sm text-gray-600 dark:text-gray-400">
+        You will leave {{ current.household.name }}.
+      </p>
+      <label v-if="hasItems" class="flex items-center gap-3 text-sm">
+        <Switch :checked="bring" @update:checked="bring = $event" />
+        Bring my items along. Items with the same name are merged.
+      </label>
+      <Button :disabled="current.kind === 'loading'" @click="join">Join</Button>
     </template>
 
-    <template v-else-if="state === 'failed'">
+    <LoadingSpinner v-else-if="phase === 'joining'" message="Joining household..." />
+
+    <template v-else-if="phase === 'done'">
+      <p class="text-lg font-medium">You've joined the household.</p>
+      <p v-if="summary && summary.merged + summary.copied > 0" class="text-sm">
+        {{ summary.copied }} item(s) came along and {{ summary.merged }} merged into ones already there.
+      </p>
+      <NuxtLink to="/inventory"><Button>Open it</Button></NuxtLink>
+    </template>
+
+    <template v-else-if="phase === 'failed'">
       <p class="text-red-500">{{ message }}</p>
-      <NuxtLink to="/inventory"><Button variant="outline">Go back</Button></NuxtLink>
+      <Button variant="outline" @click="phase = 'ready'">Try again</Button>
+      <NuxtLink to="/inventory"><Button variant="ghost">Go back</Button></NuxtLink>
     </template>
   </div>
 </template>
