@@ -2,13 +2,24 @@
 import PantryRow from '~/components/pantry/PantryRow.vue';
 import SearchDock from '~/components/pantry/SearchDock.vue';
 import ItemSheet from '~/components/pantry/ItemSheet.vue';
-import { ChevronDown, MapPin } from 'lucide-vue-next';
+import { Archive, Bath, Box, ChevronDown, DoorOpen, Refrigerator, Snowflake, WashingMachine } from 'lucide-vue-next';
+import { normName } from '~~/utils/pantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
 const { view, search, ops, ready } = usePantry();
 const act = usePantryAction();
 const query = ref('');
 const selected = ref<ItemId | null>(null);
 const results = computed(() => search(query.value));
+function storageIcon(name: string | null) {
+  const value = normName(name ?? '');
+  if (/freezer|gefrier|tiefkuhl|tu dong/.test(value)) return Snowflake;
+  if (/fridge|refrigerator|kuhlschrank|tu lanh/.test(value)) return Refrigerator;
+  if (/laundry|wasch|phong giat/.test(value)) return WashingMachine;
+  if (/bath|bathroom|badezimmer|nha tam/.test(value)) return Bath;
+  if (/cupboard|cabinet|pantry|schrank|platsa|\btu\b/.test(value)) return Archive;
+  if (/room|zimmer|phong/.test(value)) return DoorOpen;
+  return Box;
+}
 const quickPicks = computed(() => {
   const home = view.value.home;
   const excluded = new Set(home.useSoon.map(({ item }) => item.id));
@@ -108,7 +119,7 @@ function matchText(hit: ReturnType<typeof search>[number]) {
             @action="action(item)" />
         </section>
         <section class="space-y-1">
-          <h2 class="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Places</h2>
+          <h2 class="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Storage</h2>
           <div v-if="view.home.byPlace.length" class="rounded-xl border bg-card px-2">
             <Collapsible
               v-for="group in view.home.byPlace"
@@ -116,11 +127,12 @@ function matchText(hit: ReturnType<typeof search>[number]) {
               :default-open="view.home.byPlace.length === 1"
               class="group/place border-b last:border-b-0"
               ><CollapsibleTrigger
-                class="flex h-9 w-full items-center justify-between gap-2 rounded-md px-1 text-left text-xs font-medium transition-colors hover:text-primary"
+                class="flex h-9 w-full items-center justify-between gap-2 rounded-md px-1 text-left text-sm font-semibold transition-colors hover:text-primary"
                 ><span class="flex min-w-0 items-center gap-2"
-                  ><MapPin class="size-3.5 shrink-0 text-primary/70" aria-hidden="true" /><span class="truncate">{{
-                    group.name ?? 'Unsorted'
-                  }}</span></span
+                  ><component
+                    :is="storageIcon(group.name)"
+                    class="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true" /><span class="truncate">{{ group.name ?? 'Unsorted' }}</span></span
                 >
                 <span class="flex shrink-0 items-center gap-2"
                   ><span

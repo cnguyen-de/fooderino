@@ -211,3 +211,15 @@ one shows 4.8 suggestions a week at 15.2% precision, instead of 8.6 a week at 11
 "Probably need" section where 8 of 9 rows go unbought trains the owner to ignore it, so the
 shorter, sharper list wins on experience. Rerun the script after a few months of typed events,
 since the new app records purchases at the shop instead of inferring them from count edits.
+
+## Expanded coverage (owner request, 2026-11-17)
+
+The owner preferred more items after using Probably need. The current defaults are now
+**`dueFraction 0.6, minPurchaseDays 2, windowDays 365`**. This supersedes the shorter-list
+choice above: two distinct purchase days establish a repeat purchase pattern, rather than four.
+Timing, stock coverage, bag/list exclusions and Skip snoozes are unchanged.
+
+On the current Groceries snapshot, this expands the section from **8 to 22 items**, retaining
+all eight existing suggestions. This is a present-day coverage check, not a new accuracy
+measurement. The historical sweep above measured about 15.4 suggestions per week for these
+settings, with the expected tradeoff of lower precision than the previous defaults.

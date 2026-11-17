@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, localDate, suggest } from '~~/utils/pantry';
+import { addDays, DEFAULT_RULES, localDate, suggest } from '~~/utils/pantry';
 import type {
   BagEntry,
   BagId,
@@ -104,6 +104,31 @@ const needIds = (input: Partial<SuggestInput>) => run(input).probablyNeed.map((s
 const ranOutIds = (input: Partial<SuggestInput>) => run(input).ranOut.map((i) => i.id);
 
 const everyTenDays = (id: string, last: number, qty = 1) => [-20, -10, 0].map((d) => purchase(id, last + d, qty));
+
+describe('expanded suggestion defaults', () => {
+  const events = [purchase('milk', -20, 2), purchase('milk', -10, 2)];
+  it('suggests a repeat purchase after two distinct purchase days', () => {
+    expect(run({ items: [item('milk', { amount: 1 })], events, rules: DEFAULT_RULES }).probablyNeed).toMatchObject([
+      { item: { id: 'milk' }, qty: 2 }
+    ]);
+  });
+  it('does not treat several purchases on one day as an established pattern', () => {
+    expect(
+      needIds({
+        items: [item('milk')],
+        events: [purchase('milk', -10, 1, 9), purchase('milk', -10, 1, 18)],
+        rules: DEFAULT_RULES
+      })
+    ).toEqual([]);
+  });
+  it('still respects stock, shopping lists, bags and skipped suggestions', () => {
+    const input = { events, rules: DEFAULT_RULES };
+    expect(needIds({ ...input, items: [item('milk', { amount: 2 })] })).toEqual([]);
+    expect(needIds({ ...input, items: [item('milk', { to_buy: 1 })] })).toEqual([]);
+    expect(needIds({ ...input, items: [item('milk')], bag: [bagEntry('milk', 'open')] })).toEqual([]);
+    expect(needIds({ ...input, items: [item('milk')], events: [...events, dismiss('milk', -1)] })).toEqual([]);
+  });
+});
 
 describe('suggest: probably need', () => {
   it('is due once 80% of the median gap has passed since the last purchase', () => {
