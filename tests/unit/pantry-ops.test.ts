@@ -127,17 +127,39 @@ describe('pantry ops replay over confirmed state', () => {
     expect(await d.db.commands.count()).toBe(1);
   });
 
-  it('lists an item once however often it is added without a quantity', async () => {
+  it('increments offline from the latest projected quantity and undoes one tap', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Bread', default_amount: 3 }))!;
+    await d.ops.addToShopping(id);
+    const second = await d.ops.addToShopping(id);
+    expect((await d.item(id))?.to_buy).toBe(6);
+    await d.ops.undo(second!);
+    expect((await d.item(id))?.to_buy).toBe(3);
+    await d.engine.sync('full');
+    expect(d.server.items.get(id)?.to_buy).toBe(3);
+  });
+
+  it('adds one when the default amount is zero', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Milk', default_amount: 0 }))!;
+    await d.ops.addToShopping(id);
+    await d.ops.addToShopping(id);
+    expect((await d.item(id))?.to_buy).toBe(2);
+  });
+
+  it('adds another default quantity on every tap, while an explicit quantity sets the target', async () => {
     const d = await device();
     const id = (await d.ops.createItem({ name: 'Bread', default_amount: 1 }))!;
 
     await d.ops.addToShopping(id);
-    expect(await d.ops.addToShopping(id)).toBeNull();
+    expect(await d.ops.addToShopping(id)).not.toBeNull();
+    expect((await d.item(id))?.to_buy).toBe(2);
     await d.ops.addToShopping(id, 3);
 
     expect((await d.item(id))?.to_buy).toBe(3);
     expect((await d.db.commands.orderBy('created_seq').toArray()).map((c) => c.kind)).toEqual([
       'create',
+      'want',
       'want',
       'want'
     ]);

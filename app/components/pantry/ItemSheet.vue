@@ -4,8 +4,17 @@ import TagCombobox from '~/components/pantry/TagCombobox.vue';
 import { localDate, normName } from '~~/utils/pantry';
 import { toast } from 'vue-sonner';
 import { ChevronDown, History, MapPin, Plus, Store, Tag, X } from 'lucide-vue-next';
+import {
+  AlertDialogRoot,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel
+} from 'radix-vue';
 const props = defineProps<{ id: ItemId | null }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; changed: [] }>();
 const { view, search, ops, tagOptions } = usePantry();
 const act = usePantryAction();
 const draft = ref<ItemMetadata>({
@@ -33,6 +42,7 @@ function selectTag(value: string) {
 const mergeQuery = ref('');
 const merging = ref(false);
 const deleting = ref(false);
+const removing = ref(false);
 const busy = ref(false);
 const more = ref(false);
 watch(
@@ -85,6 +95,7 @@ async function save() {
       best_before: best.value ? localDate(best.value) : null
     });
     if (handle) toast('Item saved');
+    emit('changed');
     emit('close');
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'Could not save item.');
@@ -92,11 +103,25 @@ async function save() {
     busy.value = false;
   }
 }
+async function list() {
+  if (props.id && (await act(() => ops.addToShopping(props.id!), `Listed ${draft.value.name}`))) emit('changed');
+}
 async function merge(into: ItemId) {
-  if (props.id && (await act(() => ops.merge(props.id!, into)))) emit('close');
+  if (props.id && (await act(() => ops.merge(props.id!, into)))) {
+    emit('changed');
+    emit('close');
+  }
 }
 async function remove() {
-  if (props.id && (await act(() => ops.deleteItem(props.id!), 'Item deleted'))) emit('close');
+  if (!props.id || removing.value) return;
+  removing.value = true;
+  const handle = await act(() => ops.deleteItem(props.id!), 'Item deleted');
+  removing.value = false;
+  if (handle) {
+    deleting.value = false;
+    emit('changed');
+    emit('close');
+  }
 }
 </script>
 <template>
@@ -136,7 +161,7 @@ async function remove() {
               variant="ghost"
               size="xs"
               class="gap-1 text-xs text-primary hover:bg-primary/10 hover:text-primary"
-              @click="id && act(() => ops.addToShopping(id!), `Listed ${draft.name}`)"
+              @click="list"
               ><Plus class="size-3.5" />Add to list</Button
             >
           </div>
@@ -292,10 +317,6 @@ async function remove() {
                   >Merge into {{ hit.item.name }}</Button
                 >
               </div>
-              <div v-if="deleting" class="space-y-2 rounded-lg bg-destructive/5 p-3">
-                <p class="text-xs">Remove this item from your household?</p>
-                <Button type="button" variant="destructive" size="sm" @click="remove">Delete item</Button>
-              </div>
             </CollapsibleContent>
           </Collapsible>
         </div>
@@ -311,4 +332,24 @@ async function remove() {
       </form>
     </DrawerContent>
   </Drawer>
+  <AlertDialogRoot v-model:open="deleting">
+    <AlertDialogPortal>
+      <AlertDialogOverlay class="fixed inset-0 z-[60] bg-black/60" />
+      <AlertDialogContent
+        class="fixed left-1/2 top-1/2 z-[70] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-background p-5 shadow-xl">
+        <AlertDialogTitle class="text-base font-semibold">Delete “{{ draft.name }}”?</AlertDialogTitle>
+        <AlertDialogDescription class="mt-2 text-sm text-muted-foreground"
+          >It will disappear from your home and shopping list.</AlertDialogDescription
+        >
+        <div class="mt-5 flex justify-end gap-2">
+          <AlertDialogCancel as-child
+            ><Button type="button" variant="secondary" :disabled="removing">Cancel</Button></AlertDialogCancel
+          >
+          <Button type="button" variant="destructive" :disabled="removing" @click="remove">{{
+            removing ? 'Deleting…' : 'Delete item'
+          }}</Button>
+        </div>
+      </AlertDialogContent>
+    </AlertDialogPortal>
+  </AlertDialogRoot>
 </template>

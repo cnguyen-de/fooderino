@@ -31,8 +31,9 @@ const quickPicks = computed(() => {
 function use(item: PantryItem, bin = false) {
   return act(() => (bin ? ops.bin(item.id) : ops.useUp(item.id)), `${bin ? 'Binned' : 'Used'} ${item.name}`);
 }
-function action(item: PantryItem) {
-  return item.amount > 0 ? use(item) : act(() => ops.addToShopping(item.id), `Listed ${item.name}`);
+async function action(item: PantryItem) {
+  const handle = await (item.amount > 0 ? use(item) : act(() => ops.addToShopping(item.id), `Listed ${item.name}`));
+  if (handle) query.value = '';
 }
 function matchText(hit: ReturnType<typeof search>[number]) {
   return hit.via === 'tag' && hit.item.tags.some((t) => t.kind === 'store' && t.name === hit.text)
@@ -144,6 +145,6 @@ function matchText(hit: ReturnType<typeof search>[number]) {
       </template>
     </div>
     <SearchDock v-model="query" label="Find something at home" placeholder="Find by name or tag…" />
-    <ItemSheet :id="selected" @close="selected = null"
+    <ItemSheet :id="selected" @changed="query = ''" @close="selected = null"
   /></NuxtLayout>
 </template>

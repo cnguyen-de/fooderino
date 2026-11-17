@@ -3,7 +3,8 @@ import PantryRow from '~/components/pantry/PantryRow.vue';
 import SearchDock from '~/components/pantry/SearchDock.vue';
 import ItemSheet from '~/components/pantry/ItemSheet.vue';
 import UnpackSheet from '~/components/pantry/UnpackSheet.vue';
-import type { ItemId } from '~~/types/pantry';
+import type { UndoHandle } from '~/composables/usePantry';
+import type { ItemId, PantryItem } from '~~/types/pantry';
 import { toast } from 'vue-sonner';
 const { view, search, ops, historyComplete } = usePantry();
 const act = usePantryAction();
@@ -13,6 +14,14 @@ const unpack = ref(false);
 const creating = ref(false);
 const hits = computed(() => search(query.value));
 const exact = computed(() => hits.value.some((h) => h.match === 'exact' && h.via !== 'tag'));
+async function perform(work: () => Promise<UndoHandle | null>, message?: string) {
+  const handle = await act(work, message);
+  if (handle) query.value = '';
+  return handle;
+}
+function list(item: PantryItem) {
+  return perform(() => ops.addToShopping(item.id), `Listed ${item.name}`);
+}
 async function create() {
   creating.value = true;
   try {
@@ -46,11 +55,7 @@ async function create() {
           :matched="hit.text"
           adding
           @edit="selected = hit.item.id"
-          @action="act(() => ops.addToShopping(hit.item.id), `Listed ${hit.item.name}`)" /><Button
-          v-if="!exact"
-          :disabled="creating"
-          class="h-9 w-full"
-          @click="create"
+          @action="list(hit.item)" /><Button v-if="!exact" :disabled="creating" class="h-9 w-full" @click="create"
           >Create ‘{{ query.trim() }}’</Button
         >
       </section>
@@ -64,7 +69,7 @@ async function create() {
           :item="item"
           shop
           @edit="selected = item.id"
-          @action="act(() => ops.tick(item.id), `Bought ${item.name}`)" />
+          @action="perform(() => ops.tick(item.id), `Bought ${item.name}`)" />
       </section>
       <p v-if="!view.shopping.byStore.length" class="text-muted-foreground">Your list is clear. Add something below.</p>
       <section v-if="view.shopping.probablyNeed.length" class="space-y-1">
@@ -79,14 +84,14 @@ async function create() {
           :qty="entry.qty"
           shop
           @edit="selected = entry.item.id"
-          @action="act(() => ops.tick(entry.item.id, entry.qty), `Bought ${entry.item.name}`)">
+          @action="perform(() => ops.tick(entry.item.id, entry.qty), `Bought ${entry.item.name}`)">
           <template #trailing
             ><Button
               variant="ghost"
               size="xs"
               class="shrink-0 text-xs text-muted-foreground"
               :aria-label="`Skip ${entry.item.name}`"
-              @click="act(() => ops.dismiss(entry.item.id))"
+              @click="perform(() => ops.dismiss(entry.item.id))"
               >Skip</Button
             ></template
           >
@@ -108,9 +113,9 @@ async function create() {
               variant="ghost"
               size="xs"
               class="text-primary"
-              @click="act(() => ops.addToShopping(item.id), `Listed ${item.name}`)"
+              @click="perform(() => ops.addToShopping(item.id), `Listed ${item.name}`)"
               >Add</Button
-            ><Button variant="ghost" size="xs" @click="act(() => ops.dismiss(item.id))">Skip</Button>
+            ><Button variant="ghost" size="xs" @click="perform(() => ops.dismiss(item.id))">Skip</Button>
           </div></CollapsibleContent
         ></Collapsible
       >
@@ -126,7 +131,7 @@ async function create() {
             size="xs"
             class="text-muted-foreground"
             :aria-label="`Remove ${line.item.name} from bag`"
-            @click="act(() => ops.cancelBag(line.id), `Removed ${line.item.name} from bag`)"
+            @click="perform(() => ops.cancelBag(line.id), `Removed ${line.item.name} from bag`)"
             >Remove</Button
           >
         </div>
@@ -134,6 +139,6 @@ async function create() {
       </section>
     </div>
     <SearchDock v-model="query" label="Add while shopping" placeholder="Add something to your list…" adding />
-    <ItemSheet :id="selected" @close="selected = null" /><UnpackSheet v-model:open="unpack"
+    <ItemSheet :id="selected" @changed="query = ''" @close="selected = null" /><UnpackSheet v-model:open="unpack"
   /></NuxtLayout>
 </template>

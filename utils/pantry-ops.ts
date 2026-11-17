@@ -58,7 +58,7 @@ export interface PantryOps {
   useUp(id: ItemId, qty?: number): Promise<UndoHandle | null>;
   /** Like `useUp`, logged as waste. Defaults to 1. */
   bin(id: ItemId, qty?: number): Promise<UndoHandle | null>;
-  /** Sets the listed amount to `qty`. Without one, lists the item's default amount unless it is already listed. */
+  /** Sets the listed amount to `qty`. Without one, adds the item's default quantity to the list. */
   addToShopping(id: ItemId, qty?: number): Promise<UndoHandle | null>;
   /** Moves `qty` (default: the listed amount, else the default amount) into the bag. */
   tick(id: ItemId, qty?: number): Promise<UndoHandle | null>;
@@ -268,7 +268,7 @@ export function createPantryOps({
       one((ctx) => {
         const item = live(ctx, id);
         if (!item) return { ...base(ctx, id), kind: 'want', qty: qty ?? 1 };
-        const target = qty ?? (item.to_buy > 0 ? item.to_buy : defaultQty(item));
+        const target = qty ?? item.to_buy + defaultQty(item);
         return target === item.to_buy ? null : { ...base(ctx, item.id), kind: 'want', qty: target };
       }),
 
