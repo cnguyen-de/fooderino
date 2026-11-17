@@ -15,8 +15,8 @@ export interface SuggestRules {
 
 /** Tuned on the legacy log export by `scripts/calibrate-suggestions.ts`; see docs/superpowers/specs/2026-11-16-suggestion-calibration.md. */
 export const DEFAULT_RULES: Readonly<SuggestRules> = Object.freeze({
-  windowDays: 182,
-  minPurchaseDays: 2,
+  windowDays: 365,
+  minPurchaseDays: 4,
   dueFraction: 0.6,
   useSoonDays: 3
 });

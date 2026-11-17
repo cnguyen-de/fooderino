@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, addDays, buildPantryView, localDate } from '~~/utils/pantry';
+import { addDays, buildPantryView, localDate } from '~~/utils/pantry';
+import type { SuggestRules } from '~~/utils/pantry';
+
+const rules: SuggestRules = { windowDays: 182, minPurchaseDays: 3, dueFraction: 0.8, useSoonDays: 3 };
 import type {
   BagEntry,
   BagId,
@@ -99,7 +102,7 @@ function view(items: Item[], over: Partial<PantryViewInput> & { bag?: BagEntry[]
     },
     events: [],
     today,
-    rules: DEFAULT_RULES,
+    rules,
     historyComplete: true,
     ...rest
   });

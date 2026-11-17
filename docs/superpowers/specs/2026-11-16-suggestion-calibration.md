@@ -202,3 +202,12 @@ assertions are unchanged, and they test rule semantics apart from the tuned defa
 - Stock is reconstructed. `to_buy`, the bag and dismissals are unknown. In the app, items
   already on the list are held back, which this simulation cannot do.
 - Renamed items lose history. The log carries only the name at the time of each row.
+
+## Owner-facing default (coordinator decision, 2026-11-17)
+
+The shipped default is **`dueFraction 0.6, minPurchaseDays 4, windowDays 365`**, not the
+best-F1 setting. The two tie on F1 (0.117 vs 0.120, within the bootstrap range). The shipped
+one shows 4.8 suggestions a week at 15.2% precision, instead of 8.6 a week at 11.2%. A
+"Probably need" section where 8 of 9 rows go unbought trains the owner to ignore it, so the
+shorter, sharper list wins on experience. Rerun the script after a few months of typed events,
+since the new app records purchases at the shop instead of inferring them from count edits.
