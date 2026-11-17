@@ -204,9 +204,9 @@ service role, and pass the authenticated user id from the verified JWT.
 - **Purchase history.** Purchase events whose `occurred_at` is in the last `rules.windowDays`
   (182), excluding those reversed. Events are resolved through `merged_into`, and aggregated
   per local calendar day (quantities summed).
-- **Probably need.** At least `rules.minPurchaseDays` (3) purchase days. Let `gap` be the
+- **Probably need.** At least `rules.minPurchaseDays` (2) purchase days. Let `gap` be the
   median gap in days between consecutive purchase days, and `qty` the median daily quantity.
-  The item is due when `today - lastPurchaseDay >= ceil(rules.dueFraction (0.8) * gap)`. It is
+  The item is due when `today - lastPurchaseDay >= ceil(rules.dueFraction (0.6) * gap)`. It is
   held back when `amount >= qty`, `to_buy > 0`, or an open bag entry exists. It is snoozed
   when the latest `dismiss` falls after the last purchase and `today < dismissDay + gap`.
 - **Ran out.** `amount == 0` and no cadence. There must be a consume or waste event whose
@@ -217,7 +217,8 @@ service role, and pass the authenticated user id from the verified JWT.
 - `history.complete` is false until first hydration finishes. Probably need and Ran out are
   empty until then.
 - `DEFAULT_RULES` is one exported object. A calibration script, `scripts/calibrate-suggestions.ts`,
-  replays the legacy log export week by week and prints what would have been suggested.
+  replays the legacy log export week by week and prints what would have been suggested. The
+  defaults come from it, see `2026-11-16-suggestion-calibration.md`.
 
 ## Search (`utils/pantry/search.ts`, pure)
 

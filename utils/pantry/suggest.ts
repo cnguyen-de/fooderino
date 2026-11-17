@@ -13,10 +13,11 @@ export interface SuggestRules {
   useSoonDays: number;
 }
 
+/** Tuned on the legacy log export by `scripts/calibrate-suggestions.ts`; see docs/superpowers/specs/2026-11-16-suggestion-calibration.md. */
 export const DEFAULT_RULES: Readonly<SuggestRules> = Object.freeze({
   windowDays: 182,
-  minPurchaseDays: 3,
-  dueFraction: 0.8,
+  minPurchaseDays: 2,
+  dueFraction: 0.6,
   useSoonDays: 3
 });
 

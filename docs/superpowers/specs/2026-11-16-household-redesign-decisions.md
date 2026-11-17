@@ -85,6 +85,8 @@ The three core loops, in priority order:
   like anything else, or swipe to dismiss. Dismissing snoozes the item for one cycle.
 - An item that hits 0 with no cadence lands in a collapsed **"Ran out"** group.
 - Thresholds get tuned against real backfilled history, not guessed.
+- Tuned 2026-11-16 on the legacy export: a cadence needs 2 purchase days in 6 months, and an
+  item is due at 60% of its median gap (`2026-11-16-suggestion-calibration.md`).
 
 ### History (Q12)
 
