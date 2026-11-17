@@ -10,7 +10,8 @@
     "postinstall": "nuxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "bash tests/integration/run.sh"
   },
   "dependencies": {
     "@nuxtjs/color-mode": "^3.5.1",
