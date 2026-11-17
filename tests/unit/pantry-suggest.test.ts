@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, addDays, localDate, suggest } from '~~/utils/pantry';
+import { addDays, localDate, suggest } from '~~/utils/pantry';
 import type {
   BagEntry,
   BagId,
@@ -10,10 +10,13 @@ import type {
   Item,
   ItemEvent,
   ItemId,
-  SuggestInput
+  SuggestInput,
+  SuggestRules
 } from '~~/utils/pantry';
 
 const today = localDate('2026-11-16');
+/** Fixed here so the rule semantics are tested apart from the calibrated defaults. */
+const rules: SuggestRules = { windowDays: 182, minPurchaseDays: 3, dueFraction: 0.8, useSoonDays: 3 };
 const h1 = 'h1' as HouseholdId;
 
 /** Local time on the day `offset` days from today, so day bucketing ignores the machine's zone. */
@@ -95,7 +98,7 @@ const bagEntry = (itemId: string, state: BagEntry['state']): BagEntry => {
 };
 
 function run(input: Partial<SuggestInput>) {
-  return suggest({ items: [], bag: [], events: [], today, rules: DEFAULT_RULES, historyComplete: true, ...input });
+  return suggest({ items: [], bag: [], events: [], today, rules, historyComplete: true, ...input });
 }
 const needIds = (input: Partial<SuggestInput>) => run(input).probablyNeed.map((s) => s.item.id);
 const ranOutIds = (input: Partial<SuggestInput>) => run(input).ranOut.map((i) => i.id);
