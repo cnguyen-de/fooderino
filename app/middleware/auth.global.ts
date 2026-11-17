@@ -6,8 +6,8 @@ export default defineNuxtRouteMiddleware((to) => {
   if (to.path === '/join') return;
 
   const user = useSupabaseUser();
-  const protectedAppRoutes = ['/home', '/shop', '/household', '/settings', '/recipe'];
-  if (protectedAppRoutes.some(path => to.path === path || to.path.startsWith(path + '/')) && !user.value) {
+  const protectedAppRoutes = ['/home', '/shop', '/household', '/settings', '/recipe', '/logs'];
+  if (protectedAppRoutes.some((path) => to.path === path || to.path.startsWith(path + '/')) && !user.value) {
     return navigateTo('/');
   }
   const navigateToAppRoutes = ['/', '/login', '/confirm'];

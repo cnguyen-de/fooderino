@@ -105,7 +105,7 @@ async function confirmImport(): Promise<void> {
     // Each item becomes one create command carrying its counters, so the opening
     // stock lands atomically with the row.
     let created = 0;
-    for (const draft of p.items) if (await ops.createItem(draft)) created++;
+    for (const draft of p.items) if (await ops.createItem({ ...draft, unit: 'count' })) created++;
     await addImportedRecipes(p.recipes);
     notifyLocalChange('recipes');
 
@@ -161,8 +161,8 @@ async function confirmClear(): Promise<void> {
         <div class="space-y-4 px-4 pb-6">
           <ul class="space-y-1 text-sm">
             <li v-for="row in plan?.summary ?? []" :key="row.label">
-              <span class="font-medium">{{ LABELS[row.label] ?? row.label }}</span>: {{ row.newCount }} new,
-              {{ row.skipCount }} skipped
+              <span class="font-medium">{{ LABELS[row.label] ?? row.label }}</span
+              >: {{ row.newCount }} new, {{ row.skipCount }} skipped
             </li>
           </ul>
           <div class="flex gap-3">

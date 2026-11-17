@@ -17,6 +17,8 @@ let channelKey: string | null = null;
 let startInFlight: Promise<void> | null = null;
 let onOnline: (() => void) | null = null;
 let onVisible: (() => void) | null = null;
+let realtimeTimer: ReturnType<typeof setTimeout> | null = null;
+let membershipChanged = false;
 
 export function useSyncEngine() {
   const status = useState<'idle' | 'syncing' | 'offline' | 'error'>('sync-status', () => 'idle');
@@ -44,6 +46,19 @@ export function useSyncEngine() {
   }
 
   const syncNow = () => track('sync', (e) => e.sync('full'));
+
+  // One command can touch several tables, and bulk metadata edits emit one
+  // notification per item. Group those nudges into one pull.
+  function nudge(membership = false): void {
+    membershipChanged ||= membership;
+    if (realtimeTimer) return;
+    realtimeTimer = setTimeout(() => {
+      realtimeTimer = null;
+      const check = membershipChanged;
+      membershipChanged = false;
+      void (check ? checkMembership() : syncNow());
+    }, 150);
+  }
 
   /** Sends both outboxes without pulling. Resolves even when offline; check the outbox after. */
   const flush = () => track('push', (e) => e.flush());
@@ -91,12 +106,11 @@ export function useSyncEngine() {
     };
     if (household_id) {
       for (const def of HOUSEHOLD_TABLES) {
-        const nudge = def.store === 'members' ? checkMembership : syncNow;
-        listen(def.remote, `${def.scope}=eq.${household_id}`, () => void nudge());
+        listen(def.remote, `${def.scope}=eq.${household_id}`, () => nudge(def.store === 'members'));
       }
     }
-    listen('household_members', `user_id=eq.${userId}`, () => void checkMembership());
-    listen('recipes_v2', `user_id=eq.${userId}`, () => void syncNow());
+    listen('household_members', `user_id=eq.${userId}`, () => nudge(true));
+    listen('recipes_v2', `user_id=eq.${userId}`, () => nudge());
     // Changes made before the subscription went live reach this device only by a pull.
     channel = next.subscribe((state) => {
       if (state === 'SUBSCRIBED') void syncNow();
@@ -127,6 +141,9 @@ export function useSyncEngine() {
   }
 
   function stop(): void {
+    if (realtimeTimer) clearTimeout(realtimeTimer);
+    realtimeTimer = null;
+    membershipChanged = false;
     setLocalChangeHook(null);
     unsubscribe();
     if (onOnline) window.removeEventListener('online', onOnline);
@@ -138,4 +155,3 @@ export function useSyncEngine() {
 
   return { status, lastSyncedAt, start, stop, syncNow, flush, checkMembership };
 }
-

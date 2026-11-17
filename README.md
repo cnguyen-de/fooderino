@@ -20,6 +20,14 @@ A local-first grocery list and recipe app built on Nuxt (`ssr: false`), Dexie an
   Create, pick and leave live beside it under `server/api/household/`.
 - **Settings → Data** exports the household and recipes to JSON, imports an export additively
   (list-era v1 files included), and can clear local data and re-download it.
+- **Activity** (`/logs`, also linked from each item's editor) shows household changes,
+  including pending offline actions. Search by item, member or action, or view one item's history.
+- **Items have alternate names.** Add them under **More options → Other names** in the editor;
+  search matches every name, ignoring case and accents. Places and stores can be picked from
+  existing tags or entered in the same field. New items use count units, including recipe and
+  data imports; a default amount of zero is valid.
+- **Sync belongs to the session.** Page navigation reuses local data and the existing Realtime
+  subscription. Realtime notifications arriving together trigger one refresh.
 
 The design lives in `docs/superpowers/specs/2026-11-16-household-redesign-design.md`.
 

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { ItemId, ItemMetadata } from '~~/types/pantry';
-import { localDate } from '~~/utils/pantry';
+import TagCombobox from '~/components/pantry/TagCombobox.vue';
+import { localDate, normName } from '~~/utils/pantry';
 import { toast } from 'vue-sonner';
+import { ChevronDown, History, MapPin, Plus, Store, Tag, X } from 'lucide-vue-next';
 const props = defineProps<{ id: ItemId | null }>();
 const emit = defineEmits<{ close: [] }>();
-const { view, search, ops } = usePantry();
+const { view, search, ops, tagOptions } = usePantry();
 const act = usePantryAction();
 const draft = ref<ItemMetadata>({
   name: '',
@@ -20,10 +22,19 @@ const shelf = ref('');
 const alias = ref('');
 const tag = ref('');
 const kind = ref<'place' | 'store' | 'other'>('place');
+const tagChoices = computed(() => tagOptions.value.filter((t) => t.kind === kind.value).map((t) => t.name));
+watch(kind, () => {
+  tag.value = '';
+});
+function selectTag(value: string) {
+  tag.value = value;
+  addTag();
+}
 const mergeQuery = ref('');
 const merging = ref(false);
 const deleting = ref(false);
 const busy = ref(false);
+const more = ref(false);
 watch(
   () => props.id,
   (id) => {
@@ -42,6 +53,7 @@ watch(
     shelf.value = item.shelf_life_days?.toString() ?? '';
     alias.value = '';
     tag.value = '';
+    more.value = false;
     merging.value = false;
     deleting.value = false;
     mergeQuery.value = '';
@@ -55,7 +67,7 @@ function addAlias() {
 }
 function addTag() {
   const value = tag.value.trim();
-  if (value && !draft.value.tags.some((t) => t.kind === kind.value && t.name === value))
+  if (value && !draft.value.tags.some((t) => t.kind === kind.value && normName(t.name) === normName(value)))
     draft.value.tags.push({ kind: kind.value, name: value });
   tag.value = '';
 }
@@ -72,10 +84,8 @@ async function save() {
       amount: Number(amount.value),
       best_before: best.value ? localDate(best.value) : null
     });
-    if (handle) {
-      toast('Item saved');
-      emit('close');
-    }
+    if (handle) toast('Item saved');
+    emit('close');
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'Could not save item.');
   } finally {
@@ -90,117 +100,215 @@ async function remove() {
 }
 </script>
 <template>
-  <Drawer :open="!!id" @update:open="!$event && emit('close')"
-    ><DrawerContent class="mx-auto max-h-[92dvh] max-w-xl">
-      <DrawerHeader
-        ><DrawerTitle>Edit item</DrawerTitle
-        ><DrawerDescription>Save names, tags and stock together.</DrawerDescription></DrawerHeader
-      >
-      <form class="space-y-4 overflow-y-auto px-4 pb-6" @submit.prevent="save">
-        <label class="block space-y-1">Name<Input v-model="draft.name" required class="text-base" /></label>
-        <fieldset class="space-y-2">
-          <legend>Aliases</legend>
-          <div class="flex flex-wrap gap-2">
-            <Button
-              v-for="(value, i) in draft.aliases"
-              :key="value"
-              type="button"
-              variant="secondary"
-              :aria-label="`Remove alias ${value}`"
-              @click="draft.aliases.splice(i, 1)"
-              >{{ value }} ×</Button
-            >
-          </div>
-          <div class="flex gap-2">
-            <Input v-model="alias" aria-label="New alias" class="text-base" @keydown.enter.prevent="addAlias" /><Button
-              type="button"
-              variant="outline"
-              @click="addAlias"
-              >Add alias</Button
-            >
-          </div>
-        </fieldset>
-        <fieldset class="space-y-2">
-          <legend>Tags</legend>
-          <div class="flex flex-wrap gap-2">
-            <Button
-              v-for="(value, i) in draft.tags"
-              :key="value.kind + value.name"
-              type="button"
-              variant="secondary"
-              :aria-label="`Remove ${value.kind} ${value.name}`"
-              @click="draft.tags.splice(i, 1)"
-              >{{ value.kind }}: {{ value.name }} ×</Button
-            >
-          </div>
-          <div class="flex gap-2">
-            <select v-model="kind" aria-label="Tag kind" class="rounded-md border bg-background text-base">
-              <option>place</option>
-              <option>store</option>
-              <option>other</option></select
-            ><Input v-model="tag" aria-label="New tag" class="text-base" @keydown.enter.prevent="addTag" /><Button
-              type="button"
-              variant="outline"
-              @click="addTag"
-              >Add tag</Button
-            >
-          </div>
-        </fieldset>
-        <div class="grid grid-cols-2 gap-3">
-          <label
-            >Unit<select v-model="draft.unit" class="block h-10 w-full rounded-md border bg-background text-base">
-              <option value="count">Count</option>
-              <option value="gram">Grams</option>
-            </select></label
-          ><label
-            >Default amount<Input
-              v-model="draft.default_amount"
-              type="number"
-              min="0.001"
-              step="any"
+  <Drawer :open="!!id" @update:open="!$event && emit('close')">
+    <DrawerContent class="mx-auto max-h-[90dvh] max-w-xl rounded-t-2xl">
+      <DrawerHeader class="flex items-center justify-between px-5 pb-3 pt-3 text-left">
+        <div>
+          <DrawerTitle class="text-base">Item details</DrawerTitle>
+          <DrawerDescription class="sr-only">Edit the name, quantity and storage for this item.</DrawerDescription>
+        </div>
+        <button
+          type="button"
+          aria-label="Close item"
+          class="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
+          @click="emit('close')">
+          <X class="size-4" />
+        </button>
+      </DrawerHeader>
+      <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="save">
+        <div class="min-h-0 space-y-4 overflow-y-auto px-5 pb-4">
+          <label class="block">
+            <span class="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Name</span>
+            <Input
+              v-model="draft.name"
               required
-              class="text-base" /></label
-          ><label>Shelf life (days)<Input v-model="shelf" type="number" min="0" step="1" class="text-base" /></label
-          ><label
-            >Amount at home<Input v-model="amount" type="number" min="0" step="any" required class="text-base"
-          /></label>
+              class="mt-1 h-10 rounded-lg border-0 bg-muted/50 text-base font-semibold shadow-none" />
+          </label>
+          <div class="flex items-center justify-between gap-2">
+            <NuxtLink
+              :to="{ path: '/logs', query: { item: id } }"
+              class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
+              @click="emit('close')"
+              ><History class="size-3.5" />View history</NuxtLink
+            >
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              class="gap-1 text-xs text-primary hover:bg-primary/10 hover:text-primary"
+              @click="id && act(() => ops.addToShopping(id!), `Listed ${draft.name}`)"
+              ><Plus class="size-3.5" />Add to list</Button
+            >
+          </div>
+          <section class="space-y-2 rounded-xl bg-muted/40 p-3">
+            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Quantity<span v-if="draft.unit === 'gram'"> · grams</span>
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="space-y-1 text-xs font-medium"
+                >At home<Input
+                  v-model="amount"
+                  aria-label="Amount at home"
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  class="h-9 rounded-lg bg-background text-base"
+              /></label>
+              <label class="space-y-1 text-xs font-medium"
+                >Default amount<Input
+                  v-model="draft.default_amount"
+                  aria-label="Default amount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  class="h-9 rounded-lg bg-background text-base"
+              /></label>
+            </div>
+          </section>
+          <section class="space-y-2 rounded-xl bg-muted/40 p-3">
+            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Storage</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="min-w-0 space-y-1 text-xs font-medium"
+                >Best before<Input
+                  v-model="best"
+                  aria-label="Best before"
+                  type="date"
+                  class="h-9 min-w-0 rounded-lg bg-background text-base"
+              /></label>
+              <label class="space-y-1 text-xs font-medium"
+                >Shelf life · days<Input
+                  v-model="shelf"
+                  aria-label="Shelf life in days"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Optional"
+                  class="h-9 rounded-lg bg-background text-base"
+              /></label>
+            </div>
+          </section>
+          <section class="space-y-2">
+            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Places &amp; stores
+            </h3>
+            <div v-if="draft.tags.length" class="flex flex-wrap gap-1.5">
+              <button
+                v-for="(value, i) in draft.tags"
+                :key="value.kind + value.name"
+                type="button"
+                class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                :aria-label="`Remove ${value.kind} ${value.name}`"
+                @click="draft.tags.splice(i, 1)">
+                <component
+                  :is="value.kind === 'store' ? Store : value.kind === 'place' ? MapPin : Tag"
+                  class="size-3 shrink-0"
+                  aria-hidden="true" /><span class="truncate">{{ value.name }}</span
+                ><X class="size-3 shrink-0" aria-hidden="true" />
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <select v-model="kind" aria-label="Tag kind" class="h-9 rounded-lg border bg-muted/40 px-2 text-xs">
+                <option value="place">Place</option>
+                <option value="store">Store</option>
+                <option value="other">Other</option>
+              </select>
+              <TagCombobox
+                v-model="tag"
+                :options="tagChoices"
+                :placeholder="
+                  kind === 'store' ? 'Find or add store…' : kind === 'place' ? 'Find or add place…' : 'Find or add tag…'
+                "
+                @select="selectTag" />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-label="Add tag"
+                class="size-9 shrink-0 p-0"
+                @click="addTag"
+                ><Plus class="size-4"
+              /></Button>
+            </div>
+          </section>
+          <Collapsible v-model:open="more" class="border-t pt-2">
+            <CollapsibleTrigger
+              class="flex h-8 w-full items-center justify-between text-xs font-medium text-muted-foreground"
+              >More options<ChevronDown class="size-3.5 transition-transform" :class="more && 'rotate-180'"
+            /></CollapsibleTrigger>
+            <CollapsibleContent class="space-y-3 pt-2">
+              <div class="space-y-2">
+                <label for="item-alias" class="text-xs font-medium">Other names</label>
+                <div v-if="draft.aliases.length" class="flex flex-wrap gap-1.5">
+                  <button
+                    v-for="(value, i) in draft.aliases"
+                    :key="value"
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs"
+                    :aria-label="`Remove alias ${value}`"
+                    @click="draft.aliases.splice(i, 1)">
+                    {{ value }}<X class="size-3" />
+                  </button>
+                </div>
+                <div class="flex gap-2">
+                  <Input
+                    id="item-alias"
+                    v-model="alias"
+                    aria-label="New alias"
+                    placeholder="Another name to search by"
+                    class="h-9 min-w-0 text-base"
+                    @keydown.enter.prevent="addAlias" /><Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    aria-label="Add alias"
+                    class="size-9 shrink-0 p-0"
+                    @click="addAlias"
+                    ><Plus class="size-4"
+                  /></Button>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <Button type="button" variant="ghost" size="xs" @click="merging = !merging">Merge into…</Button
+                ><Button type="button" variant="ghost" size="xs" class="text-destructive" @click="deleting = !deleting"
+                  >Delete item…</Button
+                >
+              </div>
+              <div v-if="merging" class="space-y-2 rounded-lg bg-muted/40 p-3">
+                <p class="text-xs text-muted-foreground">Combines stock, names and tags. This cannot be undone.</p>
+                <Input
+                  v-model="mergeQuery"
+                  aria-label="Find merge target"
+                  placeholder="Find another item"
+                  class="h-9 text-base" /><Button
+                  v-for="hit in matches"
+                  :key="hit.item.id"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="w-full"
+                  @click="merge(hit.item.id)"
+                  >Merge into {{ hit.item.name }}</Button
+                >
+              </div>
+              <div v-if="deleting" class="space-y-2 rounded-lg bg-destructive/5 p-3">
+                <p class="text-xs">Remove this item from your household?</p>
+                <Button type="button" variant="destructive" size="sm" @click="remove">Delete item</Button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
-        <label class="block">Best-before<Input v-model="best" type="date" class="text-base" /></label>
-        <div class="flex gap-2">
-          <Button type="submit" :disabled="busy" class="flex-1">Save</Button
-          ><Button type="button" variant="outline" @click="emit('close')">Close</Button
-          ><Button
-            type="button"
-            variant="secondary"
-            @click="id && act(() => ops.addToShopping(id!), `Listed ${draft.name}`)"
-            >Add to list</Button
+        <footer
+          class="flex shrink-0 gap-2 border-t bg-background px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <Button type="button" variant="ghost" class="h-10 text-muted-foreground" @click="emit('close')"
+            >Cancel</Button
           >
-        </div>
-        <Button type="button" variant="ghost" @click="merging = !merging">Merge into…</Button>
-        <div v-if="merging" class="space-y-2">
-          <p class="text-sm text-muted-foreground">Combines stock, names and tags. This cannot be undone.</p>
-          <Input
-            v-model="mergeQuery"
-            aria-label="Find merge target"
-            placeholder="Find another item"
-            class="text-base" /><Button
-            v-for="hit in matches"
-            :key="hit.item.id"
-            type="button"
-            variant="outline"
-            class="w-full"
-            @click="merge(hit.item.id)"
-            >Merge into {{ hit.item.name }}</Button
-          >
-        </div>
-        <Button type="button" variant="ghost" class="text-destructive" @click="deleting = !deleting"
-          >Delete item…</Button
-        >
-        <div v-if="deleting">
-          <p>Remove this item from your household?</p>
-          <Button type="button" variant="destructive" @click="remove">Delete item</Button>
-        </div>
+          <Button type="submit" :disabled="busy" class="h-10 flex-1 rounded-lg">{{
+            busy ? 'Saving…' : 'Save changes'
+          }}</Button>
+        </footer>
       </form>
-    </DrawerContent></Drawer
-  >
+    </DrawerContent>
+  </Drawer>
 </template>

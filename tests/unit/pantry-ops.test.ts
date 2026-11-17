@@ -24,6 +24,18 @@ describe('pantry ops replay over confirmed state', () => {
     expect(await d.item(id!)).toMatchObject({ name: 'Oat milk', aliases: ['Haferdrink'], amount: 0, to_buy: 2 });
   });
 
+  it('defaults to count and persists a zero default amount through creation and editing', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Milk', default_amount: 0 }))!;
+    await d.engine.sync('full');
+    expect(d.server.items.get(id)).toMatchObject({ unit: 'count', default_amount: 0 });
+    await d.ops.editItem(id, { default_amount: 2 });
+    await d.engine.sync('full');
+    await d.ops.editItem(id, { default_amount: 0 });
+    await d.engine.sync('full');
+    expect(d.server.items.get(id)).toMatchObject({ unit: 'count', default_amount: 0 });
+  });
+
   it('uses up and undoes before the command ever left the device', async () => {
     const d = await device();
     const id = (await d.ops.createItem({ name: 'Eggs', amount: 6 }))!;
@@ -109,7 +121,9 @@ describe('pantry ops replay over confirmed state', () => {
     const id = (await d.ops.createItem({ name: 'Milk', amount: 0 }))!;
 
     expect(await d.ops.useUp(id)).toBeNull();
-    expect(d.notices).toEqual([expect.objectContaining({ kind: 'use', reason: 'insufficient_stock', item_name: 'Milk' })]);
+    expect(d.notices).toEqual([
+      expect.objectContaining({ kind: 'use', reason: 'insufficient_stock', item_name: 'Milk' })
+    ]);
     expect(await d.db.commands.count()).toBe(1);
   });
 
@@ -122,7 +136,11 @@ describe('pantry ops replay over confirmed state', () => {
     await d.ops.addToShopping(id, 3);
 
     expect((await d.item(id))?.to_buy).toBe(3);
-    expect((await d.db.commands.orderBy('created_seq').toArray()).map((c) => c.kind)).toEqual(['create', 'want', 'want']);
+    expect((await d.db.commands.orderBy('created_seq').toArray()).map((c) => c.kind)).toEqual([
+      'create',
+      'want',
+      'want'
+    ]);
   });
 
   it('ends with the server holding exactly what the device showed offline', async () => {

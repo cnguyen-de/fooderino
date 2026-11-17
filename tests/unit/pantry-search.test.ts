@@ -35,6 +35,14 @@ const search = buildSearchIndex(items);
 const ids = (q: string) => search(q).map((h) => h.item_id);
 
 describe('buildSearchIndex', () => {
+  it('finds the same item by German, English and Vietnamese names, with or without accents', () => {
+    const index = buildSearchIndex([item('milk', 'Milk', { aliases: ['Milch', 'Sữa'] })]);
+    for (const query of ['milk', 'Milch', 'Sữa', 'sua']) {
+      expect(index(query)).toHaveLength(1);
+      expect(index(query)[0]).toMatchObject({ item_id: 'milk', match: 'exact' });
+    }
+  });
+
   it('finds items by alias', () => {
     expect(search('oatly')).toEqual([{ item_id: 'oat', via: 'alias', match: 'exact', text: 'Oatly' }]);
     expect(search('melk')[0]).toMatchObject({ item_id: 'milk', via: 'alias', match: 'exact' });

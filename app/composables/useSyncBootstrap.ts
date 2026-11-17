@@ -3,9 +3,8 @@ import { getSyncState } from '~~/utils/sync-state';
 import { db } from '~~/utils/db';
 
 /**
- * Starts the engine for the whole session, from the layout rather than from
- * a settings component. Mounting it on a single route means writes made
- * elsewhere never sync until the user happens to visit that route.
+ * Called once by app.vue. Page layouts only read sync-hydrated: mounting a
+ * new page must not restart the engine or recreate its Realtime subscription.
  */
 export function useSyncBootstrap() {
   const user = useSupabaseUser();
@@ -30,9 +29,12 @@ export function useSyncBootstrap() {
     void boot(user.value?.id ?? null);
   });
 
-  watch(user, (u) => {
-    void boot(u?.id ?? null);
-  });
+  watch(
+    () => user.value?.id ?? null,
+    (userId) => {
+      void boot(userId);
+    }
+  );
 
   return { hydrated };
 }

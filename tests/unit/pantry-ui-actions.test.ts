@@ -10,6 +10,13 @@ afterEach(() => {
 });
 
 describe('pantry UI actions', () => {
+  it('creates count items from recipe ingredients without reintroducing gram units', async () => {
+    const createItem = vi.fn();
+    vi.stubGlobal('usePantry', () => ({ search: () => [], ops: { createItem } }));
+    await useRecipeShopping().addIngredients([{ name: 'Flour', amount: 500, amount_type: 'gram' }]);
+    expect(createItem).toHaveBeenCalledExactlyOnceWith({ name: 'Flour', unit: 'count', to_buy: 500 });
+  });
+
   it('lists exact aliases, creates missing ingredients and leaves stocked items alone', async () => {
     const ops = { addToShopping: vi.fn(), createItem: vi.fn() };
     vi.stubGlobal('usePantry', () => ({

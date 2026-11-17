@@ -9,7 +9,7 @@ export function useRecipeShopping() {
         if (match?.item.amount && match.item.amount > 0) continue;
         const qty = ingredient.amount && ingredient.amount > 0 ? ingredient.amount : 1;
         if (match) await ops.addToShopping(match.item.id, qty);
-        else await ops.createItem({ name: ingredient.name, unit: ingredient.amount_type, to_buy: qty });
+        else await ops.createItem({ name: ingredient.name, unit: 'count', to_buy: qty });
       }
       toast('Added ingredients to shopping list');
     } catch (e) {

@@ -3,6 +3,9 @@ import { useColorMode, useMediaQuery } from '@vueuse/core';
 import { Toaster } from '~/components/ui/sonner';
 import { useStorage } from '@vueuse/core';
 
+// One bootstrap for the signed-in session, independent of page/layout mounts.
+useSyncBootstrap();
+
 const colorMode = useColorMode();
 const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)');
 const userColor = useStorage('userColor', `${isPreferredDark.value ? 'dark' : 'light'}`);

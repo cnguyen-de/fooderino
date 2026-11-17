@@ -1,11 +1,13 @@
 import { liveQuery } from 'dexie';
+import { buildActivity, type ActivityEntry } from '~~/utils/activity';
 import type { ComputedRef, Ref } from 'vue';
 import type { Hit, Instant, LocalDate, PantryItem, PantryView } from '~~/utils/pantry';
-import { buildPantryView, buildSearchIndex, DEFAULT_RULES, localDateOf } from '~~/utils/pantry';
+import { buildPantryView, buildSearchIndex, DEFAULT_RULES, localDateOf, normName } from '~~/utils/pantry';
 import { projectPantry, readDeviceRows, type DeviceRows } from '~~/utils/pantry-projection';
 import { createPantryOps, type PantryOps } from '~~/utils/pantry-ops';
 import { notifyLocalChange } from '~~/utils/sync-hook';
 import { db } from '~~/utils/db';
+import type { Tag } from '~~/types/pantry';
 import type { RejectionNotice } from '~~/types/sync';
 
 export type { ItemDraft, ItemEdit, PantryOps, UndoHandle, UnpackLine } from '~~/utils/pantry-ops';
@@ -76,7 +78,29 @@ const ops = createPantryOps({
   onRejection: recordRejections
 });
 
+const activity = computed(() =>
+  buildActivity({
+    items: projection.value.snapshot.items,
+    events: projection.value.events,
+    log: rows.value?.log ?? [],
+    commands: (rows.value?.commands ?? []).filter(
+      (command) => !projection.value.rejected.some((rejection) => rejection.command === command.id)
+    )
+  })
+);
+
+const tagOptions = computed<readonly Tag[]>(() => {
+  const unique = new Map<string, Tag>();
+  for (const item of projection.value.snapshot.items.values()) {
+    if (item.deleted_at || item.merged_into) continue;
+    for (const tag of item.tags) unique.set(`${tag.kind}:${normName(tag.name)}`, tag);
+  }
+  return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name));
+});
+
 export interface Pantry {
+  tagOptions: ComputedRef<readonly Tag[]>;
+  activity: ComputedRef<readonly ActivityEntry[]>;
   view: ComputedRef<PantryView>;
   /** Reactive when called inside a computed or template: it reads the current snapshot's index. */
   search: (query: string) => SearchResult[];
@@ -93,5 +117,5 @@ const ready = computed(() => rows.value !== null);
 
 export function usePantry(): Pantry {
   ensureStarted();
-  return { view, search, ops, rejections: notices, historyComplete, ready };
+  return { view, search, ops, rejections: notices, historyComplete, ready, activity, tagOptions };
 }
