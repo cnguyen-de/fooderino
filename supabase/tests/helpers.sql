@@ -120,3 +120,12 @@ language sql as $$
   select jsonb_build_object('amount', amount, 'to_buy', to_buy, 'best_before', best_before)
     from public.items_v2 where id = p_item
 $$;
+
+-- A share token as share.post mints it: only the sha256 of the token is stored.
+create function test.share(p_household uuid, p_owner uuid, p_token text,
+                           p_expires timestamptz default now() + interval '1 day')
+returns void
+language sql as $$
+  insert into public.household_share_tokens (token_hash, household_id, created_by, expires_at)
+  values (encode(sha256(convert_to(p_token, 'UTF8')), 'hex'), p_household, p_owner, p_expires)
+$$;
