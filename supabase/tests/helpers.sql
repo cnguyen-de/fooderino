@@ -51,8 +51,9 @@ begin
 end;
 $$;
 
+-- Definer, so tests acting as a client can still name their ids.
 create function test.id(p_name text) returns uuid
-language sql immutable as $$
+language sql immutable security definer as $$
   select private.uuid_for('test:' || p_name)
 $$;
 
