@@ -355,6 +355,25 @@ describe('recipe and cooked sheets', () => {
     expect(device.notices).toEqual([]);
   });
 
+  it('pushes a dish once its deduction was rejected, since nothing is left to wait for', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const soup = recipeSheet();
+    const use: QueuedCommand = {
+      id: crypto.randomUUID() as CommandId, household_id: HOUSEHOLD, item_id: crypto.randomUUID() as ItemId,
+      at: '2026-11-18T10:00:00.000Z' as Instant, kind: 'use', qty: 1, waste: false, created_seq: 1
+    };
+    await device.db.commands.add(use);
+    const dinner = cookedSheet(soup.id, { uses: [use.id] });
+    await device.db.edits.bulkPut([soup, dinner]);
+
+    await device.engine.sync('full');
+
+    expect(device.notices).toEqual([expect.objectContaining({ kind: 'use' })]);
+    expect(server.cooked.get(dinner.id)?.uses).toEqual([use.id]);
+    expect([await device.db.commands.count(), await device.db.edits.count()]).toEqual([0, 0]);
+  });
+
   it('stops at a failed recipe push, so the dish waits for its recipe instead of being refused', async () => {
     const server = new FakeServer();
     const transport = server.transport(ALICE);

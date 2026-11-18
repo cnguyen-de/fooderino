@@ -9,6 +9,7 @@ import { FakeServer, HOUSEHOLD } from '../support/fake-server';
 import { makeDevice, project } from '../support/device';
 
 const ALICE = 'aaaaaaaa-0000-4000-8000-000000000001';
+const BOB = 'bbbbbbbb-0000-4000-8000-000000000002';
 const TODAY = '2026-11-18' as LocalDate;
 
 async function device() {
@@ -165,6 +166,33 @@ describe('cook ops', () => {
     expect(d.server.cooked.get(id)?.deleted_at).not.toBeNull();
     expect([d.server.items.get(pork)?.amount, d.server.items.get(eggs)?.amount]).toEqual([500, 6]);
     expect(d.notices).toEqual([]);
+  });
+
+  it('shows a dish on the other phone only with its deduction, so removing it there restocks everywhere', async () => {
+    const a = await device();
+    const b = await makeDevice(a.server.transport(BOB), HOUSEHOLD);
+    const bCook = createCookOps({ db: b.db, pantry: b.ops });
+    const { eggs, recipe } = await soup(a);
+    await a.engine.sync('full');
+    await b.engine.sync('full');
+    const id = await a.cook.cook({ recipe, date: TODAY, uses: [{ id: eggs, qty: 2 }] });
+    const onB = async () => ({ dish: (await b.db.cooked.get(id)) !== undefined, eggs: (await b.item(eggs))?.amount });
+
+    a.server.failNextApply('before');
+    await expect(a.engine.sync('full')).rejects.toThrow('network down');
+    await b.engine.sync('full');
+    expect(await onB()).toEqual({ dish: false, eggs: 6 });
+
+    await a.engine.sync('full');
+    await b.engine.sync('full');
+    expect(await onB()).toEqual({ dish: true, eggs: 4 });
+
+    await bCook.removeDish(id, { restock: true });
+    await b.engine.sync('full');
+    await a.engine.sync('full');
+    expect(a.server.cooked.get(id)?.deleted_at).not.toBeNull();
+    expect([a.server.items.get(eggs)?.amount, await amountOf(a, eggs), (await b.item(eggs))?.amount]).toEqual([6, 6, 6]);
+    expect([await a.db.commands.count(), await b.db.commands.count()]).toEqual([0, 0]);
   });
 
   it('undoes a dish before it ever synced', async () => {

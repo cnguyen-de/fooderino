@@ -159,7 +159,8 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
   }
 
   /**
-   * Sheets go after commands, since an item exists on the server only once its `create` landed.
+   * Sheets go after commands, since an item exists on the server only once its `create` landed,
+   * and a sheet waits while a command it names is still queued.
    * Stores go in registry order and a transport error stops the walk, so a row never lands
    * ahead of an unpushed row it references.
    */
@@ -168,9 +169,12 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
       Promise.all([db.edits.toArray(), db.commands.toArray()])
     );
     const unborn = new Set<string>(commands.filter((c) => c.kind === 'create').map((c) => c.item_id));
+    const queued = new Set<string>(commands.map((c) => c.id));
 
     for (const def of SHEET_TABLES) {
-      const ready = edits.filter((e) => e.store === def.store && !unborn.has(e.id));
+      const ready = edits.filter(
+        (e) => e.store === def.store && !unborn.has(e.id) && !def.sheet.waitsFor?.(e).some((id) => queued.has(id))
+      );
       if (ready.length === 0) continue;
 
       const { landed, refused } = await pushEach(ready, (rows) => transport.pushSheets(def, rows));

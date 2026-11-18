@@ -1,3 +1,4 @@
+import type { CommandId } from '~~/types/pantry';
 import type { HouseholdRows, HouseholdStore, PendingSheet, SheetStore } from '~~/types/sync';
 import {
   parseBagEntry,
@@ -27,6 +28,8 @@ export interface HouseholdTableDef<S extends HouseholdStore = HouseholdStore> {
 export interface SheetDef<S extends SheetStore> {
   /** The columns a push sends. Mirrors the SQL column grants; every other column is server-owned. */
   columns: readonly Exclude<keyof PendingSheet<S>, 'store'>[];
+  /** Commands the sheet points at. It waits while any of them is queued, so a reader never sees it ahead of their effects. */
+  waitsFor?: (sheet: PendingSheet<S>) => readonly CommandId[];
 }
 
 export type SheetTableDef<S extends SheetStore = SheetStore> = HouseholdTableDef<S> & { sheet: SheetDef<S> };
@@ -68,7 +71,10 @@ export const HOUSEHOLD_TABLES = [
     scope: 'household_id',
     key: (r) => r.id,
     parse: parseCooked,
-    sheet: { columns: ['id', 'household_id', 'recipe_id', 'date', 'uses', 'updated_at', 'deleted_at'] }
+    sheet: {
+      columns: ['id', 'household_id', 'recipe_id', 'date', 'uses', 'updated_at', 'deleted_at'],
+      waitsFor: (dish) => dish.uses
+    }
   }),
   def({ store: 'bag', remote: 'bag_entries', scope: 'household_id', key: (r) => r.id, parse: parseBagEntry }),
   def({ store: 'events', remote: 'item_events', scope: 'household_id', key: (r) => r.id, parse: parseEvent }),
