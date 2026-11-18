@@ -111,11 +111,13 @@ export interface Pantry {
   historyComplete: ComputedRef<boolean>;
   /** False until the device has been read once. */
   ready: ComputedRef<boolean>;
+  /** The local date, rolled over at midnight. */
+  today: Readonly<Ref<LocalDate>>;
 }
 
 const ready = computed(() => rows.value !== null);
 
 export function usePantry(): Pantry {
   ensureStarted();
-  return { view, search, ops, rejections: notices, historyComplete, ready, activity, tagOptions };
+  return { view, search, ops, rejections: notices, historyComplete, ready, activity, tagOptions, today };
 }

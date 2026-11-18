@@ -1,6 +1,10 @@
 import { daysBetween } from '~~/utils/pantry';
 import type { CommandId, ItemId, LocalDate } from '~~/types/pantry';
-import type { CookedId, CookedRow, RecipeId, RecipeKind, RecipeRow, RecipeSheet } from '~~/types/cook';
+import type { CookedId, CookedRow as Cooked, RecipeId, RecipeKind, RecipeRow as Recipe, RecipeSheet } from '~~/types/cook';
+
+/** Rows as the device shows them, pending sheets included, so no server `seq`. */
+type RecipeRow = Omit<Recipe, 'seq'>;
+type CookedRow = Omit<Cooked, 'seq'>;
 import { ingredientStatus, type IngredientStatus, type PantryLookup } from './match';
 
 /** A Vietnamese dinner: at least one soup and 2 to 3 dishes. */
