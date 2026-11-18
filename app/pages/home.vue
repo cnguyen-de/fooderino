@@ -71,7 +71,7 @@ function matchText(hit: ReturnType<typeof search>[number]) {
 <template>
   <NuxtLayout name="app"
     ><div ref="listPane" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-      <div class="flex items-baseline justify-between gap-2">
+      <div class="sticky -top-3 z-10 -mx-3 -mb-2 -mt-3 flex items-baseline justify-between gap-2 bg-background/90 px-3 pb-2 pt-3 backdrop-blur-xl">
         <h1 class="text-xl font-semibold tracking-tight">At home<span class="text-primary">.</span></h1>
         <div class="flex items-center gap-2">
           <span v-if="ready" class="text-xs tabular-nums text-muted-foreground"
