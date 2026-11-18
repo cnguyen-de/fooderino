@@ -1,12 +1,13 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { BagId, CommandId, HouseholdId, Item, LocalDate } from '~~/types/pantry';
+import type { CookedId, RecipeId } from '~~/types/cook';
+import type { BagId, CommandId, HouseholdId, Instant, Item, LocalDate } from '~~/types/pantry';
 import type { QueuedCommand } from '~~/types/sync';
 import { createSupabaseTransport } from '~/utils/supabase-transport';
 import { runMove } from '~~/utils/household-move';
 import { createPantryOps } from '~~/utils/pantry-ops';
-import { HOUSEHOLD_TABLES, SHEET_TABLES } from '~~/utils/sync-registry';
+import { HOUSEHOLD_TABLES, SHEET_TABLES, type HouseholdTableDef } from '~~/utils/sync-registry';
 import { TransportRefused } from '~~/utils/sync-engine';
 import { makeDevice, project, type Device } from '../support/device';
 
@@ -241,6 +242,61 @@ describe('two devices through PostgREST, RLS and Realtime', () => {
     expect((await project(A.db)).snapshot.items.get(milk.id)?.name).toBe('Milk (Bob)');
     expect((await project(B.db)).snapshot.items.get(milk.id)?.name).toBe('Milk (Bob)');
     expect(await A.db.edits.count()).toBe(0);
+  });
+
+  it("A's recipe and cooked dish reach B; an outsider can neither read nor write them", async () => {
+    const milk = await byName(A, 'Milk (Bob)');
+    const recipe = crypto.randomUUID() as RecipeId;
+    const dish = crypto.randomUUID() as CookedId;
+    const use = crypto.randomUUID() as CommandId;
+    const at = new Date().toISOString() as Instant;
+    await A.db.edits.bulkPut([
+      {
+        store: 'cooked',
+        id: dish,
+        household_id: home,
+        recipe_id: recipe,
+        date: '2026-11-18' as LocalDate,
+        uses: [use],
+        deleted_at: null,
+        updated_at: at
+      },
+      {
+        store: 'recipes',
+        id: recipe,
+        household_id: home,
+        name: 'Canh chua',
+        kind: 'soup',
+        ingredients: [
+          { name: 'Milk', item_id: milk.id, qty: { amount: 200, unit: 'gram' } },
+          { name: 'Tamarind', item_id: null, qty: null }
+        ],
+        instructions: 'Boil.',
+        deleted_at: null,
+        updated_at: at
+      }
+    ]);
+    await A.engine.sync('full');
+    await B.engine.sync('full');
+
+    expect(await A.db.edits.count()).toBe(0);
+    expect(await B.db.recipes.get(recipe)).toMatchObject({ name: 'Canh chua', kind: 'soup', household_id: home });
+    expect((await B.db.recipes.get(recipe))?.ingredients[0]).toEqual({
+      name: 'Milk',
+      item_id: milk.id,
+      qty: { amount: 200, unit: 'gram' }
+    });
+    expect(await B.db.cooked.get(dish)).toMatchObject({ recipe_id: recipe, date: '2026-11-18', uses: [use] });
+
+    const outsider = createSupabaseTransport(carol.client);
+    for (const store of ['recipes', 'cooked']) {
+      const def = HOUSEHOLD_TABLES.find((d) => d.store === store)! as HouseholdTableDef;
+      expect(await outsider.pull(def, home, 0, 1000)).toEqual([]);
+    }
+    const recipeSheets = SHEET_TABLES.find((d) => d.store === 'recipes')!;
+    const hijack = { ...(await A.db.recipes.get(recipe))!, name: 'Hijacked', updated_at: new Date(Date.now() + 3600_000).toISOString() };
+    await expect(outsider.pushSheets(recipeSheets, [hijack as never])).rejects.toBeInstanceOf(TransportRefused);
+    expect((await serverRow('household_recipes', 'id', recipe))[0].name).toBe('Canh chua');
   });
 
   it('keeps a non-member out of the household through RLS', async () => {
