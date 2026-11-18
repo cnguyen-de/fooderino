@@ -71,6 +71,8 @@ export interface PantryOps {
   merge(src: ItemId, into: ItemId): Promise<UndoHandle | null>;
   deleteItem(id: ItemId): Promise<UndoHandle | null>;
   undo(handle: UndoHandle): Promise<UndoHandle | null>;
+  /** Undoes commands by id, newest first, skipping any that were refused, already undone or cannot be undone. */
+  undoCommands(ids: readonly CommandId[]): Promise<UndoHandle | null>;
 }
 
 export interface PantryOpsOptions {
@@ -120,6 +122,13 @@ function validSheet(s: ItemSheet): boolean {
 
 function itemSheet(ctx: Ctx, sheet: ItemSheet): PendingSheet<'items'> {
   return { store: 'items', ...sheet, updated_at: stampAbove(ctx.at, ...(ctx.stamps.get(sheet.id) ?? [])) };
+}
+
+/** The item a command's undo touches, read from its inverse; undefined once it cannot be undone. */
+function undoTarget(state: Snapshot, id: CommandId): ItemId | undefined {
+  const inverse = state.log.get(id);
+  if (!inverse) return undefined;
+  return 'item_id' in inverse ? inverse.item_id : state.bag.get(inverse.bag_id)?.item_id;
 }
 
 function defaultQty(item: Item): number {
@@ -335,6 +344,14 @@ export function createPantryOps({
         const current = ctx.state.items.get(handle.sheet.id);
         if (!current) return { commands };
         return { commands, sheet: itemSheet(ctx, handle.sheet) };
-      })
+      }),
+
+    undoCommands: (ids) =>
+      run((ctx) => ({
+        commands: [...ids].reverse().flatMap((target): Command[] => {
+          const item = undoTarget(ctx.state, target);
+          return item ? [{ ...base(ctx, item), kind: 'undo', target }] : [];
+        })
+      }))
   };
 }

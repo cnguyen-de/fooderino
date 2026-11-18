@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ItemId, LocalDate } from '~~/types/pantry';
+import type { CommandId, ItemId, LocalDate } from '~~/types/pantry';
 import { FakeServer, HOUSEHOLD } from '../support/fake-server';
 import { makeDevice, project } from '../support/device';
 
@@ -60,6 +60,26 @@ describe('pantry ops replay over confirmed state', () => {
 
     await d.engine.sync('full');
     expect(d.server.items.get(id)?.amount).toBe(6);
+    expect(d.notices).toEqual([]);
+  });
+
+  it('undoes commands by id, pending or confirmed, and skips ones already undone or unknown', async () => {
+    const d = await device();
+    const pork = (await d.ops.createItem({ name: 'Pork', amount: 500 }))!;
+    const rice = (await d.ops.createItem({ name: 'Rice', amount: 3 }))!;
+    const pending = (await d.ops.useItems([{ id: pork, qty: 200 }]))!.commands.map((c) => c.id);
+    const confirmed = (await d.ops.useItems([{ id: rice, qty: 1 }]))!.commands.map((c) => c.id);
+    await d.engine.sync('full');
+    const late = (await d.ops.useItems([{ id: pork, qty: 100 }]))!.commands.map((c) => c.id);
+
+    await d.ops.undoCommands([...pending, ...confirmed, ...late, crypto.randomUUID() as CommandId]);
+    expect((await d.item(pork))?.amount).toBe(500);
+    expect((await d.item(rice))?.amount).toBe(3);
+
+    await d.ops.undoCommands([...pending, ...confirmed]);
+    await d.engine.sync('full');
+    expect(d.server.items.get(pork)?.amount).toBe(500);
+    expect(d.server.items.get(rice)?.amount).toBe(3);
     expect(d.notices).toEqual([]);
   });
 
