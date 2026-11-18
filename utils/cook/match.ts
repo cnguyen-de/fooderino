@@ -2,7 +2,6 @@ import type { Hit } from '~~/utils/pantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
 import type { Ingredient } from '~~/types/cook';
 
-/** A search hit with its live item, the shape `usePantry().search` returns. */
 export type PantryHit = Pick<Hit, 'match' | 'via'> & { item: PantryItem };
 
 /** What the cook domain reads from the pantry. `byId` follows merges to the live item. */
@@ -12,21 +11,12 @@ export interface PantryLookup {
 }
 
 export type IngredientMatch =
-  /** `via: 'link'` when `item_id` resolved, `'name'` when a unique exact name or alias hit stood in. */
   | { kind: 'item'; item: PantryItem; via: 'link' | 'name' }
   | { kind: 'several'; choices: PantryItem[] }
   | { kind: 'none' };
 
-/**
- * How one ingredient stands at home.
- * - `enough`: in stock, covering the recipe amount when the units agree.
- * - `short`: in stock, below the recipe amount in the same unit.
- * - `out`: the item (or every candidate) has none.
- * - `untracked`: no item matches. A staple nobody tracks, neither for nor against.
- */
 export type StockLevel = 'enough' | 'short' | 'out' | 'untracked';
 
-/** The one reading of "at home" that the cook sheet, the shopping action and the ranker share. */
 export interface IngredientStatus {
   ingredient: Ingredient;
   match: IngredientMatch;
@@ -66,9 +56,8 @@ export function ingredientStatus(ingredient: Ingredient, lookup: PantryLookup): 
   return { ingredient, match, stock };
 }
 
-/** One editable row of the cook sheet. The sheet changes `item_id`, `qty` and `include` only. */
 export interface CookLine {
-  status: IngredientStatus;
+  readonly status: IngredientStatus;
   item_id: ItemId | null;
   qty: number;
   include: boolean;
@@ -77,13 +66,11 @@ export interface CookLine {
 function lineFor(status: IngredientStatus, item: PantryItem | undefined): CookLine {
   if (!item) return { status, item_id: null, qty: 1, include: false };
   const qty = status.ingredient.qty;
-  // A recipe's 500 g is not 500 items: across units the cook enters the count, starting at one.
   const wanted = qty && qty.unit === item.unit ? qty.amount : 1;
   const inStock = item.amount > 0;
   return { status, item_id: item.id, qty: inStock ? Math.min(wanted, item.amount) : wanted, include: inStock };
 }
 
-/** Starting rows for the cook sheet: matched, pre-filled, and checked only when the item has stock. */
 export function planCook(ingredients: readonly Ingredient[], lookup: PantryLookup): CookLine[] {
   return ingredients.map((ingredient) => {
     const status = ingredientStatus(ingredient, lookup);
@@ -91,7 +78,6 @@ export function planCook(ingredients: readonly Ingredient[], lookup: PantryLooku
   });
 }
 
-/** The row after the cook picks one of several candidates, or clears the pick with null. */
 export function chooseItem(line: CookLine, id: ItemId | null, lookup: PantryLookup): CookLine {
   return lineFor(line.status, id ? lookup.byId(id) : undefined);
 }
@@ -100,7 +86,6 @@ export type UseLine = { id: ItemId; qty: number };
 
 export type CookCheck = { ok: true; uses: UseLine[] } | { ok: false; problem: string };
 
-/** The sheet's live check. On success, one use per resolved item, ready for `useItems`. */
 export function checkCook(lines: readonly CookLine[], lookup: PantryLookup): CookCheck {
   const totals = new Map<ItemId, number>();
   for (const line of lines) {

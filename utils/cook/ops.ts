@@ -2,7 +2,7 @@ import type { CommandId, HouseholdId, Instant, Item, ItemId, LocalDate } from '~
 import type { CookedId, CookedSheet, Ingredient, RecipeId, RecipeKind, RecipeSheet } from '~~/types/cook';
 import type { PendingSheet, SheetRows, SheetStore } from '~~/types/sync';
 import { SYNC_STATE_KEY, type FooderinoDb } from '~~/utils/db';
-import type { PantryOps } from '~~/utils/pantry-ops';
+import { pantryTables, type PantryOps } from '~~/utils/pantry-ops';
 import { buildSearchIndex, newId, resolveItem, tidy } from '~~/utils/pantry';
 import { projectPantry, readDeviceRows } from '~~/utils/pantry-projection';
 import { stampAbove } from '~~/utils/sheets';
@@ -25,7 +25,6 @@ export interface CookOps {
    * when the pantry refuses the deduction, so a dish never lands without what the cook confirmed.
    */
   cook(input: { recipe: RecipeId; date: LocalDate; uses: readonly UseLine[] }): Promise<CookedId>;
-  /** Removes the dish from its meal; `restock` also undoes the `use` commands it queued. */
   removeDish(id: CookedId, opts: { restock: boolean }): Promise<void>;
   /** Lists out or short items; untracked names become new count items to buy. Resolves with how many were listed. */
   addMissingToShopping(id: RecipeId): Promise<number>;
@@ -34,12 +33,10 @@ export interface CookOps {
 export interface CookOpsOptions {
   db: FooderinoDb;
   pantry: PantryOps;
-  /** Called after every write that queued a sheet, to wake the sync engine. */
   notify?: () => void;
   now?: () => Date;
 }
 
-/** The same wiring as usePantry: merge-resolving `byId`, search hits mapped to live items. */
 function lookupOf(items: ReadonlyMap<ItemId, Item>): PantryLookup {
   const index = buildSearchIndex([...items.values()]);
   const byId = (id: ItemId) => resolveItem(items, id);
@@ -71,7 +68,6 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
     return id;
   }
 
-  /** The row as the device shows it: the queued sheet when there is one, else the confirmed row. */
   async function current<S extends 'recipes' | 'cooked'>(store: S, id: RecipeId | CookedId): Promise<SheetRows[S] | undefined> {
     const pending = (await db.edits.get(id)) as PendingSheet<S> | undefined;
     if (pending) {
@@ -84,7 +80,6 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
     return sheet;
   }
 
-  /** Queues a whole sheet stamped above every stamp the device holds for the row. Joins the caller's transaction. */
   async function queue<S extends 'recipes' | 'cooked'>(store: S, sheet: SheetRows[S]): Promise<void> {
     const [confirmed, pending] = await Promise.all([db.table(store).get(sheet.id), db.edits.get(sheet.id)]);
     const updated_at = stampAbove(at(), confirmed?.updated_at, pending?.updated_at);
@@ -92,8 +87,7 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
   }
 
   const sheetTables = (store: 'recipes' | 'cooked') => [db.syncState, db.edits, db.table(store)];
-  // Every table pantry-ops opens, so its own transaction nests inside this one.
-  const pantryTables = () => [db.items, db.bag, db.log, db.commands, db.edits, db.syncState, db.cooked];
+  const cookTables = () => [...pantryTables(db), db.cooked];
 
   return {
     async saveRecipe(input) {
@@ -128,7 +122,7 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
 
     async cook({ recipe, date, uses }) {
       const id = newId<CookedId>();
-      await db.transaction('rw', pantryTables(), async () => {
+      await db.transaction('rw', cookTables(), async () => {
         const handle = uses.length > 0 ? await pantry.useItems(uses) : null;
         const sheet: CookedSheet = {
           id,
@@ -145,7 +139,7 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
     },
 
     async removeDish(id, { restock }) {
-      const queued = await db.transaction('rw', pantryTables(), async () => {
+      const queued = await db.transaction('rw', cookTables(), async () => {
         const dish = await current('cooked', id);
         if (!dish || dish.deleted_at) return false;
         if (restock && dish.uses.length > 0) await pantry.undoCommands(dish.uses as CommandId[]);

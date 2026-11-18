@@ -23,7 +23,6 @@ export interface ExportedItem {
   best_before: LocalDate | null;
 }
 
-/** A recipe as exported, and as an import adds it. Item links are dropped: ids mean nothing in another household. */
 export interface ExportedRecipe {
   name: string;
   kind: RecipeKind;
@@ -31,7 +30,6 @@ export interface ExportedRecipe {
   instructions: string;
 }
 
-/** Meals are not exported: they point at stock changes that only mean something in this household. */
 export interface ExportPayload {
   version: typeof EXPORT_VERSION;
   exported_at: string;
@@ -70,7 +68,6 @@ export function buildExportPayload(input: {
       .map((r) => ({
         name: r.name,
         kind: r.kind,
-        // A linked ingredient leaves under its item's current name, so a rename since saving carries over.
         ingredients: r.ingredients.map((i) => ({
           name: (i.item_id && resolveItem(items, i.item_id)?.name) || i.name,
           qty: i.qty
@@ -163,7 +160,6 @@ function quantityOf(v: unknown): Quantity | null {
   return v.unit === 'count' || v.unit === 'gram' ? { amount: v.amount, unit: v.unit } : null;
 }
 
-/** A v3 recipe. */
 function recipeV3(raw: Json): ExportedRecipe | null {
   const name = tidy(text(raw.name));
   if (!name) return null;
@@ -179,8 +175,7 @@ function recipeV3(raw: Json): ExportedRecipe | null {
   };
 }
 
-/** A v1 or v2 recipe, which belonged to one user. Only saved ones were ever shown, as the server migration keeps. */
-function recipeV2(raw: Json): ExportedRecipe | null {
+function recipeLegacy(raw: Json): ExportedRecipe | null {
   const name = tidy(text(raw.name));
   if (!name || raw.saved !== true || raw.deleted_at) return null;
   return {
@@ -195,7 +190,7 @@ export function parseImport(data: unknown): ImportPayload | null {
   if (!isObj(data) || !Array.isArray(data.items) || !Array.isArray(data.recipes)) return null;
   const draft = data.version === 3 || data.version === 2 ? draftV2 : data.version === 1 ? draftV1 : null;
   if (!draft) return null;
-  const recipe = data.version === 3 ? recipeV3 : recipeV2;
+  const recipe = data.version === 3 ? recipeV3 : recipeLegacy;
   const parsed = <T>(rows: unknown[], parse: (raw: Json) => T | null): T[] =>
     rows.flatMap((raw) => {
       const row = isObj(raw) ? parse(raw) : null;
@@ -219,21 +214,12 @@ export interface ImportPlan {
 
 export interface ImportContext {
   household: HouseholdId;
-  /** Stamped onto every imported recipe as `updated_at`. */
   now: Instant;
   /** The household's items as the device shows them. */
   items: readonly Item[];
-  /** The household's live recipes as the device shows them. */
   recipes: readonly LiveRecipe[];
 }
 
-/**
- * Decides what an import adds. Additive only: an item whose name or alias matches a
- * live item already here is skipped, as is a recipe whose name matches a live recipe,
- * so a double import is harmless and a stale export never rolls back newer data.
- * Each new recipe gets a new id, so a recipe exported from another household never
- * collides with that household's copy on the server.
- */
 export function planImport(payload: ImportPayload, ctx: ImportContext): ImportPlan {
   const known = new Set(ctx.items.filter(isLive).flatMap((i) => [i.name, ...i.aliases].map(normName)));
   const items = payload.items.filter((d) => {
@@ -286,7 +272,6 @@ export async function importContext(target: FooderinoDb = db): Promise<ImportCon
   };
 }
 
-/** Queues imported recipes for the push; items go through `createItem`, one `create` command each. */
 export async function addImportedRecipes(recipes: readonly PendingSheet<'recipes'>[], target: FooderinoDb = db): Promise<void> {
   await target.edits.bulkPut([...recipes]);
 }

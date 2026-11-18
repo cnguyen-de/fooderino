@@ -75,6 +75,9 @@ export interface PantryOps {
   undoCommands(ids: readonly CommandId[]): Promise<UndoHandle | null>;
 }
 
+/** The tables every pantry op writes in one transaction. A caller that nests an op lists these too. */
+export const pantryTables = (db: FooderinoDb) => [db.items, db.bag, db.log, db.commands, db.edits, db.syncState];
+
 export interface PantryOpsOptions {
   db: FooderinoDb;
   /** Called after every write that queued something, to wake the sync engine. */
@@ -92,7 +95,6 @@ interface Ctx {
   state: Snapshot;
   household: HouseholdId;
   at: Instant;
-  /** Every `updated_at` the server or the outbox already holds for each item. */
   stamps: ReadonlyMap<ItemId, readonly Instant[]>;
 }
 
@@ -124,7 +126,6 @@ function itemSheet(ctx: Ctx, sheet: ItemSheet): PendingSheet<'items'> {
   return { store: 'items', ...sheet, updated_at: stampAbove(ctx.at, ...(ctx.stamps.get(sheet.id) ?? [])) };
 }
 
-/** The item a command's undo touches, read from its inverse; undefined once it cannot be undone. */
 function undoTarget(state: Snapshot, id: CommandId): ItemId | undefined {
   const inverse = state.log.get(id);
   if (!inverse) return undefined;
@@ -148,7 +149,7 @@ export function createPantryOps({
    */
   async function execute(plan: (ctx: Ctx) => Plan | null): Promise<{ handle: UndoHandle | null; queued: number }> {
     const notices: RejectionNotice[] = [];
-    const outcome = await db.transaction('rw', [db.items, db.bag, db.log, db.commands, db.edits, db.syncState], async () => {
+    const outcome = await db.transaction('rw', pantryTables(db), async () => {
       const rows = await readDeviceRows(db, { events: false });
       const household = rows.household_id;
       if (!household) throw new Error('This device holds no household yet');
