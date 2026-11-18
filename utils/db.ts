@@ -9,8 +9,8 @@ import type {
 } from '~~/types/pantry';
 import type {
   ItemRecord,
-  PendingEdit,
   PendingOp,
+  PendingSheet,
   QueuedCommand,
   RecipeRecord,
   SyncStateRow
@@ -30,7 +30,8 @@ export type FooderinoDb = Dexie & {
   /** Confirmed `command_log` rows: receipts for replay, and the inverses undo applies. */
   log: EntityTable<CommandLogRow, 'command_id'>;
   commands: EntityTable<QueuedCommand, 'id'>;
-  edits: EntityTable<PendingEdit, 'id'>;
+  /** Sheet ids are random uuids, so one key space holds every store's sheets. */
+  edits: EntityTable<PendingSheet, 'id'>;
   recipes: EntityTable<RecipeRecord, 'id'>;
   syncState: EntityTable<SyncStateRow, 'key'>;
 };
@@ -60,6 +61,16 @@ async function upgradeToV3(tx: Transaction): Promise<void> {
     };
     await tx.table('syncState').put(next);
   }
+}
+
+/** Before v4 the outbox held only item sheets. */
+async function upgradeToV4(tx: Transaction): Promise<void> {
+  await tx
+    .table('edits')
+    .toCollection()
+    .modify((e: Partial<PendingSheet>) => {
+      e.store ??= 'items';
+    });
 }
 
 export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
@@ -95,6 +106,8 @@ export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
       edits: 'id'
     })
     .upgrade(upgradeToV3);
+
+  db.version(4).stores({ edits: 'id, store' }).upgrade(upgradeToV4);
 
   return db;
 }

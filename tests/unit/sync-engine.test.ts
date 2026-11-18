@@ -240,7 +240,7 @@ describe('metadata edits', () => {
 
     await device.engine.sync('full');
 
-    expect(transport.calls.filter((c) => c.startsWith('apply') || c.startsWith('push'))).toEqual(['apply:1', 'push:1']);
+    expect(transport.calls.filter((c) => c.startsWith('apply') || c.startsWith('push'))).toEqual(['apply:1', 'push:items:1']);
     expect(server.items.get(id)).toMatchObject({ name: 'Oat milk', tags: [{ kind: 'place', name: 'Fridge' }] });
     expect(await device.db.edits.count()).toBe(0);
     expect(await device.item(id)).toMatchObject({ name: 'Oat milk' });
@@ -278,7 +278,7 @@ describe('metadata edits', () => {
     };
     await device.db.commands.add(create);
     await device.db.edits.put({
-      id, household_id: HOUSEHOLD, name: 'Ghost', aliases: [], tags: [], unit: 'count', default_amount: 1,
+      store: 'items', id, household_id: HOUSEHOLD, name: 'Ghost', aliases: [], tags: [], unit: 'count', default_amount: 1,
       shelf_life_days: null, deleted_at: null, updated_at: '2026-11-05T00:00:01.000Z' as Instant
     });
 

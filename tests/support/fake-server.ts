@@ -14,9 +14,10 @@ import type {
   RejectionReason,
   Snapshot
 } from '~~/types/pantry';
-import type { HouseholdRows, HouseholdStore, PendingEdit, PulledRecipe, RecipeRecord } from '~~/types/sync';
+import type { HouseholdRows, HouseholdStore, PendingSheet, PulledRecipe, RecipeRecord } from '~~/types/sync';
 import { applyCommand } from '~~/utils/pantry';
 import { TransportRefused, type SyncTransport } from '~~/utils/sync-engine';
+import type { SheetTableDef } from '~~/utils/sync-registry';
 import type { ApplyResponse, CommandResult } from '~~/utils/sync-wire';
 
 export const HOUSEHOLD = '00000000-0000-4000-8000-000000000001' as HouseholdId;
@@ -43,6 +44,7 @@ export class FakeServer {
   membership = new Map<string, HouseholdId | null>();
   batches: Command[][] = [];
   private faults: Fault[] = [];
+  private pushFaults = 0;
 
   constructor() {
     this.household = {
@@ -62,6 +64,11 @@ export class FakeServer {
   /** The next apply call throws, before applying or after committing (a lost response). */
   failNextApply(fault: Fault): void {
     this.faults.push(fault);
+  }
+
+  /** The next sheet push throws a network error before it reaches the table. */
+  failNextPush(): void {
+    this.pushFaults++;
   }
 
   snapshot(): Snapshot {
@@ -150,12 +157,14 @@ export class FakeServer {
     return all[store] as HouseholdRows[S][];
   }
 
-  /** A metadata upsert: dropped when older than the stored row, as `stamp_lww` does. */
-  pushSheet(sheet: PendingEdit): ItemRow | null {
-    const row = this.items.get(sheet.id);
+  /** A sheet upsert of only the granted columns: dropped when older than the stored row, as `stamp_lww` does. */
+  pushSheet(def: SheetTableDef, sheet: PendingSheet): HouseholdRows[typeof def.store] | null {
+    const wire = Object.fromEntries(def.sheet.columns.map((c) => [c, sheet[c]]));
+    const row = this.items.get(sheet.id as ItemId);
+    // Items are born by their create command, so an upsert may only land on an existing row.
     if (!row || row.household_id !== sheet.household_id) throw new TransportRefused('new row violates row-level security');
     if (Date.parse(sheet.updated_at) < Date.parse(row.updated_at)) return null;
-    const next: ItemRow = { ...row, ...sheet, seq: this.tick() };
+    const next = { ...row, ...wire, seq: this.tick() } as ItemRow;
     this.items.set(row.id, next);
     return next;
   }
@@ -183,10 +192,14 @@ export class FakeServer {
           scoped.filter((r) => r.seq > afterSeq).sort((a, b) => a.seq - b.seq).slice(0, limit)
         ) as typeof scoped;
       },
-      pushItemSheets: async (sheets) => {
-        calls.push(`push:${sheets.length}`);
-        const landed = sheets.map((s) => this.pushSheet(s));
-        return structuredClone(landed.filter((r): r is ItemRow => r !== null));
+      pushSheets: async (def, sheets) => {
+        calls.push(`push:${def.store}:${sheets.length}`);
+        if (this.pushFaults > 0) {
+          this.pushFaults--;
+          throw new Error('network down');
+        }
+        const landed = sheets.map((s) => this.pushSheet(def, s));
+        return structuredClone(landed.filter((r) => r !== null)) as never;
       },
       myHousehold: async () => this.membership.get(actor) ?? HOUSEHOLD,
       pullRecipes: async (after, limit) => {

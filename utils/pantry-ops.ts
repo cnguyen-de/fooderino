@@ -15,10 +15,11 @@ import type {
   Tag,
   Unit
 } from '~~/types/pantry';
-import type { PendingEdit, QueuedCommand, RejectionNotice } from '~~/types/sync';
+import type { PendingSheet, QueuedCommand, RejectionNotice } from '~~/types/sync';
 import type { FooderinoDb } from '~~/utils/db';
 import { applyCommand, newId, normalizeAliases, normalizeTags, resolveItem } from '~~/utils/pantry';
 import { projectPantry, readDeviceRows } from '~~/utils/pantry-projection';
+import { stampAbove } from '~~/utils/sheets';
 
 /** What `undo` needs to reverse one gesture. Opaque to the UI. */
 export interface UndoHandle {
@@ -89,13 +90,13 @@ interface Ctx {
   state: Snapshot;
   household: HouseholdId;
   at: Instant;
-  /** The newest `updated_at` the server or the outbox already holds for each item. */
-  stamps: ReadonlyMap<ItemId, number>;
+  /** Every `updated_at` the server or the outbox already holds for each item. */
+  stamps: ReadonlyMap<ItemId, readonly Instant[]>;
 }
 
 interface Plan {
   commands: Command[];
-  sheet?: PendingEdit;
+  sheet?: PendingSheet<'items'>;
   /** The sheet an undo of this gesture restores. */
   restore?: ItemSheet;
 }
@@ -117,10 +118,8 @@ function validSheet(s: ItemSheet): boolean {
   );
 }
 
-/** A sheet must outrank what the server holds, even when this device's clock runs behind. */
-function stampFor(ctx: Ctx, id: ItemId): Instant {
-  const floor = (ctx.stamps.get(id) ?? 0) + 1;
-  return new Date(Math.max(Date.parse(ctx.at), floor)).toISOString() as Instant;
+function itemSheet(ctx: Ctx, sheet: ItemSheet): PendingSheet<'items'> {
+  return { store: 'items', ...sheet, updated_at: stampAbove(ctx.at, ...(ctx.stamps.get(sheet.id) ?? [])) };
 }
 
 function defaultQty(item: Item): number {
@@ -145,8 +144,8 @@ export function createPantryOps({
       const household = rows.household_id;
       if (!household) throw new Error('This device holds no household yet');
 
-      const stamps = new Map<ItemId, number>();
-      const stamp = (id: ItemId, at: string) => stamps.set(id, Math.max(stamps.get(id) ?? 0, Date.parse(at)));
+      const stamps = new Map<ItemId, Instant[]>();
+      const stamp = (id: ItemId, at: Instant) => stamps.set(id, [...(stamps.get(id) ?? []), at]);
       for (const row of rows.items) stamp(row.id, row.updated_at);
       for (const edit of rows.edits) stamp(edit.id, edit.updated_at);
       for (const c of rows.commands) if (c.kind === 'create') stamp(c.item_id, c.at);
@@ -204,7 +203,7 @@ export function createPantryOps({
     const before = sheetOf(item);
     const after = { ...before, ...patch };
     if (same(before, after)) return {};
-    return { sheet: { ...after, updated_at: stampFor(ctx, item.id) }, restore: before };
+    return { sheet: itemSheet(ctx, after), restore: before };
   }
 
   const one = (command: (ctx: Ctx) => Command | null) =>
@@ -335,8 +334,7 @@ export function createPantryOps({
         if (!handle.sheet) return { commands };
         const current = ctx.state.items.get(handle.sheet.id);
         if (!current) return { commands };
-        const sheet: PendingEdit = { ...handle.sheet, updated_at: stampFor(ctx, current.id) };
-        return { commands, sheet };
+        return { commands, sheet: itemSheet(ctx, handle.sheet) };
       })
   };
 }

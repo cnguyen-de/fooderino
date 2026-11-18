@@ -51,6 +51,26 @@ function openV2(name: string) {
   return v2;
 }
 
+/** Opens a database at schema v3 exactly as the household client before Cook declared it. */
+function openV3(name: string) {
+  const v3 = openV2(name);
+  v3.version(3).stores({
+    lists: null,
+    list_members: null,
+    logs: null,
+    pendingOps: null,
+    households: 'id',
+    members: 'id, user_id',
+    items: 'id, seq',
+    bag: 'id, item_id, seq',
+    events: 'id, item_id, occurred_at, seq',
+    log: 'command_id, seq',
+    commands: 'id, created_seq',
+    edits: 'id'
+  });
+  return v3;
+}
+
 const names: string[] = [];
 afterEach(async () => {
   for (const name of names.splice(0)) await Dexie.delete(name);
@@ -119,12 +139,33 @@ describe('Dexie v3 upgrade', () => {
     db.close();
   });
 
-  it('creates every v3 store on a fresh device', async () => {
+});
+
+describe('Dexie v4 upgrade', () => {
+  it('files every queued edit under the items store, so it still pushes', async () => {
+    const name = `upgrade-v4-${crypto.randomUUID()}`;
+    names.push(name);
+    const v3 = openV3(name);
+    const sheet = {
+      id: crypto.randomUUID(), household_id: LIST, name: 'Oat milk', aliases: [], tags: [], unit: 'count',
+      default_amount: 1, shelf_life_days: null, deleted_at: null, updated_at: '2026-11-01T00:00:00.000Z'
+    };
+    await v3.table('edits').add(sheet);
+    v3.close();
+
+    const db = openFooderinoDb(name);
+    await db.open();
+
+    expect(await db.edits.where('store').equals('items').toArray()).toEqual([{ ...sheet, store: 'items' }]);
+    db.close();
+  });
+
+  it('creates every store on a fresh device', async () => {
     const name = `fresh-${crypto.randomUUID()}`;
     names.push(name);
     const db = openFooderinoDb(name);
     await db.open();
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(4);
     expect(await db.commands.count()).toBe(0);
     db.close();
   });

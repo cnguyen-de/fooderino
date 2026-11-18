@@ -1,8 +1,8 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
-import { SERVER_OWNED_ITEM_FIELDS, type HouseholdId } from '~~/types/pantry';
-import type { PendingEdit, RecipeRecord } from '~~/types/sync';
+import type { HouseholdId } from '~~/types/pantry';
+import type { RecipeRecord } from '~~/types/sync';
 import { TransportRefused, type SyncTransport } from '~~/utils/sync-engine';
-import { parseApplyResponse, parseItem, parseRecipe } from '~~/utils/sync-wire';
+import { parseApplyResponse, parseRecipe } from '~~/utils/sync-wire';
 
 /** Statuses where PostgREST judged the request itself invalid: RLS, a constraint, a malformed value. */
 const REFUSED_STATUS = new Set([400, 403, 409, 422]);
@@ -10,13 +10,6 @@ const REFUSED_STATUS = new Set([400, 403, 409, 422]);
 function fail(context: string, error: PostgrestError, status: number): never {
   const message = `${context}: ${error.message}`;
   throw REFUSED_STATUS.has(status) ? new TransportRefused(message) : new Error(message);
-}
-
-/** Server-owned columns are not granted to clients, so a sheet carrying one would be refused whole. */
-const NOT_PUSHED = new Set<string>([...SERVER_OWNED_ITEM_FIELDS, 'seq', 'legacy_id']);
-
-function sheetRow(sheet: PendingEdit): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(sheet).filter(([key]) => !NOT_PUSHED.has(key)));
 }
 
 function recipeRow(r: RecipeRecord) {
@@ -66,12 +59,14 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
       return (data ?? []).map(table.parse);
     },
 
-    async pushItemSheets(sheets) {
+    async pushSheets(table, sheets) {
+      // Columns a client is not granted would get the whole upsert refused.
+      const rows = sheets.map((sheet) => Object.fromEntries(table.sheet.columns.map((c) => [c, sheet[c]])));
       const { data, error, status } = await request(
-        client.from('items_v2').upsert(sheets.map(sheetRow), { onConflict: 'id' }).select('*')
+        client.from(table.remote).upsert(rows, { onConflict: 'id' }).select('*')
       );
-      if (error) fail('push items_v2', error, status);
-      return (data ?? []).map(parseItem);
+      if (error) fail(`push ${table.remote}`, error, status);
+      return (data ?? []).map(table.parse);
     },
 
     async myHousehold() {

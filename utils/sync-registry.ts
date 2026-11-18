@@ -1,4 +1,4 @@
-import type { HouseholdRows, HouseholdStore } from '~~/types/sync';
+import type { HouseholdRows, HouseholdStore, PendingSheet, SheetStore } from '~~/types/sync';
 import {
   parseBagEntry,
   parseCommandLog,
@@ -18,7 +18,16 @@ export interface HouseholdTableDef<S extends HouseholdStore = HouseholdStore> {
   /** The row's primary key, as the Dexie store keys it. */
   key: (row: HouseholdRows[S]) => string;
   parse: (raw: unknown) => HouseholdRows[S];
+  /** Set on the stores the client writes whole. */
+  sheet?: S extends SheetStore ? SheetDef<S> : never;
 }
+
+export interface SheetDef<S extends SheetStore> {
+  /** The columns a push sends. Mirrors the SQL column grants; every other column is server-owned. */
+  columns: readonly Exclude<keyof PendingSheet<S>, 'store'>[];
+}
+
+export type SheetTableDef<S extends SheetStore = SheetStore> = HouseholdTableDef<S> & { sheet: SheetDef<S> };
 
 function def<S extends HouseholdStore>(d: HouseholdTableDef<S>): HouseholdTableDef<S> {
   return d;
@@ -32,13 +41,25 @@ function def<S extends HouseholdStore>(d: HouseholdTableDef<S>): HouseholdTableD
 export const HOUSEHOLD_TABLES = [
   def({ store: 'households', remote: 'households', scope: 'id', key: (r) => r.id, parse: parseHousehold }),
   def({ store: 'members', remote: 'household_members', scope: 'household_id', key: (r) => r.id, parse: parseMember }),
-  def({ store: 'items', remote: 'items_v2', scope: 'household_id', key: (r) => r.id, parse: parseItem }),
+  def({
+    store: 'items',
+    remote: 'items_v2',
+    scope: 'household_id',
+    key: (r) => r.id,
+    parse: parseItem,
+    sheet: {
+      columns: ['id', 'household_id', 'name', 'aliases', 'tags', 'unit', 'default_amount', 'shelf_life_days', 'updated_at', 'deleted_at']
+    }
+  }),
   def({ store: 'bag', remote: 'bag_entries', scope: 'household_id', key: (r) => r.id, parse: parseBagEntry }),
   def({ store: 'events', remote: 'item_events', scope: 'household_id', key: (r) => r.id, parse: parseEvent }),
   def({ store: 'log', remote: 'command_log', scope: 'household_id', key: (r) => r.command_id, parse: parseCommandLog })
 ] as const;
 
 export const HOUSEHOLD_STORES: readonly HouseholdStore[] = HOUSEHOLD_TABLES.map((d) => d.store);
+
+/** Push order is registry order, so a row lands after the rows it references. */
+export const SHEET_TABLES = HOUSEHOLD_TABLES.filter((d) => d.sheet !== undefined) as readonly SheetTableDef[];
 
 export const PAGE_SIZE = 1000;
 export const COMMAND_BATCH = 50;

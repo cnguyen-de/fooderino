@@ -6,7 +6,7 @@ import type { QueuedCommand } from '~~/types/sync';
 import { createSupabaseTransport } from '~/utils/supabase-transport';
 import { runMove } from '~~/utils/household-move';
 import { createPantryOps } from '~~/utils/pantry-ops';
-import { HOUSEHOLD_TABLES } from '~~/utils/sync-registry';
+import { HOUSEHOLD_TABLES, SHEET_TABLES } from '~~/utils/sync-registry';
 import { TransportRefused } from '~~/utils/sync-engine';
 import { makeDevice, project, type Device } from '../support/device';
 
@@ -250,7 +250,8 @@ describe('two devices through PostgREST, RLS and Realtime', () => {
 
     const milk = await byName(A, 'Milk (Bob)');
     const sheet = { ...milk, name: 'Hijacked', updated_at: new Date(Date.now() + 3600_000).toISOString() };
-    await expect(outsider.pushItemSheets([sheet as never])).rejects.toBeInstanceOf(TransportRefused);
+    const itemSheets = SHEET_TABLES.find((d) => d.store === 'items')!;
+    await expect(outsider.pushSheets(itemSheets, [sheet as never])).rejects.toBeInstanceOf(TransportRefused);
 
     const id = crypto.randomUUID() as CommandId;
     const response = await outsider.applyCommands([

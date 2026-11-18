@@ -1,13 +1,14 @@
-import type { Command, CommandId, HouseholdId, Instant, ItemRow } from '~~/types/pantry';
+import type { Command, CommandId, HouseholdId, Instant } from '~~/types/pantry';
 import type {
   HouseholdRows,
   HouseholdStore,
-  PendingEdit,
+  PendingSheet,
   PulledRecipe,
   QueuedCommand,
   RecipeCursor,
   RecipeRecord,
   RejectionNotice,
+  SheetStore,
   SyncStateRow
 } from '~~/types/sync';
 import type { FooderinoDb } from '~~/utils/db';
@@ -17,8 +18,11 @@ import {
   HOUSEHOLD_STORES,
   HOUSEHOLD_TABLES,
   PAGE_SIZE,
-  type HouseholdTableDef
+  SHEET_TABLES,
+  type HouseholdTableDef,
+  type SheetTableDef
 } from '~~/utils/sync-registry';
+import { sheetPending } from '~~/utils/sheets';
 import { getSyncState } from '~~/utils/sync-state';
 import { remoteWins } from '~~/utils/sync-merge';
 import type { ApplyResponse, CommandResult } from '~~/utils/sync-wire';
@@ -36,8 +40,11 @@ export interface SyncTransport {
     afterSeq: number,
     limit: number
   ): Promise<HouseholdRows[S][]>;
-  /** Resolves with the rows that landed. A sheet older than the stored row is dropped by the server. */
-  pushItemSheets(sheets: readonly PendingEdit[]): Promise<ItemRow[]>;
+  /**
+   * Upserts whole sheets into `table.remote`, sending only `table.sheet.columns`, and resolves
+   * with the rows that landed. A sheet older than the stored row is dropped by the server.
+   */
+  pushSheets<S extends SheetStore>(table: SheetTableDef<S>, sheets: readonly PendingSheet<S>[]): Promise<HouseholdRows[S][]>;
   /** The household this user is a live member of, or null. */
   myHousehold(): Promise<HouseholdId | null>;
   pullRecipes(after: RecipeCursor | null, limit: number): Promise<PulledRecipe[]>;
@@ -157,25 +164,32 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
     return { landed, refused };
   }
 
-  /** Metadata goes after commands: an item exists on the server only once its `create` landed. */
+  /**
+   * Sheets go after commands, since an item exists on the server only once its `create` landed.
+   * Stores go in registry order and a transport error stops the walk, so a row never lands
+   * ahead of an unpushed row it references.
+   */
   async function pushEdits(): Promise<void> {
     const [edits, commands] = await db.transaction('r', db.edits, db.commands, () =>
       Promise.all([db.edits.toArray(), db.commands.toArray()])
     );
-    const unborn = new Set(commands.filter((c) => c.kind === 'create').map((c) => c.item_id));
-    const ready = edits.filter((e) => !unborn.has(e.id));
-    if (ready.length === 0) return;
+    const unborn = new Set<string>(commands.filter((c) => c.kind === 'create').map((c) => c.item_id));
 
-    const { landed, refused } = await pushEach(ready, (rows) => transport.pushItemSheets(rows));
-    if (refused.length > 0) console.warn(`[sync] the server refused ${refused.length} item edit(s); dropped them`);
+    for (const def of SHEET_TABLES) {
+      const ready = edits.filter((e) => e.store === def.store && !unborn.has(e.id));
+      if (ready.length === 0) continue;
 
-    await db.transaction('rw', db.items, db.edits, async () => {
-      await putNewer(tableDef('items'), landed);
-      // An edit saved again while this push was in flight stays queued.
-      for (const sent of ready) {
-        if ((await db.edits.get(sent.id))?.updated_at === sent.updated_at) await db.edits.delete(sent.id);
-      }
-    });
+      const { landed, refused } = await pushEach(ready, (rows) => transport.pushSheets(def, rows));
+      if (refused.length > 0) console.warn(`[sync] the server refused ${refused.length} ${def.store} sheet(s); dropped them`);
+
+      await db.transaction('rw', db.table(def.store), db.edits, async () => {
+        await putNewer(def, landed);
+        // A sheet saved again while this push was in flight stays queued.
+        for (const sent of ready) {
+          if ((await db.edits.get(sent.id))?.updated_at === sent.updated_at) await db.edits.delete(sent.id);
+        }
+      });
+    }
   }
 
   async function pullHousehold(): Promise<void> {
@@ -208,13 +222,15 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
         await putNewer(def as HouseholdTableDef, rows as HouseholdRows[HouseholdStore][]);
         for (const row of rows) next[def.store] = Math.max(next[def.store] ?? 0, row.seq);
       }
-      const items = fetched.get('items') as ItemRow[];
-      const edits = await db.edits.bulkGet(items.map((i) => i.id));
-      const settled = items.filter((row, i) => {
-        const edit = edits[i];
-        return edit && Date.parse(row.updated_at) >= Date.parse(edit.updated_at);
-      });
-      await db.edits.bulkDelete(settled.map((row) => row.id));
+      for (const def of SHEET_TABLES) {
+        const rows = fetched.get(def.store) as unknown as Pick<PendingSheet, 'id' | 'updated_at'>[];
+        const edits = await db.edits.bulkGet(rows.map((r) => r.id));
+        const settled = rows.filter((row, i) => {
+          const edit = edits[i];
+          return edit?.store === def.store && !sheetPending(edit, row);
+        });
+        await db.edits.bulkDelete(settled.map((row) => row.id));
+      }
       await db.syncState.put({ ...state, cursors: next, hydrated_at: state.hydrated_at ?? nowInstant() });
     });
   }

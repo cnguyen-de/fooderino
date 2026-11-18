@@ -13,9 +13,10 @@ import type {
   Rejection,
   Snapshot
 } from '~~/types/pantry';
-import type { PendingEdit, QueuedCommand } from '~~/types/sync';
+import type { PendingSheet, QueuedCommand } from '~~/types/sync';
 import type { FooderinoDb } from '~~/utils/db';
 import { replayPending } from '~~/utils/pantry';
+import { pendingSheets, sheetPending } from '~~/utils/sheets';
 import { readSyncState } from '~~/utils/sync-state';
 
 /** One consistent read of the device: confirmed household state and both outboxes. */
@@ -26,7 +27,7 @@ export interface DeviceRows {
   bag: readonly BagEntryRow[];
   log: readonly CommandLogRow[];
   commands: readonly QueuedCommand[];
-  edits: readonly PendingEdit[];
+  edits: readonly PendingSheet<'items'>[];
   /** Ops leave this out: they need state, not history. */
   events?: readonly ItemEventRow[];
 }
@@ -40,14 +41,15 @@ export interface Projection {
   rejected: Rejection[];
 }
 
-/** An edit applies until the server holds a sheet at least as new: by then it either landed or lost. */
-function overlayEdits(items: Map<ItemId, Item>, edits: readonly PendingEdit[], confirmed: ReadonlyMap<ItemId, ItemRow>) {
-  for (const { updated_at, ...sheet } of edits) {
+function overlayEdits(
+  items: Map<ItemId, Item>,
+  edits: readonly PendingSheet<'items'>[],
+  confirmed: ReadonlyMap<ItemId, ItemRow>
+) {
+  for (const { store: _, updated_at, ...sheet } of edits) {
     const item = items.get(sheet.id);
-    const row = confirmed.get(sheet.id);
     if (!item || item.household_id !== sheet.household_id) continue;
-    if (row && Date.parse(row.updated_at) >= Date.parse(updated_at)) continue;
-    items.set(sheet.id, { ...item, ...sheet });
+    if (sheetPending({ updated_at }, confirmed.get(sheet.id))) items.set(sheet.id, { ...item, ...sheet });
   }
 }
 
@@ -87,7 +89,7 @@ export function readDeviceRows(db: FooderinoDb, { events }: { events: boolean })
       db.bag.toArray(),
       db.log.toArray(),
       db.commands.orderBy('created_seq').toArray(),
-      db.edits.toArray(),
+      pendingSheets(db, 'items'),
       events ? db.events.toArray() : undefined
     ]);
     return {

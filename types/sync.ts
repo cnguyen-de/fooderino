@@ -49,8 +49,16 @@ export interface RecipeCursor {
 /** A command waiting in the outbox. The drain sends commands in `created_seq` order. */
 export type QueuedCommand = Command & { created_seq: number };
 
-/** A metadata write waiting to be pushed: the whole LWW sheet, stamped when the user saved it. */
-export type PendingEdit = ItemSheet & { updated_at: Instant };
+/** The stores the client writes whole, last-write-wins, and the sheet each one takes. */
+export interface SheetRows {
+  items: ItemSheet;
+}
+export type SheetStore = keyof SheetRows;
+
+/** A whole sheet waiting in the `edits` outbox, stamped when the user saved it. */
+export type PendingSheet<S extends SheetStore = SheetStore> = {
+  [K in S]: SheetRows[K] & { store: K; updated_at: Instant };
+}[S];
 
 /** The Dexie stores that hold confirmed household state, each pulled from one server table. */
 export interface HouseholdRows {
