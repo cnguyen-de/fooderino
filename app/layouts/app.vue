@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import HouseholdGate from '~/components/pantry/HouseholdGate.vue';
 import PantryNotices from '~/components/pantry/PantryNotices.vue';
-import { BookOpen, History, House, Settings, ShoppingBasket } from 'lucide-vue-next';
+import { History, House, Settings, ShoppingBasket } from 'lucide-vue-next';
 const hydrated = useState<boolean>('sync-hydrated', () => false);
 const route = useRoute();
 const hasDock = computed(() => route.name === 'home' || route.name === 'shop');
@@ -49,14 +49,6 @@ onMounted(() => {
             :aria-current="route.path === '/logs' ? 'page' : undefined"
             ><History class="size-4" aria-hidden="true"
           /></NuxtLink>
-          <NuxtLink
-            to="/recipe"
-            aria-label="Recipes"
-            title="Recipes"
-            class="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary"
-            :aria-current="route.path.startsWith('/recipe') ? 'page' : undefined">
-            <BookOpen class="size-4" aria-hidden="true" />
-          </NuxtLink>
           <NuxtLink
             to="/settings"
             aria-label="Settings"
