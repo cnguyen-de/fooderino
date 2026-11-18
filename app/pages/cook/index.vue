@@ -34,7 +34,7 @@ function add(id: RecipeId) {
     <div class="space-y-4 p-3">
       <h1 class="text-xl font-semibold tracking-tight">What’s for dinner<span class="text-primary">?</span></h1>
       <p v-if="!ready" role="status">Loading…</p>
-      <div v-else-if="!recipes.length" class="space-y-3 rounded-xl border border-dashed p-5 text-center">
+      <div v-else-if="!recipes.length && !todayMeal.dishes.length" class="space-y-3 rounded-xl border border-dashed p-5 text-center">
         <p class="text-muted-foreground">
           Add the dishes and soups you cook. Cook then suggests what to make from what is at home, and keeps a history
           of your meals.
