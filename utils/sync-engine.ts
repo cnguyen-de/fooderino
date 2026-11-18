@@ -3,10 +3,7 @@ import type {
   HouseholdRows,
   HouseholdStore,
   PendingSheet,
-  PulledRecipe,
   QueuedCommand,
-  RecipeCursor,
-  RecipeRecord,
   RejectionNotice,
   SheetStore,
   SyncStateRow
@@ -24,7 +21,6 @@ import {
 } from '~~/utils/sync-registry';
 import { sheetPending } from '~~/utils/sheets';
 import { getSyncState } from '~~/utils/sync-state';
-import { remoteWins } from '~~/utils/sync-merge';
 import type { ApplyResponse, CommandResult } from '~~/utils/sync-wire';
 
 /**
@@ -47,8 +43,6 @@ export interface SyncTransport {
   pushSheets<S extends SheetStore>(table: SheetTableDef<S>, sheets: readonly PendingSheet<S>[]): Promise<HouseholdRows[S][]>;
   /** The household this user is a live member of, or null. */
   myHousehold(): Promise<HouseholdId | null>;
-  pullRecipes(after: RecipeCursor | null, limit: number): Promise<PulledRecipe[]>;
-  pushRecipes(rows: readonly RecipeRecord[]): Promise<void>;
 }
 
 /** The server refused the request itself. Sending it again unchanged cannot succeed. */
@@ -235,37 +229,6 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
     });
   }
 
-  async function pushRecipes(): Promise<void> {
-    const { pushed } = (await getSyncState(db)).recipes;
-    const dirty = (await db.recipes.toArray()).filter((r) => !pushed || r.updated_at > pushed);
-    if (dirty.length === 0) return;
-    const { refused } = await pushEach(dirty, async (rows) => {
-      await transport.pushRecipes(rows);
-      return rows;
-    });
-    if (refused.length > 0) console.warn(`[sync] the server refused ${refused.length} recipe(s); skipped them`);
-    const max = dirty.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), pushed ?? '');
-    await updateState((s) => ({ ...s, recipes: { ...s.recipes, pushed: max } }));
-  }
-
-  async function pullRecipes(): Promise<void> {
-    let after = (await getSyncState(db)).recipes.pulled;
-    for (;;) {
-      const page = await transport.pullRecipes(after, PAGE_SIZE);
-      if (page.length === 0) return;
-      const last = page[page.length - 1]!;
-      after = { synced_at: last.synced_at, id: last.id };
-      const cursor = after;
-      await db.transaction('rw', db.recipes, db.syncState, async () => {
-        for (const { synced_at: _, ...recipe } of page) {
-          if (remoteWins(await db.recipes.get(recipe.id), recipe)) await db.recipes.put(recipe);
-        }
-        await updateState((s) => ({ ...s, recipes: { ...s.recipes, pulled: cursor } }));
-      });
-      if (page.length < PAGE_SIZE) return;
-    }
-  }
-
   /** Every phase runs even when an earlier one failed; the first error is rethrown. */
   async function runOnce(mode: SyncMode): Promise<void> {
     const errors: unknown[] = [];
@@ -278,11 +241,7 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
     };
     await attempt(drain);
     await attempt(pushEdits);
-    await attempt(pushRecipes);
-    if (mode === 'full') {
-      await attempt(pullHousehold);
-      await attempt(pullRecipes);
-    }
+    if (mode === 'full') await attempt(pullHousehold);
     if (errors.length > 0) throw errors[0];
   }
 
@@ -337,7 +296,7 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
     flush: () => sync('push'),
     /** Compares the server's membership with the device's household, and resets on a change. */
     syncMembership: () => exclusive(checkMembership),
-    /** Wipes household data and cursors, keeping recipes. Drains first; refuses while commands remain. */
+    /** Wipes household data, recipes and meals included, and cursors. Drains first; refuses while commands remain. */
     resetHouseholdData: (next: HouseholdId | null) => exclusive(() => reset(next))
   };
 }

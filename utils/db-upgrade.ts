@@ -1,5 +1,7 @@
+import type { Ingredient, RecipeId } from '~~/types/cook';
 import type { Command, CommandId, HouseholdId, Instant, ItemId } from '~~/types/pantry';
-import type { ItemRecord, PendingOp } from '~~/types/sync';
+import type { ItemRecord, PendingOp, PendingSheet } from '~~/types/sync';
+import { tidy } from '~~/utils/pantry';
 
 export interface ConvertedOps {
   commands: Command[];
@@ -58,4 +60,59 @@ export function convertPendingOps(ops: readonly PendingOp[], items: readonly Ite
 
   out.sort((a, b) => a.at.localeCompare(b.at));
   return { commands: out.map((o) => o.command), discarded };
+}
+
+/** A per-user recipe as Dexie v1 to v3 stored it. */
+export interface LegacyRecipe {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  ingredients: unknown;
+  instructions: string | null;
+  saved: boolean;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+/**
+ * Legacy `{name, amount?, amount_type}` entries to ingredients with no item link. Mirrors
+ * private.legacy_ingredients in supabase/cook.sql; tests/fixtures/legacy-ingredients.json pins both.
+ */
+export function legacyIngredients(raw: unknown): Ingredient[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((entry): Ingredient[] => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return [];
+    const { name, amount, amount_type } = entry as Record<string, unknown>;
+    if (typeof name !== 'string' || tidy(name) === '') return [];
+    const measured = typeof amount === 'number' && Number.isFinite(amount) && amount > 0;
+    const qty = measured
+      ? {
+          amount: amount_type === 'kg' ? amount * 1000 : amount,
+          unit: amount_type === 'gram' || amount_type === 'kg' ? ('gram' as const) : ('count' as const)
+        }
+      : null;
+    return [{ name: tidy(name), item_id: null, qty }];
+  });
+}
+
+/** A saved or deleted legacy recipe as a household recipe sheet, as private.adopt_recipes_v2 moves one. */
+export function legacyRecipeSheet(r: LegacyRecipe, household: HouseholdId): PendingSheet<'recipes'> | null {
+  const name = typeof r.name === 'string' ? tidy(r.name) : '';
+  const updated_at = typeof r.updated_at === 'string' ? instantOf(r.updated_at) : null;
+  if (!(r.saved || r.deleted_at) || !name || !updated_at) return null;
+  return {
+    store: 'recipes',
+    id: r.id as RecipeId,
+    household_id: household,
+    name,
+    kind: 'dish',
+    ingredients: legacyIngredients(r.ingredients),
+    instructions: [r.description, r.instructions]
+      .map((t) => (typeof t === 'string' ? t.trim() : ''))
+      .filter(Boolean)
+      .join('\n\n'),
+    deleted_at: r.deleted_at ? instantOf(r.deleted_at) : null,
+    updated_at
+  };
 }

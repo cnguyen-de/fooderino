@@ -1,8 +1,7 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { HouseholdId } from '~~/types/pantry';
-import type { RecipeRecord } from '~~/types/sync';
 import { TransportRefused, type SyncTransport } from '~~/utils/sync-engine';
-import { parseApplyResponse, parseRecipe } from '~~/utils/sync-wire';
+import { parseApplyResponse } from '~~/utils/sync-wire';
 
 /** Statuses where PostgREST judged the request itself invalid: RLS, a constraint, a malformed value. */
 const REFUSED_STATUS = new Set([400, 403, 409, 422]);
@@ -10,11 +9,6 @@ const REFUSED_STATUS = new Set([400, 403, 409, 422]);
 function fail(context: string, error: PostgrestError, status: number): never {
   const message = `${context}: ${error.message}`;
   throw REFUSED_STATUS.has(status) ? new TransportRefused(message) : new Error(message);
-}
-
-function recipeRow(r: RecipeRecord) {
-  const { id, user_id, name, description, ingredients, instructions, saved, updated_at, deleted_at } = r;
-  return { id, user_id, name, description, ingredients, instructions, saved, updated_at, deleted_at };
 }
 
 // The SDK can wait for an auth lock before reaching fetch. Bound that wait too,
@@ -73,29 +67,6 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
       const { data, error, status } = await request(client.rpc('my_household'));
       if (error) fail('my_household', error, status);
       return data ? (String(data) as HouseholdId) : null;
-    },
-
-    async pullRecipes(after, limit) {
-      let query = client
-        .from('recipes_v2')
-        .select('*')
-        .order('synced_at', { ascending: true })
-        .order('id', { ascending: true })
-        .limit(limit);
-      if (after) {
-        const at = `"${after.synced_at}"`;
-        query = query.or(`synced_at.gt.${at},and(synced_at.eq.${at},id.gt.${after.id})`);
-      }
-      const { data, error, status } = await request(query);
-      if (error) fail('pull recipes_v2', error, status);
-      return (data ?? []).map(parseRecipe);
-    },
-
-    async pushRecipes(rows) {
-      const { error, status } = await request(
-        client.from('recipes_v2').upsert(rows.map(recipeRow), { onConflict: 'id' })
-      );
-      if (error) fail('push recipes_v2', error, status);
     }
   };
 }

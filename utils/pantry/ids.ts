@@ -1,6 +1,7 @@
+import type { CookedId, RecipeId } from '~~/types/cook';
 import type { BagId, CommandId, EventId, HouseholdId, ItemId, Tag } from '~~/types/pantry';
 
-export function newId<T extends ItemId | HouseholdId | BagId | CommandId | EventId>(): T {
+export function newId<T extends ItemId | HouseholdId | BagId | CommandId | EventId | RecipeId | CookedId>(): T {
   return crypto.randomUUID() as T;
 }
 
@@ -9,7 +10,8 @@ export function normName(s: string): string {
   return s.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-function tidy(s: string): string {
+/** The stored form of a name: trimmed, inner spacing collapsed. Mirrors private.tidy. */
+export function tidy(s: string): string {
   return s.trim().replace(/\s+/g, ' ');
 }
 

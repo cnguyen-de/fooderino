@@ -14,7 +14,8 @@ import type {
   RejectionReason,
   Snapshot
 } from '~~/types/pantry';
-import type { HouseholdRows, HouseholdStore, PendingSheet, PulledRecipe, RecipeRecord } from '~~/types/sync';
+import type { CookedId, CookedRow, RecipeId, RecipeRow } from '~~/types/cook';
+import type { HouseholdRows, HouseholdStore, PendingSheet } from '~~/types/sync';
 import { applyCommand } from '~~/utils/pantry';
 import { TransportRefused, type SyncTransport } from '~~/utils/sync-engine';
 import type { SheetTableDef } from '~~/utils/sync-registry';
@@ -39,7 +40,8 @@ export class FakeServer {
   events = new Map<string, ItemEventRow>();
   log = new Map<CommandId, CommandLogRow>();
   rejected = new Map<CommandId, RejectionReason>();
-  recipes = new Map<string, PulledRecipe>();
+  recipes = new Map<RecipeId, RecipeRow>();
+  cooked = new Map<CookedId, CookedRow>();
   /** Each actor's live household. */
   membership = new Map<string, HouseholdId | null>();
   batches: Command[][] = [];
@@ -150,6 +152,8 @@ export class FakeServer {
       households: [this.household],
       members: [...this.members.values()],
       items: [...this.items.values()],
+      recipes: [...this.recipes.values()],
+      cooked: [...this.cooked.values()],
       bag: [...this.bag.values()],
       events: [...this.events.values()],
       log: [...this.log.values()]
@@ -157,15 +161,26 @@ export class FakeServer {
     return all[store] as HouseholdRows[S][];
   }
 
-  /** A sheet upsert of only the granted columns: dropped when older than the stored row, as `stamp_lww` does. */
-  pushSheet(def: SheetTableDef, sheet: PendingSheet): HouseholdRows[typeof def.store] | null {
-    const wire = Object.fromEntries(def.sheet.columns.map((c) => [c, sheet[c]]));
-    const row = this.items.get(sheet.id as ItemId);
+  /**
+   * A sheet upsert of only the granted columns, refused where RLS or a foreign key would
+   * refuse it, and dropped when older than the stored row, as `stamp_lww` does.
+   */
+  pushSheet(actor: string, def: SheetTableDef, sheet: PendingSheet): HouseholdRows[typeof def.store] | null {
+    const wire = Object.fromEntries(def.sheet.columns.map((c) => [c, sheet[c]])) as unknown as { id: string; household_id: HouseholdId };
+    const table = { items: this.items, recipes: this.recipes, cooked: this.cooked }[def.store] as Map<string, HouseholdRows[typeof def.store]>;
+    const row = table.get(wire.id);
+    const household = this.membership.get(actor) ?? HOUSEHOLD;
+    if (wire.household_id !== household || (row && row.household_id !== household)) {
+      throw new TransportRefused('new row violates row-level security');
+    }
     // Items are born by their create command, so an upsert may only land on an existing row.
-    if (!row || row.household_id !== sheet.household_id) throw new TransportRefused('new row violates row-level security');
-    if (Date.parse(sheet.updated_at) < Date.parse(row.updated_at)) return null;
-    const next = { ...row, ...wire, seq: this.tick() } as ItemRow;
-    this.items.set(row.id, next);
+    if (def.store === 'items' && !row) throw new TransportRefused('new row violates row-level security');
+    if (sheet.store === 'cooked' && this.recipes.get(sheet.recipe_id)?.household_id !== sheet.household_id) {
+      throw new TransportRefused('insert or update on table "cooked_recipes" violates foreign key constraint');
+    }
+    if (row && Date.parse(sheet.updated_at) < Date.parse(row.updated_at)) return null;
+    const next = { ...row, ...wire, seq: this.tick() } as HouseholdRows[typeof def.store];
+    table.set(wire.id, next);
     return next;
   }
 
@@ -198,24 +213,10 @@ export class FakeServer {
           this.pushFaults--;
           throw new Error('network down');
         }
-        const landed = sheets.map((s) => this.pushSheet(def, s));
+        const landed = sheets.map((s) => this.pushSheet(actor, def as unknown as SheetTableDef, s as PendingSheet));
         return structuredClone(landed.filter((r) => r !== null)) as never;
       },
-      myHousehold: async () => this.membership.get(actor) ?? HOUSEHOLD,
-      pullRecipes: async (after, limit) => {
-        const all = [...this.recipes.values()].sort(
-          (a, b) => a.synced_at.localeCompare(b.synced_at) || a.id.localeCompare(b.id)
-        );
-        const later = all.filter(
-          (r) => !after || r.synced_at > after.synced_at || (r.synced_at === after.synced_at && r.id > after.id)
-        );
-        return structuredClone(later.slice(0, limit));
-      },
-      pushRecipes: async (rows: readonly RecipeRecord[]) => {
-        for (const r of rows) {
-          this.recipes.set(r.id, { ...r, synced_at: new Date(Date.now() + this.tick()).toISOString() });
-        }
-      }
+      myHousehold: async () => this.membership.get(actor) ?? HOUSEHOLD
     };
   }
 }

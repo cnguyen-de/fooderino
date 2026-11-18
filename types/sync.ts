@@ -14,6 +14,7 @@ import type {
   MemberRow,
   RejectionReason
 } from '~~/types/pantry';
+import type { CookedRow, CookedSheet, RecipeRow, RecipeSheet } from '~~/types/cook';
 
 /** Every LWW-synced record carries these three fields. */
 export interface SyncRecord {
@@ -22,36 +23,14 @@ export interface SyncRecord {
   deleted_at: string | null;
 }
 
-export interface RecipeIngredient {
-  name: string;
-  amount?: number;
-  amount_type: 'count' | 'gram';
-}
-
-export interface RecipeRecord extends SyncRecord {
-  user_id: string;
-  name: string;
-  description: string | null;
-  ingredients: RecipeIngredient[];
-  instructions: string | null;
-  saved: boolean;
-}
-
-/** A pulled recipe and its server-stamped pull position. */
-export type PulledRecipe = RecipeRecord & { synced_at: string };
-
-/** The recipes pull position: `synced_at` as the server wrote it (microseconds kept), then `id`. */
-export interface RecipeCursor {
-  synced_at: string;
-  id: string;
-}
-
 /** A command waiting in the outbox. The drain sends commands in `created_seq` order. */
 export type QueuedCommand = Command & { created_seq: number };
 
 /** The stores the client writes whole, last-write-wins, and the sheet each one takes. */
 export interface SheetRows {
   items: ItemSheet;
+  recipes: RecipeSheet;
+  cooked: CookedSheet;
 }
 export type SheetStore = keyof SheetRows;
 
@@ -65,6 +44,8 @@ export interface HouseholdRows {
   households: HouseholdRow;
   members: MemberRow;
   items: ItemRow;
+  recipes: RecipeRow;
+  cooked: CookedRow;
   bag: BagEntryRow;
   events: ItemEventRow;
   log: CommandLogRow;
@@ -82,7 +63,6 @@ export interface SyncStateRow {
   hydrated_at: Instant | null;
   /** The highest server `seq` pulled, per household store. */
   cursors: Partial<Record<HouseholdStore, number>>;
-  recipes: { pulled: RecipeCursor | null; pushed: string | null };
 }
 
 /** A command the server, or the local precheck, refused. The UI shows it as a toast. */

@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import type { CommandId, HouseholdId, Instant, ItemId, ItemRow } from '~~/types/pantry';
-import type { QueuedCommand } from '~~/types/sync';
+import { describe, expect, it, vi } from 'vitest';
+import type { CookedId, RecipeId } from '~~/types/cook';
+import type { CommandId, HouseholdId, Instant, ItemId, ItemRow, LocalDate } from '~~/types/pantry';
+import type { PendingSheet, QueuedCommand } from '~~/types/sync';
+import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 import { PendingCommandsError, type SyncTransport } from '~~/utils/sync-engine';
+import { HOUSEHOLD_STORES } from '~~/utils/sync-registry';
 import { getSyncState } from '~~/utils/sync-state';
 import { FakeServer, HOUSEHOLD, OTHER_HOUSEHOLD } from '../support/fake-server';
 import { makeDevice, project } from '../support/device';
@@ -25,6 +28,31 @@ async function seededItem(server: FakeServer, name = 'Milk', amount = 1): Promis
   expect(response.results[0]!.status).toBe('accepted');
   return id;
 }
+
+const recipeSheet = (over: Partial<PendingSheet<'recipes'>> = {}): PendingSheet<'recipes'> => ({
+  store: 'recipes',
+  id: crypto.randomUUID() as RecipeId,
+  household_id: HOUSEHOLD,
+  name: 'Canh chua',
+  kind: 'soup',
+  ingredients: [{ name: 'Tamarind', item_id: null, qty: { amount: 2, unit: 'count' } }],
+  instructions: 'Boil.',
+  deleted_at: null,
+  updated_at: '2026-11-18T10:00:00.000Z' as Instant,
+  ...over
+});
+
+const cookedSheet = (recipe: RecipeId, over: Partial<PendingSheet<'cooked'>> = {}): PendingSheet<'cooked'> => ({
+  store: 'cooked',
+  id: crypto.randomUUID() as CookedId,
+  household_id: HOUSEHOLD,
+  recipe_id: recipe,
+  date: '2026-11-18' as LocalDate,
+  uses: [crypto.randomUUID() as CommandId],
+  deleted_at: null,
+  updated_at: '2026-11-18T10:00:01.000Z' as Instant,
+  ...over
+});
 
 describe('drain', () => {
   it('sends the outbox in order, in batches of 50, and confirms what each batch touched', async () => {
@@ -162,26 +190,28 @@ describe('pull', () => {
 });
 
 describe('membership', () => {
-  it('wipes household data and cursors when the server moved the user, and keeps recipes', async () => {
+  it('wipes household data, recipes and meals included, when the server moved the user', async () => {
     const server = new FakeServer();
     const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
     await seededItem(server);
+    const soup = recipeSheet();
+    await device.db.edits.bulkPut([soup, cookedSheet(soup.id)]);
     await device.engine.sync('full');
-    await device.db.recipes.put({
-      id: crypto.randomUUID(), user_id: ALICE, name: 'Soup', description: null, ingredients: [], instructions: null,
-      saved: true, updated_at: '2026-11-01T00:00:00.000Z', deleted_at: null
-    });
-    expect(await device.db.items.count()).toBe(1);
+    expect([await device.db.items.count(), await device.db.recipes.count(), await device.db.cooked.count()]).toEqual([1, 1, 1]);
+    await device.db.edits.put(recipeSheet({ name: 'Unsent' }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     server.membership.set(ALICE, OTHER_HOUSEHOLD);
     expect(await device.engine.syncMembership()).toBe('changed');
+    warn.mockRestore();
 
     const state = await getSyncState(device.db);
     expect(state).toMatchObject({ household_id: OTHER_HOUSEHOLD, cursors: {}, hydrated_at: null });
-    for (const store of ['households', 'members', 'items', 'bag', 'events', 'log', 'edits'] as const) {
+    for (const store of [...HOUSEHOLD_STORES, 'edits']) {
       expect(await device.db.table(store).count(), store).toBe(0);
     }
-    expect(await device.db.recipes.count()).toBe(1);
+    // The old household refuses a sheet sent after the move, and it never follows the user.
+    expect([...server.recipes.values()].map((r) => r.name)).toEqual(['Canh chua']);
     expect(await device.engine.syncMembership()).toBe('same');
   });
 
@@ -286,6 +316,100 @@ describe('metadata edits', () => {
 
     expect(await device.db.edits.count()).toBe(0);
     expect(device.notices).toEqual([expect.objectContaining({ kind: 'create', reason: 'invalid' })]);
+  });
+});
+
+describe('recipe and cooked sheets', () => {
+  it('pushes a recipe and a dish cooked from it, and the other phone pulls both', async () => {
+    const server = new FakeServer();
+    const alice = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const bob = await makeDevice(server.transport(BOB), HOUSEHOLD);
+    const soup = recipeSheet();
+    const dinner = cookedSheet(soup.id);
+    await alice.db.edits.bulkPut([soup, dinner]);
+
+    await alice.engine.sync('full');
+    await bob.engine.sync('full');
+
+    const { store: _r, ...recipe } = soup;
+    const { store: _c, ...cooked } = dinner;
+    expect(server.recipes.get(soup.id)).toEqual({ ...recipe, seq: expect.any(Number) });
+    expect(server.cooked.get(dinner.id)).toEqual({ ...cooked, seq: expect.any(Number) });
+    expect(await alice.db.edits.count()).toBe(0);
+    expect(await bob.db.recipes.toArray()).toEqual([server.recipes.get(soup.id)]);
+    expect(await bob.db.cooked.toArray()).toEqual([server.cooked.get(dinner.id)]);
+  });
+
+  it('pushes a recipe before a dish that references it, whatever order they were queued in', async () => {
+    const server = new FakeServer();
+    const transport = server.transport(ALICE);
+    const device = await makeDevice(transport, HOUSEHOLD);
+    const soup = recipeSheet();
+    await device.db.edits.put(cookedSheet(soup.id));
+    await device.db.edits.put(soup);
+
+    await device.engine.sync('push');
+
+    expect(transport.calls.filter((c) => c.startsWith('push'))).toEqual(['push:recipes:1', 'push:cooked:1']);
+    expect(server.cooked.size).toBe(1);
+    expect(device.notices).toEqual([]);
+  });
+
+  it('stops at a failed recipe push, so the dish waits for its recipe instead of being refused', async () => {
+    const server = new FakeServer();
+    const transport = server.transport(ALICE);
+    const device = await makeDevice(transport, HOUSEHOLD);
+    const soup = recipeSheet();
+    await device.db.edits.bulkPut([soup, cookedSheet(soup.id)]);
+
+    server.failNextPush();
+    await expect(device.engine.sync('push')).rejects.toThrow('network down');
+    expect(transport.calls.filter((c) => c.startsWith('push'))).toEqual(['push:recipes:1']);
+    expect(await device.db.edits.count()).toBe(2);
+
+    await device.engine.sync('push');
+    expect([server.recipes.size, server.cooked.size]).toEqual([1, 1]);
+    expect(await device.db.edits.count()).toBe(0);
+  });
+
+  it('lets the newer recipe sheet win on every phone, and the pull retires the one that lost', async () => {
+    const server = new FakeServer();
+    const alice = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    const bob = await makeDevice(server.transport(BOB), HOUSEHOLD);
+    const soup = recipeSheet({ updated_at: '2026-11-18T09:00:00.000Z' as Instant });
+    await alice.db.edits.put(soup);
+    await alice.engine.sync('full');
+    await bob.engine.sync('full');
+
+    await alice.db.edits.put({ ...soup, name: 'Alice soup', updated_at: '2026-11-18T10:00:00.000Z' as Instant });
+    await bob.db.edits.put({ ...soup, name: 'Bob soup', updated_at: '2026-11-18T11:00:00.000Z' as Instant });
+    await bob.engine.sync('full');
+    await alice.engine.sync('full');
+
+    expect(server.recipes.get(soup.id)?.name).toBe('Bob soup');
+    for (const phone of [alice, bob]) {
+      const shown = overlaySheets(await phone.db.recipes.toArray(), await pendingSheets(phone.db, 'recipes'));
+      expect(shown.get(soup.id)?.name).toBe('Bob soup');
+      expect(await phone.db.edits.count()).toBe(0);
+    }
+  });
+
+  it('drops a dish the server refuses because its recipe belongs to another household', async () => {
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ALICE), HOUSEHOLD);
+    server.recipes.set('00000000-0000-4000-8000-0000000000aa' as RecipeId, {
+      ...recipeSheet({ id: '00000000-0000-4000-8000-0000000000aa' as RecipeId, household_id: OTHER_HOUSEHOLD }),
+      seq: 1
+    } as never);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await device.db.edits.put(cookedSheet('00000000-0000-4000-8000-0000000000aa' as RecipeId));
+
+    await device.engine.sync('push');
+
+    expect(server.cooked.size).toBe(0);
+    expect(await device.db.edits.count()).toBe(0);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('refused 1 cooked sheet'));
+    warn.mockRestore();
   });
 });
 

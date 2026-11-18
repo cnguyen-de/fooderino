@@ -8,8 +8,7 @@ export function freshSyncState(): SyncStateRow {
     user_id: null,
     household_id: null,
     hydrated_at: null,
-    cursors: {},
-    recipes: { pulled: null, pushed: null }
+    cursors: {}
   };
 }
 

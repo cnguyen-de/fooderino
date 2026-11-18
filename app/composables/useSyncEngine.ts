@@ -138,7 +138,6 @@ export function useSyncEngine() {
       }
     }
     listen('household_members', `user_id=eq.${userId}`, () => nudge(true));
-    listen('recipes_v2', `user_id=eq.${userId}`, () => nudge());
     // Changes made before the subscription went live reach this device only by a pull.
     channel = next.subscribe((state) => {
       if (state === 'SUBSCRIBED') void syncNow();

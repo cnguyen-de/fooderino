@@ -20,7 +20,7 @@ import type {
   Tag,
   TagKind
 } from '~~/types/pantry';
-import type { PulledRecipe, RecipeIngredient } from '~~/types/sync';
+import type { CookedId, CookedRow, Ingredient, Quantity, RecipeId, RecipeRow } from '~~/types/cook';
 
 /** A server row or response that does not have the shape the client relies on. */
 export class WireError extends Error {
@@ -52,11 +52,6 @@ function str(v: unknown, path: string): string {
 
 function num(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v)) throw new WireError(path, 'a number', v);
-  return v;
-}
-
-function bool(v: unknown, path: string): boolean {
-  if (typeof v !== 'boolean') throw new WireError(path, 'a boolean', v);
   return v;
 }
 
@@ -285,32 +280,50 @@ export function parseCommandLog(raw: unknown): CommandLogRow {
   };
 }
 
-function ingredients(v: unknown): RecipeIngredient[] {
-  return arr(v, 'recipe.ingredients').map((raw, i) => {
-    const o = obj(raw, `recipe.ingredients[${i}]`);
-    const amount = optNum(o.amount, `recipe.ingredients[${i}].amount`);
-    return {
-      name: str(o.name, `recipe.ingredients[${i}].name`),
-      ...(amount === null ? {} : { amount }),
-      amount_type: o.amount_type === 'gram' ? 'gram' : 'count'
-    };
-  });
+function quantity(v: unknown, path: string): Quantity | null {
+  if (v === null || v === undefined) return null;
+  const o = obj(v, path);
+  const amount = num(o.amount, `${path}.amount`);
+  if (amount <= 0) throw new WireError(`${path}.amount`, 'a positive number', amount);
+  return { amount, unit: oneOf(o.unit, ['count', 'gram'] as const, `${path}.unit`) };
 }
 
-/** `synced_at` stays the server's string: the pull cursor needs its microseconds. */
-export function parseRecipe(raw: unknown): PulledRecipe {
+/** Mirrors private.ingredients_valid in supabase/cook.sql. */
+function parseIngredient(raw: unknown, path: string): Ingredient {
+  const o = obj(raw, path);
+  return {
+    name: str(o.name, `${path}.name`),
+    item_id: optUuid<ItemId>(o.item_id, `${path}.item_id`),
+    qty: quantity(o.qty, `${path}.qty`)
+  };
+}
+
+export function parseRecipe(raw: unknown): RecipeRow {
   const r = obj(raw, 'recipe');
   return {
-    id: uuid(r.id, 'recipe.id'),
-    user_id: uuid(r.user_id, 'recipe.user_id'),
+    id: uuid<RecipeId>(r.id, 'recipe.id'),
+    household_id: uuid<HouseholdId>(r.household_id, 'recipe.household_id'),
     name: str(r.name, 'recipe.name'),
-    description: optStr(r.description, 'recipe.description'),
-    ingredients: ingredients(r.ingredients),
-    instructions: optStr(r.instructions, 'recipe.instructions'),
-    saved: bool(r.saved, 'recipe.saved'),
-    updated_at: instant(r.updated_at, 'recipe.updated_at'),
+    kind: oneOf(r.kind, ['dish', 'soup'] as const, 'recipe.kind'),
+    ingredients: arr(r.ingredients, 'recipe.ingredients').map((v, i) => parseIngredient(v, `recipe.ingredients[${i}]`)),
+    instructions: str(r.instructions, 'recipe.instructions'),
     deleted_at: optInstant(r.deleted_at, 'recipe.deleted_at'),
-    synced_at: str(r.synced_at, 'recipe.synced_at')
+    updated_at: instant(r.updated_at, 'recipe.updated_at'),
+    seq: num(r.seq, 'recipe.seq')
+  };
+}
+
+export function parseCooked(raw: unknown): CookedRow {
+  const r = obj(raw, 'cooked');
+  return {
+    id: uuid<CookedId>(r.id, 'cooked.id'),
+    household_id: uuid<HouseholdId>(r.household_id, 'cooked.household_id'),
+    recipe_id: uuid<RecipeId>(r.recipe_id, 'cooked.recipe_id'),
+    date: date(r.date, 'cooked.date'),
+    uses: arr(r.uses, 'cooked.uses').map((id, i) => uuid<CommandId>(id, `cooked.uses[${i}]`)),
+    deleted_at: optInstant(r.deleted_at, 'cooked.deleted_at'),
+    updated_at: instant(r.updated_at, 'cooked.updated_at'),
+    seq: num(r.seq, 'cooked.seq')
   };
 }
 

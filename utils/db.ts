@@ -1,4 +1,4 @@
-import Dexie, { type EntityTable, type Transaction } from 'dexie';
+import Dexie, { type EntityTable, type Table, type Transaction } from 'dexie';
 import type {
   BagEntryRow,
   CommandLogRow,
@@ -7,15 +7,9 @@ import type {
   ItemRow,
   MemberRow
 } from '~~/types/pantry';
-import type {
-  ItemRecord,
-  PendingOp,
-  PendingSheet,
-  QueuedCommand,
-  RecipeRecord,
-  SyncStateRow
-} from '~~/types/sync';
-import { convertPendingOps } from '~~/utils/db-upgrade';
+import type { CookedRow, RecipeRow } from '~~/types/cook';
+import type { ItemRecord, PendingOp, PendingSheet, QueuedCommand, SyncStateRow } from '~~/types/sync';
+import { convertPendingOps, legacyRecipeSheet, type LegacyRecipe } from '~~/utils/db-upgrade';
 
 /**
  * The device holds confirmed server state for one household, plus two outboxes:
@@ -29,10 +23,11 @@ export type FooderinoDb = Dexie & {
   events: EntityTable<ItemEventRow, 'id'>;
   /** Confirmed `command_log` rows: receipts for replay, and the inverses undo applies. */
   log: EntityTable<CommandLogRow, 'command_id'>;
+  recipes: EntityTable<RecipeRow, 'id'>;
+  cooked: EntityTable<CookedRow, 'id'>;
   commands: EntityTable<QueuedCommand, 'id'>;
   /** Sheet ids are random uuids, so one key space holds every store's sheets. */
-  edits: EntityTable<PendingSheet, 'id'>;
-  recipes: EntityTable<RecipeRecord, 'id'>;
+  edits: Table<PendingSheet, PendingSheet['id'], PendingSheet>;
   syncState: EntityTable<SyncStateRow, 'key'>;
 };
 
@@ -56,14 +51,18 @@ async function upgradeToV3(tx: Transaction): Promise<void> {
       user_id: state.user_id ?? null,
       household_id: null,
       hydrated_at: null,
-      cursors: {},
-      recipes: { pulled: null, pushed: null }
+      cursors: {}
     };
     await tx.table('syncState').put(next);
   }
 }
 
-/** Before v4 the outbox held only item sheets. */
+/**
+ * Before v4 the outbox held only item sheets, and recipes belonged to their user. Every
+ * saved or deleted local recipe is queued for the device's household with its own stamp:
+ * the old push watermark skipped refused rows, so it cannot say which ones reached the server.
+ * `stamp_lww` drops any older than the copy cook.sql moved. The household pull refills `recipes`.
+ */
 async function upgradeToV4(tx: Transaction): Promise<void> {
   await tx
     .table('edits')
@@ -71,6 +70,19 @@ async function upgradeToV4(tx: Transaction): Promise<void> {
     .modify((e: Partial<PendingSheet>) => {
       e.store ??= 'items';
     });
+
+  const state = (await tx.table('syncState').get(SYNC_STATE_KEY)) as (SyncStateRow & { recipes?: unknown }) | undefined;
+  const household = state?.household_id;
+  if (household) {
+    const legacy = (await tx.table('recipes').toArray()) as LegacyRecipe[];
+    const sheets = legacy.flatMap((r) => legacyRecipeSheet(r, household) ?? []);
+    await tx.table('edits').bulkPut(sheets);
+  }
+  await tx.table('recipes').clear();
+  if (state && 'recipes' in state) {
+    const { recipes: _, ...next } = state;
+    await tx.table('syncState').put(next);
+  }
 }
 
 export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
@@ -107,7 +119,9 @@ export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
     })
     .upgrade(upgradeToV3);
 
-  db.version(4).stores({ edits: 'id, store' }).upgrade(upgradeToV4);
+  db.version(4)
+    .stores({ recipes: 'id, seq', cooked: 'id, seq', edits: 'id, store' })
+    .upgrade(upgradeToV4);
 
   return db;
 }

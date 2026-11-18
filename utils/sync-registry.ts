@@ -2,10 +2,12 @@ import type { HouseholdRows, HouseholdStore, PendingSheet, SheetStore } from '~~
 import {
   parseBagEntry,
   parseCommandLog,
+  parseCooked,
   parseEvent,
   parseHousehold,
   parseItem,
-  parseMember
+  parseMember,
+  parseRecipe
 } from '~~/utils/sync-wire';
 
 export interface HouseholdTableDef<S extends HouseholdStore = HouseholdStore> {
@@ -34,9 +36,10 @@ function def<S extends HouseholdStore>(d: HouseholdTableDef<S>): HouseholdTableD
 }
 
 /**
- * Pull order. The log comes last: a command commits its effects and its log row
- * together, so any effect a pull saw has its receipt in the same pull, and replay
- * never applies an accepted pending command on top of its own effect.
+ * Pull order, and push order for sheets. The log comes last: a command commits its
+ * effects and its log row together, so any effect a pull saw has its receipt in the
+ * same pull, and replay never applies an accepted pending command on top of its own
+ * effect. Recipes come before cooked dishes, so a dish never pushes ahead of its recipe.
  */
 export const HOUSEHOLD_TABLES = [
   def({ store: 'households', remote: 'households', scope: 'id', key: (r) => r.id, parse: parseHousehold }),
@@ -50,6 +53,22 @@ export const HOUSEHOLD_TABLES = [
     sheet: {
       columns: ['id', 'household_id', 'name', 'aliases', 'tags', 'unit', 'default_amount', 'shelf_life_days', 'updated_at', 'deleted_at']
     }
+  }),
+  def({
+    store: 'recipes',
+    remote: 'household_recipes',
+    scope: 'household_id',
+    key: (r) => r.id,
+    parse: parseRecipe,
+    sheet: { columns: ['id', 'household_id', 'name', 'kind', 'ingredients', 'instructions', 'updated_at', 'deleted_at'] }
+  }),
+  def({
+    store: 'cooked',
+    remote: 'cooked_recipes',
+    scope: 'household_id',
+    key: (r) => r.id,
+    parse: parseCooked,
+    sheet: { columns: ['id', 'household_id', 'recipe_id', 'date', 'uses', 'updated_at', 'deleted_at'] }
   }),
   def({ store: 'bag', remote: 'bag_entries', scope: 'household_id', key: (r) => r.id, parse: parseBagEntry }),
   def({ store: 'events', remote: 'item_events', scope: 'household_id', key: (r) => r.id, parse: parseEvent }),

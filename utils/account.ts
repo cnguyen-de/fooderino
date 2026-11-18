@@ -5,8 +5,7 @@ import type { SyncStateRow } from '~~/types/sync';
 const FROM_SCRATCH: Partial<SyncStateRow> = {
   household_id: null,
   hydrated_at: null,
-  cursors: {},
-  recipes: { pulled: null, pushed: null }
+  cursors: {}
 };
 
 /**

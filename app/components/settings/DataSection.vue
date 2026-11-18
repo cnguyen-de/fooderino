@@ -38,8 +38,7 @@ async function exportJSON(): Promise<void> {
 }
 
 async function buildPlan(payload: ImportPayload): Promise<ImportPlan | null> {
-  const userId = user.value?.id;
-  return userId ? planImport(payload, await importContext(userId)) : null;
+  return user.value?.id ? planImport(payload, await importContext()) : null;
 }
 
 async function onFileSelected(event: Event): Promise<void> {

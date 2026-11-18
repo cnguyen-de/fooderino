@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Dexie from 'dexie';
 import { openFooderinoDb, SYNC_STATE_KEY } from '~~/utils/db';
-import { convertPendingOps } from '~~/utils/db-upgrade';
+import { convertPendingOps, legacyIngredients, type LegacyRecipe } from '~~/utils/db-upgrade';
 import type { ItemRecord, PendingOp } from '~~/types/sync';
+import { pendingSheets } from '~~/utils/sheets';
+import fixture from '../fixtures/legacy-ingredients.json';
 
 const LIST = '11111111-1111-4111-8111-111111111111';
 
@@ -78,7 +80,7 @@ afterEach(async () => {
 });
 
 describe('Dexie v3 upgrade', () => {
-  it('converts the v2 outbox, drops list-era stores and keeps recipes and device identity', async () => {
+  it('converts the v2 outbox, drops list-era stores and keeps device identity', async () => {
     const name = `upgrade-${crypto.randomUUID()}`;
     names.push(name);
     const milk = legacyItem({ name: 'Milk', amount: 1, amount_to_purchase: 3 });
@@ -111,10 +113,12 @@ describe('Dexie v3 upgrade', () => {
     await db.open();
 
     expect(db.tables.map((t) => t.name).sort()).toEqual(
-      ['bag', 'commands', 'edits', 'events', 'households', 'items', 'log', 'members', 'recipes', 'syncState'].sort()
+      ['bag', 'commands', 'cooked', 'edits', 'events', 'households', 'items', 'log', 'members', 'recipes', 'syncState'].sort()
     );
     expect(await db.items.count()).toBe(0);
-    expect((await db.recipes.get('r1'))?.name).toBe('Soup');
+    // With no household yet there is nowhere to send it; the server moved its own copy.
+    expect(await db.recipes.count()).toBe(0);
+    expect(await db.edits.count()).toBe(0);
 
     const commands = await db.commands.orderBy('created_seq').toArray();
     expect(commands.map(({ id, kind, item_id, household_id, created_seq, ...payload }) => ({ id, kind, item_id, ...payload }))).toEqual([
@@ -133,15 +137,80 @@ describe('Dexie v3 upgrade', () => {
       user_id: 'user-1',
       household_id: null,
       hydrated_at: null,
-      cursors: {},
-      recipes: { pulled: null, pushed: null }
+      cursors: {}
     });
     db.close();
   });
 
 });
 
+const HOUSEHOLD = '22222222-2222-4222-8222-222222222222';
+
+const legacyRecipe = (over: Partial<LegacyRecipe>): LegacyRecipe => ({
+  id: crypto.randomUUID(),
+  user_id: 'user-1',
+  name: 'Soup',
+  description: null,
+  ingredients: [],
+  instructions: null,
+  saved: true,
+  updated_at: '2026-10-01T00:00:00.000Z',
+  deleted_at: null,
+  ...over
+});
+
+async function openV3With(name: string, state: Record<string, unknown>, recipes: LegacyRecipe[]) {
+  names.push(name);
+  const v3 = openV3(name);
+  await v3.table('syncState').put({ key: SYNC_STATE_KEY, device_id: 'device-1', user_id: 'user-1', hydrated_at: null, cursors: {}, ...state });
+  await v3.table('recipes').bulkAdd(recipes);
+  v3.close();
+  const db = openFooderinoDb(name);
+  await db.open();
+  return db;
+}
+
 describe('Dexie v4 upgrade', () => {
+  it('queues every saved or deleted legacy recipe for the household, keeping its id and stamp', async () => {
+    const bun = legacyRecipe({
+      name: ' Bún   chả ', description: 'Hanoi style', instructions: 'Grill.',
+      ingredients: [{ name: 'Pork', amount: 500, amount_type: 'gram' }, { name: 'Herbs', amount_type: 'count' }]
+    });
+    const gone = legacyRecipe({ name: 'Gone', saved: false, deleted_at: '2026-10-02T00:00:00.000Z' });
+    const idea = legacyRecipe({ name: 'AI idea', saved: false });
+    const blank = legacyRecipe({ name: '  ' });
+    const db = await openV3With(`upgrade-v4-recipes-${crypto.randomUUID()}`,
+      { household_id: HOUSEHOLD, recipes: { pulled: null, pushed: '2026-12-01T00:00:00.000Z' } }, [bun, gone, idea, blank]);
+
+    const sheets = await pendingSheets(db, 'recipes');
+    expect(sheets.sort((a, b) => a.name.localeCompare(b.name))).toEqual([
+      {
+        store: 'recipes', id: bun.id, household_id: HOUSEHOLD, name: 'Bún chả', kind: 'dish',
+        ingredients: [
+          { name: 'Pork', item_id: null, qty: { amount: 500, unit: 'gram' } },
+          { name: 'Herbs', item_id: null, qty: null }
+        ],
+        instructions: 'Hanoi style\n\nGrill.', deleted_at: null, updated_at: '2026-10-01T00:00:00.000Z'
+      },
+      {
+        store: 'recipes', id: gone.id, household_id: HOUSEHOLD, name: 'Gone', kind: 'dish', ingredients: [],
+        instructions: '', deleted_at: '2026-10-02T00:00:00.000Z', updated_at: '2026-10-01T00:00:00.000Z'
+      }
+    ]);
+    expect(await db.recipes.count()).toBe(0);
+    expect(await db.syncState.get(SYNC_STATE_KEY)).not.toHaveProperty('recipes');
+    db.close();
+  });
+
+  it('keeps no legacy recipe on a device with no household', async () => {
+    const db = await openV3With(`upgrade-v4-homeless-${crypto.randomUUID()}`,
+      { household_id: null, recipes: { pulled: null, pushed: null } }, [legacyRecipe({})]);
+
+    expect(await db.edits.count()).toBe(0);
+    expect(await db.recipes.count()).toBe(0);
+    db.close();
+  });
+
   it('files every queued edit under the items store, so it still pushes', async () => {
     const name = `upgrade-v4-${crypto.randomUUID()}`;
     names.push(name);
@@ -168,6 +237,12 @@ describe('Dexie v4 upgrade', () => {
     expect(db.verno).toBe(4);
     expect(await db.commands.count()).toBe(0);
     db.close();
+  });
+});
+
+describe('legacyIngredients', () => {
+  it.each(fixture)('converts $case as private.legacy_ingredients does', ({ legacy, ingredients }) => {
+    expect(legacyIngredients(legacy)).toEqual(ingredients);
   });
 });
 
