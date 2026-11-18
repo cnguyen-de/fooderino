@@ -5,10 +5,7 @@ const md = markdownit();
 defineProps<{ source: string }>();
 </script>
 <template>
-  <div v-html="md.render(source)"></div>
+  <div
+    class="space-y-2 [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+    v-html="md.render(source)"></div>
 </template>
-<style scoped>
-div > * {
-  list-style-type: disc;
-}
-</style>
