@@ -10,4 +10,7 @@ drop table if exists public.invites;
 drop table if exists public.items;
 drop table if exists public.logs;
 drop table if exists public.recipes;
+drop table if exists public.recipes_v2;
+drop function if exists private.adopt_recipes_v2();
+drop function if exists private.stamp_synced_at();
 drop table if exists public.lists;

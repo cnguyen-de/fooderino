@@ -69,8 +69,15 @@ select test.eq((select jsonb_object_agg(right(log_id::text, 2), reason) from pub
                'every other log lands in the audit with its reason');
 
 -- Recipes
-select test.eq((select count(*) from public.recipes_v2 where id in (private.uuid_for('recipe:1'), private.uuid_for('recipe:2'))),
-               2::bigint, 'recipes keep their owner under deterministic ids');
+select test.eq((select jsonb_build_object('household', household_id, 'name', name, 'kind', kind,
+                                          'ingredients', ingredients, 'instructions', instructions)
+                  from public.household_recipes where id = private.uuid_for('recipe:1')),
+               jsonb_build_object('household', '10000000-0000-0000-0000-000000000001'::uuid, 'name', 'Pancakes', 'kind', 'dish',
+                                  'ingredients', '[{"name": "Flour", "item_id": null, "qty": null}]'::jsonb,
+                                  'instructions', E'Fluffy\n\nMix.'),
+               'a saved recipe moves to its owner''s household, description folded into instructions');
+select test.eq((select count(*) from public.household_recipes where id = private.uuid_for('recipe:2')), 0::bigint,
+               'an unsaved recipe of an owner with no single household is left behind');
 
 -- Rerun
 create temp table before_rerun as
@@ -81,7 +88,7 @@ select t.name, (select md5(coalesce(string_agg(r::text, ',' order by r::text), '
                         union all select to_jsonb(x) from public.items_v2 x where t.name = 'items'
                         union all select to_jsonb(x) from public.item_events x where t.name = 'events'
                         union all select to_jsonb(x) from public.legacy_log_audit x where t.name = 'audit'
-                        union all select to_jsonb(x) - 'synced_at' from public.recipes_v2 x where t.name = 'recipes'
+                        union all select to_jsonb(x) from public.household_recipes x where t.name = 'recipes'
                         union all select to_jsonb(x) from public.household_clocks x where t.name = 'clocks') rows) as sum
   from unnest(array['households', 'members', 'candidates', 'items', 'events', 'audit', 'recipes', 'clocks']) t(name);
 \i /repo/supabase/backfill-v2.sql
@@ -97,7 +104,7 @@ select test.ok(not exists (
              union all select to_jsonb(x) from public.items_v2 x where b.name = 'items'
              union all select to_jsonb(x) from public.item_events x where b.name = 'events'
              union all select to_jsonb(x) from public.legacy_log_audit x where b.name = 'audit'
-             union all select to_jsonb(x) - 'synced_at' from public.recipes_v2 x where b.name = 'recipes'
+             union all select to_jsonb(x) from public.household_recipes x where b.name = 'recipes'
              union all select to_jsonb(x) from public.household_clocks x where b.name = 'clocks') rows)),
   'a backfill rerun leaves every v2 table byte-identical');
 

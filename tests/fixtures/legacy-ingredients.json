@@ -1,0 +1,67 @@
+[
+  {
+    "case": "a bare name",
+    "legacy": [{ "name": "Flour" }],
+    "ingredients": [{ "name": "Flour", "item_id": null, "qty": null }]
+  },
+  {
+    "case": "grams and counts keep their amount",
+    "legacy": [
+      { "name": "Pork belly", "amount": 500, "amount_type": "gram" },
+      { "name": "Eggs", "amount": 2, "amount_type": "count" }
+    ],
+    "ingredients": [
+      { "name": "Pork belly", "item_id": null, "qty": { "amount": 500, "unit": "gram" } },
+      { "name": "Eggs", "item_id": null, "qty": { "amount": 2, "unit": "count" } }
+    ]
+  },
+  {
+    "case": "kg becomes grams",
+    "legacy": [{ "name": "Rice", "amount": 1.5, "amount_type": "kg" }],
+    "ingredients": [{ "name": "Rice", "item_id": null, "qty": { "amount": 1500, "unit": "gram" } }]
+  },
+  {
+    "case": "a missing or unknown unit counts",
+    "legacy": [
+      { "name": "Basil", "amount": 3, "amount_type": "bunch" },
+      { "name": "Limes", "amount": 2 }
+    ],
+    "ingredients": [
+      { "name": "Basil", "item_id": null, "qty": { "amount": 3, "unit": "count" } },
+      { "name": "Limes", "item_id": null, "qty": { "amount": 2, "unit": "count" } }
+    ]
+  },
+  {
+    "case": "names are tidied",
+    "legacy": [{ "name": "  Fish   sauce \t" }],
+    "ingredients": [{ "name": "Fish sauce", "item_id": null, "qty": null }]
+  },
+  {
+    "case": "zero, negative and text amounts mean some",
+    "legacy": [
+      { "name": "Salt", "amount": 0, "amount_type": "gram" },
+      { "name": "Sugar", "amount": -1, "amount_type": "gram" },
+      { "name": "Chili", "amount": "2", "amount_type": "count" }
+    ],
+    "ingredients": [
+      { "name": "Salt", "item_id": null, "qty": null },
+      { "name": "Sugar", "item_id": null, "qty": null },
+      { "name": "Chili", "item_id": null, "qty": null }
+    ]
+  },
+  {
+    "case": "blank, nameless and malformed entries drop",
+    "legacy": [{ "name": " \t " }, { "amount": 2 }, "Salt", null, { "name": 3 }, { "name": "Lime" }],
+    "ingredients": [{ "name": "Lime", "item_id": null, "qty": null }]
+  },
+  {
+    "case": "a value that is not a list",
+    "legacy": { "name": "Flour" },
+    "ingredients": []
+  },
+  {
+    "case": "null",
+    "legacy": null,
+    "ingredients": []
+  }
+]

@@ -130,15 +130,40 @@ commit;
 select test.eq((select count(*) from public.household_share_tokens where household_id = :'h2'), 1::bigint,
                'a member mints a share token for their household');
 
--- Recipes
+-- Recipes and cooked dishes
 begin;
 select test.act_as(:'una');
-insert into public.recipes_v2 (id, user_id, name, synced_at) values (test.id('a-recipe'), :'una', 'Soup', '2000-01-01');
-select test.throws(format('insert into public.recipes_v2 (id, user_id, name) values (%L, %L, %L)', test.id('a-recipe2'), :'vic', 'Theirs'),
-                   '42501', 'a user cannot write another user''s recipe');
+insert into public.household_recipes (id, household_id, name, updated_at)
+values (test.id('a-recipe'), :'h2', 'Canh chua', now())
+on conflict (id) do update set name = excluded.name, updated_at = excluded.updated_at;
+insert into public.cooked_recipes (id, household_id, recipe_id, date, updated_at)
+values (test.id('a-cooked'), :'h2', test.id('a-recipe'), current_date, now())
+on conflict (id) do update set date = excluded.date, updated_at = excluded.updated_at;
+select test.throws(format('insert into public.household_recipes (id, household_id, name, updated_at) values (%L, %L, %L, now())',
+                          test.id('a-recipe-theirs'), :'hv', 'Theirs'),
+                   '42501', 'a member cannot add a recipe to another household');
+select test.throws(format('update public.household_recipes set seq = 0 where id = %L', test.id('a-recipe')),
+                   '42501', 'a client cannot write a recipe''s seq');
+select test.throws(format('update public.cooked_recipes set seq = 0 where id = %L', test.id('a-cooked')),
+                   '42501', 'a client cannot write a cooked dish''s seq');
 commit;
-select test.ok((select synced_at > now() - interval '1 minute' from public.recipes_v2 where id = test.id('a-recipe')),
-               'recipes_v2.synced_at is stamped by the server, not the client');
+select test.eq((select count(*) from public.household_recipes where id = test.id('a-recipe'))
+             + (select count(*) from public.cooked_recipes where id = test.id('a-cooked')), 2::bigint,
+               'a member adds a recipe and a cooked dish to their household by upsert');
+
+begin;
+select test.act_as(:'vic');
+select test.eq((select count(*) from public.household_recipes where household_id = :'h2')
+             + (select count(*) from public.cooked_recipes where household_id = :'h2'), 0::bigint,
+               'RLS hides another household''s recipes and meals');
+update public.household_recipes set name = 'Stolen' where id = test.id('a-recipe');
+select test.throws(format('insert into public.household_recipes (id, household_id, name, updated_at) values (%L, %L, %L, now() + interval ''1 hour'')
+                           on conflict (id) do update set name = excluded.name, updated_at = excluded.updated_at',
+                          test.id('a-recipe'), :'hv', 'Stolen'),
+                   '42501', 'an upsert onto another household''s recipe is denied');
+commit;
+select test.eq((select name from public.household_recipes where id = test.id('a-recipe')), 'Canh chua',
+               'an update aimed at another household''s recipe changes nothing');
 
 -- CHECKs that would pass on NULL if written naively
 select test.throws(format('insert into public.item_events (id, household_id, item_id, kind, occurred_at, origin) values (%L, %L, %L, %L, now(), %L)',
@@ -163,6 +188,6 @@ select test.throws(format('update public.items_v2 set aliases = %L where id = %L
 
 -- Realtime
 select test.eq((select array_agg(tablename::text order by tablename) from pg_publication_tables where pubname = 'supabase_realtime'),
-               array['bag_entries', 'command_log', 'household_members', 'households', 'item_events', 'items_v2',
-                     'recipes_v2', 'rejected_commands'],
-               'Realtime publishes the household tables and recipes');
+               array['bag_entries', 'command_log', 'cooked_recipes', 'household_members', 'household_recipes', 'households',
+                     'item_events', 'items_v2', 'rejected_commands'],
+               'Realtime publishes every household table');

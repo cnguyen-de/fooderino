@@ -1,5 +1,5 @@
 -- supabase/verify-v2.sql
--- Run after supabase/backfill-v2.sql. Read-only. The DO block raises
+-- Run after supabase/cook.sql and supabase/backfill-v2.sql. Read-only. The DO block raises
 -- 'verify-v2 failed: ...' naming every failed gate; otherwise it reports
 -- 'verify-v2: all gates pass'. The queries after it are context for the
 -- operator, not gates.
@@ -8,6 +8,7 @@ do $$
 declare
   v_failed text[] := '{}';
   v_moves  boolean := exists (select 1 from public.household_moves);
+  v_stray  bigint;
 begin
   if not exists (select 1 from public.migration_runs where version = 'v2') then
     v_failed := v_failed || 'migration_runs has no v2 row'::text;
@@ -64,9 +65,25 @@ begin
     v_failed := v_failed || 'logs do not equal backfilled events plus audit'::text;
   end if;
 
-  if (select count(*) from public.recipes where id is not null)
-     <> (select count(*) from public.recipes_v2 where legacy_index is not null) then
-    v_failed := v_failed || 'recipes do not equal backfilled recipes'::text;
+  -- Every saved recipe whose owner has a household reached it. Where recipes_v2 still
+  -- exists it holds the recipes as their owners last left them, so it is the source.
+  if to_regclass('public.recipes_v2') is null then
+    select count(*) into v_stray
+      from public.recipes r
+      join public.household_members m on m.user_id = r.id and m.deleted_at is null
+     where r.saved and private.tidy(r.name) <> ''
+       and not exists (select 1 from public.household_recipes h where h.id = private.uuid_for('recipe:' || r.index));
+  else
+    execute $q$
+      select count(*) from public.recipes_v2 r
+        join public.household_members m on m.user_id = r.user_id and m.deleted_at is null
+       where r.saved and r.deleted_at is null and private.tidy(r.name) <> ''
+         and not exists (select 1 from public.household_recipes h where h.id = r.id)
+    $q$ into v_stray;
+  end if;
+  if v_stray > 0 then
+    v_failed := v_failed || format('%s saved recipe(s) of housed owners are not household recipes; '
+                                   'on a hosted database run select private.adopt_recipes_v2()', v_stray);
   end if;
 
   -- The clock is the pull cursor: it must be at or past every seq it issued.
@@ -80,7 +97,9 @@ begin
              (select max(seq) from public.household_members where household_id = h.id),
              (select max(seq) from public.item_events where household_id = h.id),
              (select max(seq) from public.bag_entries where household_id = h.id),
-             (select max(seq) from public.command_log where household_id = h.id))) then
+             (select max(seq) from public.command_log where household_id = h.id),
+             (select max(seq) from public.household_recipes where household_id = h.id),
+             (select max(seq) from public.cooked_recipes where household_id = h.id))) then
     v_failed := v_failed || 'a household clock is behind its rows'::text;
   end if;
 
@@ -99,6 +118,12 @@ select 'item without a list' as excluded, i.id, i.name, i.list_id
 -- Context: recipes with no owner.
 select 'recipe without a user' as excluded, r.index, r.name
   from public.recipes r where r.id is null;
+
+-- Context: saved recipes whose owner has no household, so no household received them.
+select 'recipe whose owner has no household' as excluded, r.index, r.name
+  from public.recipes r
+ where r.saved and r.id is not null
+   and not exists (select 1 from public.household_members m where m.user_id = r.id and m.deleted_at is null);
 
 -- Context: why legacy logs did not become events.
 select reason, count(*) from public.legacy_log_audit group by reason order by reason;

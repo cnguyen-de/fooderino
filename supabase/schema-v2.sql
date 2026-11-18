@@ -1,6 +1,6 @@
 -- supabase/schema-v2.sql
 -- Household backend for the local-first client. The operator applies it once
--- in the Supabase SQL editor, before backfill-v2.sql. The contract is
+-- in the Supabase SQL editor, then cook.sql, then backfill-v2.sql. The contract is
 -- docs/superpowers/specs/2026-11-16-household-redesign-design.md.
 --
 -- Write paths:
@@ -305,21 +305,6 @@ create table public.migration_runs (
   ran_at  timestamptz not null default now()
 );
 
-create table public.recipes_v2 (
-  id            uuid primary key,
-  legacy_index  bigint unique,
-  user_id       uuid not null,
-  name          text not null,
-  description   text,
-  ingredients   jsonb not null default '[]'::jsonb,
-  instructions  text,
-  saved         boolean not null default false,
-  updated_at    timestamptz not null default now(),
-  deleted_at    timestamptz,
-  synced_at     timestamptz not null default now()
-);
-create index recipes_v2_pull on public.recipes_v2 (user_id, synced_at, id);
-
 -- Clock and triggers ---------------------------------------------------------
 
 -- The upsert takes the clock row lock and holds it to commit, so a second
@@ -381,15 +366,6 @@ begin
 end;
 $$;
 
-create function private.stamp_synced_at() returns trigger
-language plpgsql set search_path = ''
-as $$
-begin
-  new.synced_at := clock_timestamp();
-  return new;
-end;
-$$;
-
 create trigger households_seq before insert on public.households
   for each row execute function private.stamp_seq('id');
 create trigger households_lww before update on public.households
@@ -414,9 +390,6 @@ create trigger bag_entries_seq before insert or update on public.bag_entries
   for each row execute function private.stamp_seq('household_id');
 create trigger rejected_commands_seq before insert or update on public.rejected_commands
   for each row execute function private.stamp_seq('household_id');
-
-create trigger recipes_v2_synced_at before insert or update on public.recipes_v2
-  for each row execute function private.stamp_synced_at();
 
 -- Membership ------------------------------------------------------------------
 
@@ -1262,12 +1235,12 @@ grant execute on function public.move_household(uuid, uuid, text, jsonb) to serv
 revoke all on public.households, public.household_clocks, public.household_members,
               public.household_candidates, public.household_share_tokens, public.items_v2,
               public.command_log, public.item_events, public.bag_entries, public.rejected_commands,
-              public.household_moves, public.legacy_log_audit, public.migration_runs, public.recipes_v2
+              public.household_moves, public.legacy_log_audit, public.migration_runs
   from anon, authenticated;
 
 grant select on public.households, public.household_members, public.household_candidates,
                 public.household_share_tokens, public.items_v2, public.command_log, public.item_events,
-                public.bag_entries, public.rejected_commands, public.recipes_v2
+                public.bag_entries, public.rejected_commands
   to authenticated;
 
 -- Metadata only. amount, to_buy, best_before, merged_into, legacy_id and seq
@@ -1280,7 +1253,6 @@ grant insert (id, household_id, name, aliases, tags, unit, default_amount, shelf
   on public.items_v2 to authenticated;
 grant insert (token_hash, household_id, created_by, expires_at), update (revoked_at)
   on public.household_share_tokens to authenticated;
-grant insert, update on public.recipes_v2 to authenticated;
 
 -- RLS ------------------------------------------------------------------------
 
@@ -1297,7 +1269,6 @@ alter table public.rejected_commands      enable row level security;
 alter table public.household_moves        enable row level security;
 alter table public.legacy_log_audit       enable row level security;
 alter table public.migration_runs         enable row level security;
-alter table public.recipes_v2             enable row level security;
 
 create policy "members read their household" on public.households
   for select to authenticated using (id = (select public.my_household()));
@@ -1346,15 +1317,7 @@ create policy "members and actors read rejections" on public.rejected_commands
   for select to authenticated
   using (household_id = (select public.my_household()) or actor = (select auth.uid()));
 
-create policy "own recipes read" on public.recipes_v2
-  for select to authenticated using (user_id = (select auth.uid()));
-create policy "own recipes insert" on public.recipes_v2
-  for insert to authenticated with check (user_id = (select auth.uid()));
-create policy "own recipes update" on public.recipes_v2
-  for update to authenticated
-  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
-
 -- Realtime only nudges a pull. RLS decides who hears which row.
 alter publication supabase_realtime add table
   public.households, public.household_members, public.items_v2, public.bag_entries,
-  public.item_events, public.command_log, public.rejected_commands, public.recipes_v2;
+  public.item_events, public.command_log, public.rejected_commands;

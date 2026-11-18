@@ -1,6 +1,6 @@
 -- supabase/backfill-v2.sql
 -- One-shot migration from the legacy tables into the v2 household schema.
--- Run after schema-v2.sql, with legacy writes frozen. It is guarded by
+-- Run after schema-v2.sql and cook.sql, with legacy writes frozen. It is guarded by
 -- migration_runs: once version 'v2' is recorded, a rerun changes nothing, so
 -- candidates consumed by a pick are never re-derived. Every id is
 -- deterministic (private.uuid_for), so the rows are the same on any run.
@@ -199,14 +199,16 @@ begin
   select id, household_id, item, action, payload, created_at, reason
     from classified where reason is not null;
 
-  -- 5. Recipes keep their per-user LWW model.
-  insert into public.recipes_v2 (id, legacy_index, user_id, name, description, ingredients,
-                                 instructions, saved, updated_at)
-  select private.uuid_for('recipe:' || r.index), r.index, r.id, coalesce(r.name, ''), r.description,
-         coalesce(r.ingredients, '[]'::jsonb), r.instructions, coalesce(r.saved, false),
+  -- 5. Saved recipes move to their owner's household, as cook.sql's adopt_recipes_v2 does on
+  -- a database that went through recipes_v2. An owner with no single household keeps none.
+  insert into public.household_recipes (id, household_id, name, ingredients, instructions, updated_at)
+  select private.uuid_for('recipe:' || r.index), m.household_id, private.tidy(r.name),
+         private.legacy_ingredients(r.ingredients),
+         concat_ws(E'\n\n', nullif(btrim(r.description), ''), nullif(btrim(r.instructions), '')),
          coalesce(r.created_at, now())
     from public.recipes r
-   where r.id is not null;
+    join public.household_members m on m.user_id = r.id and m.deleted_at is null
+   where r.saved and private.tidy(r.name) <> '';
 
   insert into public.migration_runs (version) values ('v2');
 
@@ -217,7 +219,7 @@ begin
     'items',      (select count(*) from public.items_v2),
     'events',     (select count(*) from public.item_events),
     'audit',      (select count(*) from public.legacy_log_audit),
-    'recipes',    (select count(*) from public.recipes_v2)) into v_counts;
+    'recipes',    (select count(*) from public.household_recipes)) into v_counts;
   raise notice 'backfill-v2: applied %', v_counts;
 end;
 $$;
