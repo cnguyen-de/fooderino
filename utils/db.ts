@@ -26,7 +26,6 @@ export type FooderinoDb = Dexie & {
   recipes: EntityTable<RecipeRow, 'id'>;
   cooked: EntityTable<CookedRow, 'id'>;
   commands: EntityTable<QueuedCommand, 'id'>;
-  /** Sheet ids are random uuids, so one key space holds every store's sheets. */
   edits: Table<PendingSheet, PendingSheet['id'], PendingSheet>;
   syncState: EntityTable<SyncStateRow, 'key'>;
 };
@@ -57,12 +56,6 @@ async function upgradeToV3(tx: Transaction): Promise<void> {
   }
 }
 
-/**
- * Before v4 the outbox held only item sheets, and recipes belonged to their user. Every
- * saved or deleted local recipe is queued for the device's household with its own stamp:
- * the old push watermark skipped refused rows, so it cannot say which ones reached the server.
- * `stamp_lww` drops any older than the copy cook.sql moved. The household pull refills `recipes`.
- */
 async function upgradeToV4(tx: Transaction): Promise<void> {
   await tx
     .table('edits')

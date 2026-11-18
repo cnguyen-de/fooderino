@@ -2,27 +2,21 @@ import { daysBetween } from '~~/utils/pantry';
 import type { CommandId, ItemId, LocalDate } from '~~/types/pantry';
 import type { CookedId, CookedRow as Cooked, RecipeId, RecipeKind, RecipeRow as Recipe, RecipeSheet } from '~~/types/cook';
 
-/** Rows as the device shows them, pending sheets included, so no server `seq`. */
 type RecipeRow = Omit<Recipe, 'seq'>;
 type CookedRow = Omit<Cooked, 'seq'>;
 import { ingredientStatus, type IngredientStatus, type PantryLookup } from './match';
 
-/** A Vietnamese dinner: at least one soup and 2 to 3 dishes. */
 export const MEAL_RULE = { soups: 1, dishes: 2, maxDishes: 3 } as const;
-/** A recipe cooked fewer than this many days ago is ranked after every other suggestion. */
 export const RECENT_DAYS = 7;
 const SUGGESTION_LIMIT = { soups: 2, dishes: 3 } as const;
 
-/** A live recipe as every Cook page reads it. */
 export interface RecipeView extends Omit<RecipeSheet, 'household_id' | 'deleted_at'> {
   lastEaten: LocalDate | null;
   ingredientsAtHome: IngredientStatus[];
-  /** Counts of `out` and `short` ingredients, for badges and ranking. */
   out: number;
   short: number;
 }
 
-/** Live recipes by name, each with its stock and the last date it was cooked. */
 export function buildRecipeViews(
   recipes: readonly RecipeRow[],
   cooked: readonly CookedRow[],
@@ -54,18 +48,15 @@ export function buildRecipeViews(
 
 export interface MealDish {
   id: CookedId;
-  /** Deleted recipes stay readable here, so history never loses a name. */
   recipe: { id: RecipeId; name: string; kind: RecipeKind; deleted: boolean };
   uses: CommandId[];
 }
 
 export interface MealNeeds {
   soup: boolean;
-  /** Dishes still missing to reach `MEAL_RULE.dishes`. Zero once met. */
   dishes: number;
 }
 
-/** Every live cooked row sharing a date. A meal has no row of its own. */
 export interface Meal {
   date: LocalDate;
   dishes: MealDish[];
@@ -82,7 +73,6 @@ export function mealNeeds(dishes: readonly MealDish[]): MealNeeds {
   };
 }
 
-/** Live cooked rows grouped by date, newest first, dishes in the order they were added. */
 export function buildMeals(cooked: readonly CookedRow[], recipes: ReadonlyMap<RecipeId, RecipeRow>): Meal[] {
   const byDate = new Map<LocalDate, CookedRow[]>();
   for (const row of cooked) {
@@ -110,17 +100,13 @@ export function buildMeals(cooked: readonly CookedRow[], recipes: ReadonlyMap<Re
 
 export interface Suggestion {
   recipe: RecipeView;
-  /** Days since last cooked; null when never. */
   daysSince: number | null;
-  /** At-home ingredients whose item is on Home's use-soon list. */
   expiring: number;
 }
 
 export interface MealSuggestions {
   needs: MealNeeds;
-  /** Empty once today's meal has a soup. */
   soups: Suggestion[];
-  /** Empty once today's meal has `MEAL_RULE.maxDishes` dishes. */
   dishes: Suggestion[];
 }
 
@@ -136,10 +122,6 @@ function rank(a: Suggestion, b: Suggestion): number {
   );
 }
 
-/**
- * What to cook today. A candidate has at least one tracked ingredient, none of them out,
- * and was not cooked today. Recently cooked recipes go last, then more short ingredients.
- */
 export function suggestFor(input: {
   recipes: readonly RecipeView[];
   meals: readonly Meal[];

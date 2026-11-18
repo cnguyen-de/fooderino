@@ -35,7 +35,6 @@ interface CookRows {
   cooked: Shown<CookedRow>[];
 }
 
-// Module-level, like usePantry: one live subscription shared by every Cook page.
 const rows = shallowRef<CookRows | null>(null);
 let started = false;
 
@@ -74,18 +73,13 @@ export interface Cook {
   /** Every date with at least one dish, newest first. */
   meals: ComputedRef<readonly Meal[]>;
   today: Readonly<Ref<LocalDate>>;
-  /** Today's meal, empty until something is cooked. */
   todayMeal: ComputedRef<Meal>;
-  /** What to cook today: soups while the meal lacks one, dishes until it has enough. */
   suggestions: ComputedRef<MealSuggestions>;
-  /** Combobox options for an ingredient: pantry search hits with what is at home. */
   ingredientOptions(query: string): readonly SearchResult[];
   plan(id: RecipeId): CookLine[];
-  /** The line after picking one of several matching items. */
   choose(line: CookLine, id: ItemId | null): CookLine;
   check(lines: readonly CookLine[]): CookCheck;
 
-  // Writes toast on failure and resolve with a falsy value; adding a dish toasts with Undo.
   saveRecipe(input: RecipeInput): Promise<RecipeId | null>;
   deleteRecipe(id: RecipeId): Promise<boolean>;
   addToMeal(id: RecipeId, date: LocalDate, lines: readonly CookLine[]): Promise<boolean>;

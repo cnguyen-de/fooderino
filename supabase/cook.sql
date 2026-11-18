@@ -1,12 +1,5 @@
--- supabase/cook.sql
--- Household recipes and cooked dishes. The one copy of this DDL:
---   * fresh install: apply after schema-v2.sql, and before backfill-v2.sql on a legacy database;
---   * hosted database: apply once, then deploy the client. It also moves recipes_v2.
--- One transaction: a failed or repeated run changes nothing.
-
 begin;
 
--- Mirrors parseIngredient in utils/sync-wire.ts. Keys: name, item_id, qty.
 create function private.ingredients_valid(p jsonb) returns boolean
 language plpgsql immutable set search_path = ''
 as $$
@@ -37,8 +30,6 @@ begin
 end;
 $$;
 
--- Legacy {name, amount?, amount_type} to {name, item_id: null, qty}. Mirrors legacyIngredient in
--- utils/db-upgrade.ts; tests/fixtures/legacy-ingredients.json pins the two together.
 create function private.legacy_ingredients(p jsonb) returns jsonb
 language sql immutable set search_path = ''
 as $$
@@ -68,8 +59,6 @@ create table public.household_recipes (
 );
 create index household_recipes_pull on public.household_recipes (household_id, seq);
 
--- A meal is every live row sharing a household and a date; it has no row of its own,
--- so two phones adding dishes to one dinner never write the same row.
 create table public.cooked_recipes (
   id           uuid primary key,
   household_id uuid not null references public.households(id),
@@ -98,7 +87,6 @@ create trigger cooked_recipes_lww before update on public.cooked_recipes
 create trigger cooked_recipes_lock before insert or update on public.cooked_recipes
   for each statement execute function private.lock_caller_household();
 
--- Mirrors the `sheet.columns` of the recipes and cooked entries in utils/sync-registry.ts.
 revoke all on public.household_recipes, public.cooked_recipes from anon, authenticated;
 grant select on public.household_recipes, public.cooked_recipes to authenticated;
 grant insert (id, household_id, name, kind, ingredients, instructions, updated_at, deleted_at),
@@ -111,7 +99,6 @@ grant insert (id, household_id, recipe_id, date, uses, updated_at, deleted_at),
 alter table public.household_recipes enable row level security;
 alter table public.cooked_recipes    enable row level security;
 
--- Unlike items, a recipe or a cooked row is born by upsert, so insert needs no existence check.
 create policy "members read recipes" on public.household_recipes
   for select to authenticated using (household_id = (select public.my_household()));
 create policy "members add recipes" on public.household_recipes
@@ -130,9 +117,6 @@ create policy "members edit meals" on public.cooked_recipes
 
 alter publication supabase_realtime add table public.household_recipes, public.cooked_recipes;
 
--- Each saved, live recipes_v2 row moves to its creator's live household with its id kept.
--- Recipes whose creator has no household stay behind until drop-legacy.sql; a later call
--- moves those whose creator has joined one since. `on conflict do nothing` makes a repeat a no-op.
 create function private.adopt_recipes_v2() returns jsonb
 language plpgsql set search_path = ''
 as $$
@@ -163,7 +147,6 @@ do $$
 begin
   if to_regclass('public.recipes_v2') is null then return; end if;
   raise notice 'cook.sql: %', private.adopt_recipes_v2();
-  -- A stale client's recipe push is now refused (403) and dropped, not retried forever.
   revoke insert, update on public.recipes_v2 from authenticated;
   if exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'recipes_v2') then
     alter publication supabase_realtime drop table public.recipes_v2;

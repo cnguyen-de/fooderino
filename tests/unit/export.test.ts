@@ -21,7 +21,6 @@ const item = (over: Partial<Item>): Item => ({
   unit: 'count', default_amount: 1, shelf_life_days: null, amount: 0, to_buy: 0, best_before: null,
   merged_into: null, deleted_at: null, ...over
 });
-/** A recipe as v1 and v2 files carried it: one user's, with legacy ingredients. */
 const legacyRecipe = (id: string, over: Record<string, unknown> = {}) => ({
   id, user_id: ME, name: 'Soup', description: null, ingredients: [], instructions: null, saved: true,
   updated_at: '2026-01-01T00:00:00.000Z', deleted_at: null, ...over

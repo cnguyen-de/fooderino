@@ -21,7 +21,6 @@ const item = (id: string, name: string, over: Partial<Item> = {}): Item => ({
   ...over
 });
 
-/** The same wiring as usePantry: merge-resolving byId, search hits mapped to live items. */
 function pantry(items: Item[]): PantryLookup {
   const map = new Map(items.map((i) => [i.id, i]));
   const index = buildSearchIndex(items);

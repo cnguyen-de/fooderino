@@ -158,12 +158,6 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
     return { landed, refused };
   }
 
-  /**
-   * Sheets go after commands, since an item exists on the server only once its `create` landed,
-   * and a sheet waits while a command it names is still queued.
-   * Stores go in registry order and a transport error stops the walk, so a row never lands
-   * ahead of an unpushed row it references.
-   */
   async function pushEdits(): Promise<void> {
     const [edits, commands] = await db.transaction('r', db.edits, db.commands, () =>
       Promise.all([db.edits.toArray(), db.commands.toArray()])
@@ -182,7 +176,6 @@ export function createSyncEngine({ db, transport, onRejection = () => {} }: Sync
 
       await db.transaction('rw', db.table(def.store), db.edits, async () => {
         await putNewer(def, landed);
-        // A sheet saved again while this push was in flight stays queued.
         for (const sent of ready) {
           if ((await db.edits.get(sent.id))?.updated_at === sent.updated_at) await db.edits.delete(sent.id);
         }

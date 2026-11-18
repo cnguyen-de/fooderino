@@ -65,8 +65,6 @@ begin
     v_failed := v_failed || 'logs do not equal backfilled events plus audit'::text;
   end if;
 
-  -- Every saved recipe whose owner has a household reached it. Where recipes_v2 still
-  -- exists it holds the recipes as their owners last left them, so it is the source.
   if to_regclass('public.recipes_v2') is null then
     select count(*) into v_stray
       from public.recipes r
@@ -119,7 +117,6 @@ select 'item without a list' as excluded, i.id, i.name, i.list_id
 select 'recipe without a user' as excluded, r.index, r.name
   from public.recipes r where r.id is null;
 
--- Context: saved recipes whose owner has no household, so no household received them.
 select 'recipe whose owner has no household' as excluded, r.index, r.name
   from public.recipes r
  where r.saved and r.id is not null

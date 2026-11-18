@@ -288,7 +288,6 @@ function quantity(v: unknown, path: string): Quantity | null {
   return { amount, unit: oneOf(o.unit, ['count', 'gram'] as const, `${path}.unit`) };
 }
 
-/** Mirrors private.ingredients_valid in supabase/cook.sql. */
 function parseIngredient(raw: unknown, path: string): Ingredient {
   const o = obj(raw, path);
   return {

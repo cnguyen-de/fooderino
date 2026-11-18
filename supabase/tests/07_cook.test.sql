@@ -4,7 +4,6 @@ select test.user('k-ann') as ann, test.user('k-ben') as ben, test.user('k-cat') 
 select test.household(:'ann', 'Cook Ann') as ha \gset
 select test.household(:'ben', 'Cook Ben') as hb \gset
 
--- Recipe documents
 begin;
 select test.act_as(:'ann');
 insert into public.household_recipes (id, household_id, name, kind, ingredients, instructions, updated_at)
@@ -32,7 +31,6 @@ commit;
 select test.eq((select kind || '/' || jsonb_array_length(ingredients) from public.household_recipes where id = test.id('k-soup')),
                'soup/3', 'a member saves a soup with linked, typed and unmeasured ingredients');
 
--- Last write wins
 select seq as seq_before, updated_at as at_before from public.household_recipes where id = test.id('k-soup') \gset
 begin;
 select test.act_as(:'ann');
@@ -49,7 +47,6 @@ select test.eq((select name from public.household_recipes where id = test.id('k-
 select test.ok((select seq from public.household_recipes where id = test.id('k-soup')) > :'seq_before'::bigint,
                'an accepted recipe write takes a new seq');
 
--- Cooked dishes
 begin;
 select test.act_as(:'ann');
 insert into public.cooked_recipes (id, household_id, recipe_id, date, uses, updated_at)
@@ -77,14 +74,12 @@ select test.throws(format('insert into public.cooked_recipes (id, household_id, 
                           gen_random_uuid(), :'ha', test.id('k-ben-dish')),
                    '23503', 'the household foreign key holds even where RLS does not apply');
 
--- Legacy ingredients: the same fixture pins utils/db-upgrade.ts legacyIngredients
 \set fixture `cat /repo/tests/fixtures/legacy-ingredients.json`
 select test.eq(private.legacy_ingredients(c -> 'legacy'), c -> 'ingredients', 'legacy ingredients: ' || (c ->> 'case'))
   from jsonb_array_elements(:'fixture'::jsonb) c;
 select test.ok(bool_and(private.ingredients_valid(c -> 'ingredients')), 'every converted legacy list is a valid recipe list')
   from jsonb_array_elements(:'fixture'::jsonb) c;
 
--- Moving recipes_v2, as on the hosted database
 begin;
 create table public.recipes_v2 (
   id           uuid primary key,

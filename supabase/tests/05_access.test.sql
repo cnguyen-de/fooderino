@@ -130,7 +130,6 @@ commit;
 select test.eq((select count(*) from public.household_share_tokens where household_id = :'h2'), 1::bigint,
                'a member mints a share token for their household');
 
--- Recipes and cooked dishes
 begin;
 select test.act_as(:'una');
 insert into public.household_recipes (id, household_id, name, updated_at)

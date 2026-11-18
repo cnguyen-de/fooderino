@@ -210,7 +210,6 @@ describe('membership', () => {
     for (const store of [...HOUSEHOLD_STORES, 'edits']) {
       expect(await device.db.table(store).count(), store).toBe(0);
     }
-    // The old household refuses a sheet sent after the move, and it never follows the user.
     expect([...server.recipes.values()].map((r) => r.name)).toEqual(['Canh chua']);
     expect(await device.engine.syncMembership()).toBe('same');
   });

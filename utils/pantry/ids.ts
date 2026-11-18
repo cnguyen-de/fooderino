@@ -10,7 +10,6 @@ export function normName(s: string): string {
   return s.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-/** The stored form of a name: trimmed, inner spacing collapsed. Mirrors private.tidy. */
 export function tidy(s: string): string {
   return s.trim().replace(/\s+/g, ' ');
 }

@@ -53,7 +53,6 @@ function openV2(name: string) {
   return v2;
 }
 
-/** Opens a database at schema v3 exactly as the household client before Cook declared it. */
 function openV3(name: string) {
   const v3 = openV2(name);
   v3.version(3).stores({
@@ -116,7 +115,6 @@ describe('Dexie v3 upgrade', () => {
       ['bag', 'commands', 'cooked', 'edits', 'events', 'households', 'items', 'log', 'members', 'recipes', 'syncState'].sort()
     );
     expect(await db.items.count()).toBe(0);
-    // With no household yet there is nowhere to send it; the server moved its own copy.
     expect(await db.recipes.count()).toBe(0);
     expect(await db.edits.count()).toBe(0);
 

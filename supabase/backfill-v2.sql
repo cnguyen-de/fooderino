@@ -199,8 +199,6 @@ begin
   select id, household_id, item, action, payload, created_at, reason
     from classified where reason is not null;
 
-  -- 5. Saved recipes move to their owner's household, as cook.sql's adopt_recipes_v2 does on
-  -- a database that went through recipes_v2. An owner with no single household keeps none.
   insert into public.household_recipes (id, household_id, name, ingredients, instructions, updated_at)
   select private.uuid_for('recipe:' || r.index), m.household_id, private.tidy(r.name),
          private.legacy_ingredients(r.ingredients),

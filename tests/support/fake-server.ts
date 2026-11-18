@@ -68,7 +68,6 @@ export class FakeServer {
     this.faults.push(fault);
   }
 
-  /** The next sheet push throws a network error before it reaches the table. */
   failNextPush(): void {
     this.pushFaults++;
   }
@@ -161,10 +160,6 @@ export class FakeServer {
     return all[store] as HouseholdRows[S][];
   }
 
-  /**
-   * A sheet upsert of only the granted columns, refused where RLS or a foreign key would
-   * refuse it, and dropped when older than the stored row, as `stamp_lww` does.
-   */
   pushSheet(actor: string, def: SheetTableDef, sheet: PendingSheet): HouseholdRows[typeof def.store] | null {
     const wire = Object.fromEntries(def.sheet.columns.map((c) => [c, sheet[c]])) as unknown as { id: string; household_id: HouseholdId };
     const table = { items: this.items, recipes: this.recipes, cooked: this.cooked }[def.store] as Map<string, HouseholdRows[typeof def.store]>;
@@ -173,7 +168,6 @@ export class FakeServer {
     if (wire.household_id !== household || (row && row.household_id !== household)) {
       throw new TransportRefused('new row violates row-level security');
     }
-    // Items are born by their create command, so an upsert may only land on an existing row.
     if (def.store === 'items' && !row) throw new TransportRefused('new row violates row-level security');
     if (sheet.store === 'cooked' && this.recipes.get(sheet.recipe_id)?.household_id !== sheet.household_id) {
       throw new TransportRefused('insert or update on table "cooked_recipes" violates foreign key constraint');

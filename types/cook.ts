@@ -6,7 +6,6 @@ type Brand<T, B extends string> = T & { readonly [brand]: B };
 export type RecipeId = Brand<string, 'RecipeId'>;
 export type CookedId = Brand<string, 'CookedId'>;
 
-/** A Vietnamese dinner is 2 to 3 dishes plus at least one soup. */
 export type RecipeKind = 'dish' | 'soup';
 
 /** `amount > 0`. Amount and unit come together or not at all. */
@@ -24,7 +23,6 @@ export interface Ingredient {
   qty: Quantity | null;
 }
 
-/** The last-write-wins recipe document, pushed whole. */
 export interface RecipeSheet {
   id: RecipeId;
   household_id: HouseholdId;

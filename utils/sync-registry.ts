@@ -21,14 +21,11 @@ export interface HouseholdTableDef<S extends HouseholdStore = HouseholdStore> {
   /** The row's primary key, as the Dexie store keys it. */
   key: (row: HouseholdRows[S]) => string;
   parse: (raw: unknown) => HouseholdRows[S];
-  /** Set on the stores the client writes whole. */
   sheet?: S extends SheetStore ? SheetDef<S> : never;
 }
 
 export interface SheetDef<S extends SheetStore> {
-  /** The columns a push sends. Mirrors the SQL column grants; every other column is server-owned. */
   columns: readonly Exclude<keyof PendingSheet<S>, 'store'>[];
-  /** Commands the sheet points at. It waits while any of them is queued, so a reader never sees it ahead of their effects. */
   waitsFor?: (sheet: PendingSheet<S>) => readonly CommandId[];
 }
 
@@ -39,10 +36,9 @@ function def<S extends HouseholdStore>(d: HouseholdTableDef<S>): HouseholdTableD
 }
 
 /**
- * Pull order, and push order for sheets. The log comes last: a command commits its
- * effects and its log row together, so any effect a pull saw has its receipt in the
- * same pull, and replay never applies an accepted pending command on top of its own
- * effect. Recipes come before cooked dishes, so a dish never pushes ahead of its recipe.
+ * Pull order. The log comes last: a command commits its effects and its log row
+ * together, so any effect a pull saw has its receipt in the same pull, and replay
+ * never applies an accepted pending command on top of its own effect.
  */
 export const HOUSEHOLD_TABLES = [
   def({ store: 'households', remote: 'households', scope: 'id', key: (r) => r.id, parse: parseHousehold }),
@@ -83,7 +79,6 @@ export const HOUSEHOLD_TABLES = [
 
 export const HOUSEHOLD_STORES: readonly HouseholdStore[] = HOUSEHOLD_TABLES.map((d) => d.store);
 
-/** Push order is registry order, so a row lands after the rows it references. */
 export const SHEET_TABLES = HOUSEHOLD_TABLES.filter((d) => d.sheet !== undefined) as readonly SheetTableDef[];
 
 export const PAGE_SIZE = 1000;

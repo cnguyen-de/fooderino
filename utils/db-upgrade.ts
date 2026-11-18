@@ -62,7 +62,6 @@ export function convertPendingOps(ops: readonly PendingOp[], items: readonly Ite
   return { commands: out.map((o) => o.command), discarded };
 }
 
-/** A per-user recipe as Dexie v1 to v3 stored it. */
 export interface LegacyRecipe {
   id: string;
   user_id: string;
@@ -75,10 +74,6 @@ export interface LegacyRecipe {
   deleted_at: string | null;
 }
 
-/**
- * Legacy `{name, amount?, amount_type}` entries to ingredients with no item link. Mirrors
- * private.legacy_ingredients in supabase/cook.sql; tests/fixtures/legacy-ingredients.json pins both.
- */
 export function legacyIngredients(raw: unknown): Ingredient[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((entry): Ingredient[] => {
@@ -96,7 +91,6 @@ export function legacyIngredients(raw: unknown): Ingredient[] {
   });
 }
 
-/** A saved or deleted legacy recipe as a household recipe sheet, as private.adopt_recipes_v2 moves one. */
 export function legacyRecipeSheet(r: LegacyRecipe, household: HouseholdId): PendingSheet<'recipes'> | null {
   const name = typeof r.name === 'string' ? tidy(r.name) : '';
   const updated_at = typeof r.updated_at === 'string' ? instantOf(r.updated_at) : null;
