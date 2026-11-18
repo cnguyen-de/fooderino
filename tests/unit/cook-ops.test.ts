@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { ItemId, LocalDate } from '~~/types/pantry';
 import type { CookedRow, RecipeId, RecipeRow } from '~~/types/cook';
 import { createCookOps } from '~~/utils/cook';
+import { createPantryOps } from '~~/utils/pantry-ops';
+import { notifyLocalChange, setLocalChangeHook } from '~~/utils/sync-hook';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 import { FakeServer, HOUSEHOLD } from '../support/fake-server';
 import { makeDevice, project } from '../support/device';
@@ -117,6 +119,24 @@ describe('cook ops', () => {
     await d.cook.cook({ recipe, date: TODAY, uses: [] });
     expect(await d.dishes()).toEqual([expect.objectContaining({ recipe_id: recipe, uses: [] })]);
     expect(await amountOf(d, pork)).toBe(500);
+  });
+
+  it('lets the sync engine push from the write-through hook while a dish is cooked', async () => {
+    const d = await device();
+    const { pork, recipe } = await soup(d);
+    await d.engine.sync('full');
+    const pushes: Promise<unknown>[] = [];
+    setLocalChangeHook(() => pushes.push(d.engine.flush()));
+    try {
+      const pantry = createPantryOps({ db: d.db, notify: () => notifyLocalChange('pantry') });
+      const cook = createCookOps({ db: d.db, pantry, notify: () => notifyLocalChange('pantry') });
+      const id = await cook.cook({ recipe, date: TODAY, uses: [{ id: pork, qty: 100 }] });
+      await Promise.all(pushes);
+      expect(d.server.cooked.get(id)?.recipe_id).toBe(recipe);
+      expect(d.server.items.get(pork)?.amount).toBe(400);
+    } finally {
+      setLocalChangeHook(null);
+    }
   });
 
   it('records nothing when the pantry refuses the deduction', async () => {

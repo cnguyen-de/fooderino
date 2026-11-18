@@ -1,3 +1,5 @@
+import Dexie from 'dexie';
+
 /** What a local write touched: the household outboxes, or the user's recipes. */
 export type LocalChange = 'pantry' | 'recipes';
 
@@ -15,5 +17,6 @@ export function setLocalChangeHook(fn: LocalChangeHook | null): void {
  * bootstrap) it does nothing, and the write waits in its outbox for the next sync.
  */
 export function notifyLocalChange(change: LocalChange): void {
-  hook?.(change);
+  // A write nested in a caller's transaction (cooking wraps useItems) must not start sync work inside it.
+  Dexie.ignoreTransaction(() => hook?.(change));
 }
