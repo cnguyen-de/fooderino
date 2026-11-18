@@ -4,9 +4,10 @@ export default defineNuxtRouteMiddleware((to) => {
   // /join carries a share token and must resolve on its own page, signed in
   // or not — the redirects below would swallow the token.
   if (to.path === '/join') return;
+  if (to.path === '/recipe' || to.path.startsWith('/recipe/')) return navigateTo('/cook/recipes', { replace: true });
 
   const user = useSupabaseUser();
-  const protectedAppRoutes = ['/home', '/shop', '/household', '/settings', '/recipe', '/logs'];
+  const protectedAppRoutes = ['/home', '/shop', '/household', '/settings', '/cook', '/logs'];
   if (protectedAppRoutes.some((path) => to.path === path || to.path.startsWith(path + '/')) && !user.value) {
     return navigateTo('/');
   }

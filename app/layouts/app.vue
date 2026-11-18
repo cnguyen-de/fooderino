@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import HouseholdGate from '~/components/pantry/HouseholdGate.vue';
 import PantryNotices from '~/components/pantry/PantryNotices.vue';
-import { History, House, Settings, ShoppingBasket } from 'lucide-vue-next';
+import { ChefHat, History, House, Settings, ShoppingBasket } from 'lucide-vue-next';
 const hydrated = useState<boolean>('sync-hydrated', () => false);
 const route = useRoute();
 const hasDock = computed(() => route.name === 'home' || route.name === 'shop');
+const active = (path: string) => route.path === path || route.path.startsWith(path + '/');
+const gated = computed(() => ['/home', '/shop', '/household', '/logs', '/cook'].some(active));
 const viewport = ref<{ height: string; top: string }>();
 onMounted(() => {
   const visible = window.visualViewport;
@@ -59,18 +61,19 @@ onMounted(() => {
           </NuxtLink>
         </nav>
       </div>
-      <nav aria-label="Main navigation" class="grid grid-cols-2 gap-1 rounded-lg bg-muted p-0.5">
+      <nav aria-label="Main navigation" class="grid grid-cols-3 gap-1 rounded-lg bg-muted p-0.5">
         <NuxtLink
           v-for="tab in [
             { path: '/home', name: 'Home', icon: House },
-            { path: '/shop', name: 'Shopping', icon: ShoppingBasket }
+            { path: '/shop', name: 'Shopping', icon: ShoppingBasket },
+            { path: '/cook', name: 'Cook', icon: ChefHat }
           ]"
           :key="tab.path"
           :to="tab.path"
-          :aria-current="route.path === tab.path ? 'page' : undefined"
+          :aria-current="active(tab.path) ? 'page' : undefined"
           class="flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
           :class="
-            route.path === tab.path
+            active(tab.path)
               ? 'bg-background text-primary shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           "
@@ -81,7 +84,7 @@ onMounted(() => {
     <main
       :class="hasDock ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'">
       <p v-if="!hydrated" class="p-4" role="status">Loading your household…</p>
-      <HouseholdGate v-else-if="['/home', '/shop', '/household', '/logs'].includes(route.path)"><slot /></HouseholdGate>
+      <HouseholdGate v-else-if="gated"><slot /></HouseholdGate>
       <slot v-else />
     </main>
     <PantryNotices v-if="hydrated" />

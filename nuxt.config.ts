@@ -52,7 +52,7 @@ export default defineNuxtConfig({
   components: [
     { path: '~/components/footer', pathPrefix: false },
     { path: '~/components/lists', pathPrefix: false },
-    { path: '~/components/recipes', pathPrefix: false },
+    { path: '~/components/cook', pathPrefix: false },
     { path: '~/components/logs', pathPrefix: false },
     { path: '~/components/settings', pathPrefix: false },
     { path: '~/components/sync', pathPrefix: false }

@@ -60,7 +60,7 @@ async function copy() {
         >
       </div>
       <nav class="flex gap-6">
-        <NuxtLink to="/recipe" class="underline">Recipes</NuxtLink
+        <NuxtLink to="/cook/recipes" class="underline">Recipes</NuxtLink
         ><NuxtLink to="/settings" class="underline">Settings</NuxtLink>
       </nav>
       <Button variant="ghost" @click="leaving = !leaving">Leave household…</Button>

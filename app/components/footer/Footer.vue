@@ -12,7 +12,7 @@ import { CookingPot, House, Settings, ShoppingCart } from 'lucide-vue-next';
         <ShoppingCart> </ShoppingCart>
       </div>
     </FooterLink>
-    <FooterLink link="/recipe" include-child>
+    <FooterLink link="/cook" include-child>
       <CookingPot></CookingPot>
     </FooterLink>
     <FooterLink link="/settings">
