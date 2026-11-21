@@ -92,6 +92,22 @@ describe('buildSeasonView', () => {
     ]);
   });
 
+  it('ranks bought items above never-bought entries of the same kind, in season now and coming soon', () => {
+    const calendar: CalendarEntry[] = [
+      { name: 'Aubergine', aliases: [], kind: 'vegetable', season: { from: 11, to: 11 } },
+      { name: 'Zwiebeln', aliases: ['Onions'], kind: 'vegetable', season: { from: 10, to: 12 } },
+      { name: 'Artischocke', aliases: [], kind: 'vegetable', season: { from: 12, to: 1 } },
+      { name: 'Zitronen', aliases: ['Lemons'], kind: 'vegetable', season: { from: 1, to: 3 } }
+    ];
+    const v = buildSeasonView({
+      items: [item('Onions', { season: { from: 10, to: 12 } }), item('Lemons', { season: { from: 1, to: 3 } })],
+      calendar,
+      month: 11
+    });
+    expect(names(v.now)).toEqual(['item:Onions', 'calendar:Aubergine']);
+    expect(names(v.soon)).toEqual(['item:Lemons', 'calendar:Artischocke']);
+  });
+
   it('is empty for a month the calendar has nothing for', () => {
     const v = buildSeasonView({ items: [], calendar: [CALENDAR[3]!], month: 9 });
     expect(v).toEqual({ now: [], soon: [], fillable: [] });

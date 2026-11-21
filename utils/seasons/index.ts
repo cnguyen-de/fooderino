@@ -117,6 +117,8 @@ export interface SeasonViewInput {
 }
 
 const KIND_ORDER: Record<ProduceKind | 'other', number> = { vegetable: 0, fruit: 1, other: 2 };
+/** What the household buys ranks above what it never bought. */
+const SOURCE_ORDER: Record<SeasonRow['source'], number> = { item: 0, calendar: 1 };
 
 export function buildSeasonView({ items, calendar, month, soonMonths = 2 }: SeasonViewInput): SeasonView {
   const endsThisMonth = (season: Season) => season.to === month && inSeason(season, month);
@@ -139,14 +141,15 @@ export function buildSeasonView({ items, calendar, month, soonMonths = 2 }: Seas
   }
 
   const byName = (a: SeasonRow, b: SeasonRow) => rowName(a).localeCompare(rowName(b));
+  const bySource = (a: SeasonRow, b: SeasonRow) => SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
   const until = (row: SeasonRow) => monthsUntil(rowSeason(row), month);
   return {
     now: rows
       .filter((r) => until(r) === 0)
-      .sort((a, b) => KIND_ORDER[rowKind(a)] - KIND_ORDER[rowKind(b)] || byName(a, b)),
+      .sort((a, b) => KIND_ORDER[rowKind(a)] - KIND_ORDER[rowKind(b)] || bySource(a, b) || byName(a, b)),
     soon: rows
       .filter((r) => until(r) > 0 && until(r) <= soonMonths)
-      .sort((a, b) => until(a) - until(b) || byName(a, b)),
+      .sort((a, b) => bySource(a, b) || until(a) - until(b) || byName(a, b)),
     fillable
   };
 }
