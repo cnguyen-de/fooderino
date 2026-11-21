@@ -114,6 +114,9 @@ function sheetOf(item: Item): ItemSheet {
   return { id, household_id, name, aliases, tags, unit, default_amount, shelf_life_days, season, deleted_at };
 }
 
+/** The editor hands over a Vue proxy, which IndexedDB cannot store. */
+const plainSeason = ({ from, to }: Season): Season => ({ from, to });
+
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 function validSheet(s: ItemSheet): boolean {
@@ -249,7 +252,13 @@ export function createPantryOps({
         const commands: Command[] = [{ ...base(ctx, id), kind: 'create', item, start }];
         if (!draft.season) return { commands };
         if (!isSeason(draft.season)) throw new RangeError(`Invalid season for ${name}`);
-        const sheet: ItemSheet = { id, household_id: ctx.household, ...item, season: draft.season, deleted_at: null };
+        const sheet: ItemSheet = {
+          id,
+          household_id: ctx.household,
+          ...item,
+          season: plainSeason(draft.season),
+          deleted_at: null
+        };
         // The create lands stamped `at`; a sheet stamped the same would count as already settled and be dropped.
         return { commands, sheet: { store: 'items', ...sheet, updated_at: stampAbove(ctx.at, ctx.at) } };
       });
@@ -277,6 +286,7 @@ export function createPantryOps({
           patch.aliases = normalizeAliases(name, patch.aliases ?? item.aliases);
         }
         if (patch.tags !== undefined) patch.tags = normalizeTags(patch.tags);
+        if (patch.season) patch.season = plainSeason(patch.season);
         const sheet = sheetPlan(ctx, item, patch);
         if (sheet.sheet && !validSheet(sheet.sheet)) throw new RangeError(`Invalid edit for item ${id}`);
         return { commands, ...sheet };

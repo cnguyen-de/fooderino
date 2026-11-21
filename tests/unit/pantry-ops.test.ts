@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { reactive } from 'vue';
 import type { CommandId, ItemId, LocalDate } from '~~/types/pantry';
+import type { Season } from '~~/types/season';
 import { createSyncEngine } from '~~/utils/sync-engine';
 import { FakeServer, HOUSEHOLD } from '../support/fake-server';
 import { makeDevice, project } from '../support/device';
@@ -211,7 +213,7 @@ describe('pantry ops replay over confirmed state', () => {
 describe('item seasons', () => {
   const kale = { from: 11, to: 2 } as const;
 
-  it('shows a new item\'s season offline and lands it on the server once the create has', async () => {
+  it("shows a new item's season offline and lands it on the server once the create has", async () => {
     const d = await device();
     const id = (await d.ops.createItem({ name: 'Grünkohl', season: kale, to_buy: 1 }))!;
     expect(await d.item(id)).toMatchObject({ name: 'Grünkohl', season: kale, to_buy: 1 });
@@ -273,5 +275,15 @@ describe('item seasons', () => {
     expect(d.server.items.get(id)?.season).toBeNull();
 
     await expect(d.ops.editItem(id, { season: { from: 0, to: 13 } as never })).rejects.toThrow(RangeError);
+  });
+
+  it('stores a season the editor hands over as reactive state, on create and on edit', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Spargel', season: reactive<Season>({ from: 4, to: 6 }) }))!;
+    expect(await d.item(id)).toMatchObject({ season: { from: 4, to: 6 } });
+
+    await d.ops.editItem(id, { season: reactive<Season>({ from: 4, to: 5 }) });
+    await d.engine.sync('full');
+    expect(d.server.items.get(id)?.season).toEqual({ from: 4, to: 5 });
   });
 });
