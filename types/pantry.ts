@@ -1,3 +1,5 @@
+import type { Season } from './season';
+
 declare const brand: unique symbol;
 type Brand<T, B extends string> = T & { readonly [brand]: B };
 
@@ -26,7 +28,12 @@ export interface ItemMetadata {
   unit: Unit;
   default_amount: number;
   shelf_life_days: number | null;
+  /** Null when the item has no season: year-round, or not known. */
+  season: Season | null;
 }
+
+/** A `create` command's metadata. A season follows the create as an items sheet, so the server's create needs no season. */
+export type CreateMetadata = Omit<ItemMetadata, 'season'>;
 
 /** Server-owned counters. Only commands change them. */
 export interface Stock {
@@ -136,7 +143,7 @@ interface CommandBase {
 
 export type Command = CommandBase &
   (
-    | { kind: 'create'; item: ItemMetadata; start: Partial<Stock> }
+    | { kind: 'create'; item: CreateMetadata; start: Partial<Stock> }
     | { kind: 'use'; qty: number; waste: boolean }
     /** `qty` is the absolute target for `to_buy`. */
     | { kind: 'want'; qty: number }

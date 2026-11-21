@@ -21,6 +21,8 @@ import type {
   TagKind
 } from '~~/types/pantry';
 import type { CookedId, CookedRow, Ingredient, Quantity, RecipeId, RecipeRow } from '~~/types/cook';
+import type { Season } from '~~/types/season';
+import { isSeason } from '~~/utils/seasons';
 
 /** A server row or response that does not have the shape the client relies on. */
 export class WireError extends Error {
@@ -87,6 +89,12 @@ const optInstant = nullable(instant);
 const optDate = nullable(date);
 const optStr = nullable(str);
 const optNum = nullable(num);
+
+function season(v: unknown, path: string): Season {
+  if (!isSeason(v)) throw new WireError(path, 'a season of months 1-12, { from, to }', v);
+  return { from: v.from, to: v.to };
+}
+const optSeason = nullable(season);
 
 const TAG_KINDS: readonly TagKind[] = ['place', 'store', 'other'];
 const COMMAND_KINDS: readonly CommandKind[] = [
@@ -166,6 +174,7 @@ export function parseItem(raw: unknown): ItemRow {
     unit: oneOf(r.unit, ['count', 'gram'] as const, 'item.unit'),
     default_amount: num(r.default_amount, 'item.default_amount'),
     shelf_life_days: optNum(r.shelf_life_days, 'item.shelf_life_days'),
+    season: optSeason(r.season, 'item.season'),
     amount: num(r.amount, 'item.amount'),
     to_buy: num(r.to_buy, 'item.to_buy'),
     best_before: optDate(r.best_before, 'item.best_before'),

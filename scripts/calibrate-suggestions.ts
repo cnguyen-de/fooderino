@@ -106,6 +106,7 @@ function blankItem(id: ItemId, list: HouseholdId, name: string): Item {
     unit: 'count',
     default_amount: 1,
     shelf_life_days: null,
+    season: null,
     amount: 0,
     to_buy: 0,
     best_before: null,

@@ -50,7 +50,7 @@ export const HOUSEHOLD_TABLES = [
     key: (r) => r.id,
     parse: parseItem,
     sheet: {
-      columns: ['id', 'household_id', 'name', 'aliases', 'tags', 'unit', 'default_amount', 'shelf_life_days', 'updated_at', 'deleted_at']
+      columns: ['id', 'household_id', 'name', 'aliases', 'tags', 'unit', 'default_amount', 'shelf_life_days', 'season', 'updated_at', 'deleted_at']
     }
   }),
   def({

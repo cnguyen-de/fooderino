@@ -163,6 +163,7 @@ function effectOf(state: Snapshot, cmd: Command): Outcome {
       unit: meta.unit,
       default_amount: meta.default_amount,
       shelf_life_days: meta.shelf_life_days,
+      season: null,
       amount: start.amount ?? 0,
       to_buy: start.to_buy ?? 0,
       best_before: start.best_before ?? null,

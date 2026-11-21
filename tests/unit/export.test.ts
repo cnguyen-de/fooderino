@@ -18,7 +18,7 @@ const NOW = '2026-11-16T12:00:00.000Z';
 
 const item = (over: Partial<Item>): Item => ({
   id: crypto.randomUUID() as ItemId, household_id: HOUSEHOLD as HouseholdId, name: 'Milk', aliases: [], tags: [],
-  unit: 'count', default_amount: 1, shelf_life_days: null, amount: 0, to_buy: 0, best_before: null,
+  unit: 'count', default_amount: 1, shelf_life_days: null, season: null, amount: 0, to_buy: 0, best_before: null,
   merged_into: null, deleted_at: null, ...over
 });
 const legacyRecipe = (id: string, over: Record<string, unknown> = {}) => ({
@@ -124,6 +124,36 @@ describe('export v3', () => {
 });
 
 describe('import', () => {
+  it('round-trips an item season, and reads a file without one, or with a bad one, as no season', async () => {
+    const payload = buildExportPayload({
+      household: null,
+      items: [item({ name: 'Grünkohl', season: { from: 11, to: 2 } }), item({ name: 'Salt' })],
+      recipes: [],
+      now: NOW
+    });
+    const parsed = parseImport(JSON.parse(JSON.stringify(payload)))!;
+    expect(parsed.items.map(({ name, season }) => ({ name, season }))).toEqual([
+      { name: 'Grünkohl', season: { from: 11, to: 2 } },
+      { name: 'Salt', season: null }
+    ]);
+
+    const older = { ...payload, items: payload.items.map(({ season: _, ...rest }) => rest) };
+    expect(parseImport(older)!.items.map((i) => i.season)).toEqual([null, null]);
+    const bad = { ...payload, items: [{ ...payload.items[0], season: { from: 11, to: 14 } }] };
+    expect(parseImport(bad)!.items[0]!.season).toBeNull();
+
+    const server = new FakeServer();
+    const device = await makeDevice(server.transport(ME), HOUSEHOLD);
+    for (const draft of parsed.items) await device.ops.createItem(draft);
+    await device.engine.sync('full');
+    expect([...server.items.values()].map(({ name, season }) => ({ name, season }))).toEqual(
+      expect.arrayContaining([
+        { name: 'Grünkohl', season: { from: 11, to: 2 } },
+        { name: 'Salt', season: null }
+      ])
+    );
+  });
+
   it('maps a v1 item location to a place tag and its store to a store tag', () => {
     expect(parseImport(v1)?.items).toEqual([
       { name: 'Milk', tags: [{ kind: 'place', name: 'Fridge' }, { kind: 'store', name: 'Lidl' }], unit: 'count', default_amount: 1, amount: 2, to_buy: 1 },

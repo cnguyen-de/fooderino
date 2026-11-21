@@ -14,7 +14,7 @@ const item = (id: string, name: string, over: Partial<Item> = {}): Item => ({
   amount: 3,
   to_buy: 0,
   default_amount: 1,
-  shelf_life_days: null,
+  shelf_life_days: null, season: null,
   best_before: null,
   deleted_at: null,
   merged_into: null,

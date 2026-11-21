@@ -78,6 +78,15 @@ async function upgradeToV4(tx: Transaction): Promise<void> {
   }
 }
 
+/** Items and item sheets stored before seasons existed have no season. */
+async function upgradeToV5(tx: Transaction): Promise<void> {
+  const noSeason = (row: { season?: unknown }) => {
+    row.season ??= null;
+  };
+  await tx.table('items').toCollection().modify(noSeason);
+  await tx.table('edits').where('store').equals('items').modify(noSeason);
+}
+
 export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
   const db = new Dexie(name) as FooderinoDb;
 
@@ -115,6 +124,8 @@ export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
   db.version(4)
     .stores({ recipes: 'id, seq', cooked: 'id, seq', edits: 'id, store' })
     .upgrade(upgradeToV4);
+
+  db.version(5).stores({}).upgrade(upgradeToV5);
 
   return db;
 }

@@ -1,11 +1,13 @@
 import type { Quantity, RecipeId, RecipeKind, RecipeRow } from '~~/types/cook';
 import type { HouseholdId, Instant, Item, ItemId, LocalDate, Tag } from '~~/types/pantry';
+import type { Season } from '~~/types/season';
 import type { PendingSheet } from '~~/types/sync';
 import { db, type FooderinoDb } from '~~/utils/db';
 import { legacyIngredients } from '~~/utils/db-upgrade';
 import { isLive, isLocalDate, newId, normName, resolveItem, tidy } from '~~/utils/pantry';
 import type { ItemDraft } from '~~/utils/pantry-ops';
 import { projectPantry, readDeviceRows } from '~~/utils/pantry-projection';
+import { isSeason } from '~~/utils/seasons';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 
 export const EXPORT_VERSION = 3;
@@ -18,6 +20,7 @@ export interface ExportedItem {
   unit: 'count' | 'gram';
   default_amount: number;
   shelf_life_days: number | null;
+  season: Season | null;
   amount: number;
   to_buy: number;
   best_before: LocalDate | null;
@@ -59,6 +62,7 @@ export function buildExportPayload(input: {
       unit: i.unit,
       default_amount: i.default_amount,
       shelf_life_days: i.shelf_life_days,
+      season: i.season,
       amount: i.amount,
       to_buy: i.to_buy,
       best_before: i.best_before
@@ -132,6 +136,7 @@ function draftV2(raw: Json): ItemDraft | null {
     unit: raw.unit === 'gram' ? 'gram' : 'count',
     default_amount: count(raw.default_amount ?? 1),
     shelf_life_days: typeof days === 'number' && Number.isInteger(days) && days >= 0 ? days : null,
+    season: isSeason(raw.season) ? { from: raw.season.from, to: raw.season.to } : null,
     amount: count(raw.amount),
     to_buy: count(raw.to_buy),
     best_before: isLocalDate(raw.best_before) ? raw.best_before : null

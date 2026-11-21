@@ -52,7 +52,9 @@ Create `.env` with:
 | `SUPABASE_SERVICE_KEY` | Service-role key. The household routes use it to call `move_household`, the only writer of memberships. **Never commit it.** |
 | `BASE_URL` | Public origin, used to build share links (defaults to `http://localhost:3000`) |
 
-Apply `supabase/schema-v2.sql`, then `supabase/cook.sql`, to the database before the first run.
+Apply `supabase/schema-v2.sql`, then `supabase/cook.sql`, then `supabase/seasons.sql`, to the database before the
+first run. An existing database gets `supabase/seasons.sql` before this client deploys, since the client pushes the
+`season` column with every item sheet.
 Migrating an existing database also needs `supabase/backfill-v2.sql`, then `supabase/verify-v2.sql`
 to check it. A database that predates recipes in households gets `supabase/cook.sql` before this
 client deploys: it moves each user's saved recipes to their household.

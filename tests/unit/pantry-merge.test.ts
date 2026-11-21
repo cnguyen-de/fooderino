@@ -11,7 +11,7 @@ function item(id: string, name: string, household: string, over: Partial<Item> =
     tags: [],
     unit: 'count',
     default_amount: 1,
-    shelf_life_days: null,
+    shelf_life_days: null, season: null,
     amount: 0,
     to_buy: 0,
     best_before: null,

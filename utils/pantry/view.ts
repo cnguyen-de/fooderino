@@ -25,8 +25,8 @@ export interface PantryViewInput {
 const MOST_USED_LIMIT = 10;
 
 function toPantryItem(item: Item): PantryItem {
-  const { id, name, aliases, tags, unit, default_amount, shelf_life_days, amount, to_buy, best_before } = item;
-  return { id, name, aliases, tags, unit, default_amount, shelf_life_days, amount, to_buy, best_before };
+  const { id, name, aliases, tags, unit, default_amount, shelf_life_days, season, amount, to_buy, best_before } = item;
+  return { id, name, aliases, tags, unit, default_amount, shelf_life_days, season, amount, to_buy, best_before };
 }
 
 const byName = (a: PantryItem, b: PantryItem) => a.name.localeCompare(b.name);

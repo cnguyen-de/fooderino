@@ -308,7 +308,7 @@ describe('metadata edits', () => {
     await device.db.commands.add(create);
     await device.db.edits.put({
       store: 'items', id, household_id: HOUSEHOLD, name: 'Ghost', aliases: [], tags: [], unit: 'count', default_amount: 1,
-      shelf_life_days: null, deleted_at: null, updated_at: '2026-11-05T00:00:01.000Z' as Instant
+      shelf_life_days: null, season: null, deleted_at: null, updated_at: '2026-11-05T00:00:01.000Z' as Instant
     });
 
     await device.engine.sync('full');

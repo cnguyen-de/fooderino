@@ -23,7 +23,8 @@ const newItem = (name = ''): ItemMetadata => ({
   tags: [],
   unit: 'count',
   default_amount: 1,
-  shelf_life_days: null
+  shelf_life_days: null,
+  season: null
 });
 const draft = ref(newItem());
 const amount = ref(0);
@@ -58,7 +59,8 @@ watch([() => props.id, () => props.creating], ([id, creating]) => {
         tags: item.tags.map((t) => ({ ...t })),
         unit: item.unit,
         default_amount: item.default_amount,
-        shelf_life_days: item.shelf_life_days
+        shelf_life_days: item.shelf_life_days,
+        season: item.season
       }
     : newItem(props.initialName?.trim());
   amount.value = item?.amount ?? 1;

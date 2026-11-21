@@ -11,7 +11,7 @@ function item(id: string, name: string, over: { aliases?: string[]; tags?: Tag[]
     tags: [],
     unit: 'count',
     default_amount: 1,
-    shelf_life_days: null,
+    shelf_life_days: null, season: null,
     amount: 1,
     to_buy: 0,
     best_before: null,

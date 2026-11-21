@@ -25,7 +25,7 @@ afterEach(async () => {
 
 const row: ItemRow = {
   id: 'i1' as ItemId, household_id: H, name: 'Milk', aliases: [], tags: [], unit: 'count', default_amount: 1,
-  shelf_life_days: null, amount: 1, to_buy: 0, best_before: null, merged_into: null, deleted_at: null,
+  shelf_life_days: null, season: null, amount: 1, to_buy: 0, best_before: null, merged_into: null, deleted_at: null,
   updated_at: '2026-01-01T00:00:00.000Z' as Instant, seq: 1
 };
 

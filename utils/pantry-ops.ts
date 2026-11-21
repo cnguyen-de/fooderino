@@ -3,6 +3,7 @@ import type {
   Command,
   CommandId,
   CommandKind,
+  CreateMetadata,
   HouseholdId,
   Instant,
   Item,
@@ -15,10 +16,12 @@ import type {
   Tag,
   Unit
 } from '~~/types/pantry';
+import type { Season } from '~~/types/season';
 import type { PendingSheet, QueuedCommand, RejectionNotice } from '~~/types/sync';
 import type { FooderinoDb } from '~~/utils/db';
 import { applyCommand, newId, normalizeAliases, normalizeTags, resolveItem } from '~~/utils/pantry';
 import { projectPantry, readDeviceRows } from '~~/utils/pantry-projection';
+import { isSeason } from '~~/utils/seasons';
 import { stampAbove } from '~~/utils/sheets';
 
 /** What `undo` needs to reverse one gesture. Opaque to the UI. */
@@ -35,6 +38,7 @@ export interface ItemDraft {
   unit?: Unit;
   default_amount?: number;
   shelf_life_days?: number | null;
+  season?: Season | null;
   amount?: number;
   to_buy?: number;
   best_before?: LocalDate | null;
@@ -88,7 +92,7 @@ export interface PantryOpsOptions {
 }
 
 const UNDOABLE: ReadonlySet<CommandKind> = new Set(['use', 'want', 'set', 'tick', 'unpack']);
-const META_KEYS = ['name', 'aliases', 'tags', 'unit', 'default_amount', 'shelf_life_days'] as const;
+const META_KEYS = ['name', 'aliases', 'tags', 'unit', 'default_amount', 'shelf_life_days', 'season'] as const;
 
 /** Everything one gesture reads: the projected state, and the stamps a sheet edit has to beat. */
 interface Ctx {
@@ -106,8 +110,8 @@ interface Plan {
 }
 
 function sheetOf(item: Item): ItemSheet {
-  const { id, household_id, name, aliases, tags, unit, default_amount, shelf_life_days, deleted_at } = item;
-  return { id, household_id, name, aliases, tags, unit, default_amount, shelf_life_days, deleted_at };
+  const { id, household_id, name, aliases, tags, unit, default_amount, shelf_life_days, season, deleted_at } = item;
+  return { id, household_id, name, aliases, tags, unit, default_amount, shelf_life_days, season, deleted_at };
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -118,7 +122,8 @@ function validSheet(s: ItemSheet): boolean {
     (s.unit === 'count' || s.unit === 'gram') &&
     Number.isFinite(s.default_amount) &&
     s.default_amount >= 0 &&
-    (s.shelf_life_days === null || (Number.isInteger(s.shelf_life_days) && s.shelf_life_days >= 0))
+    (s.shelf_life_days === null || (Number.isInteger(s.shelf_life_days) && s.shelf_life_days >= 0)) &&
+    (s.season === null || isSeason(s.season))
   );
 }
 
@@ -185,12 +190,14 @@ export function createPantryOps({
         queued.push({ ...command, created_seq: ++seq });
       }
       await db.commands.bulkAdd(queued);
-      if (p.sheet) await db.edits.put(p.sheet);
+      // A sheet for an item the commands did not leave standing, such as a refused create, could never land.
+      const sheet = p.sheet && state.items.has(p.sheet.id) ? p.sheet : undefined;
+      if (sheet) await db.edits.put(sheet);
 
       const undoable = queued.filter((c) => UNDOABLE.has(c.kind)).map((c) => ({ id: c.id, item_id: c.item_id }));
-      const restore = p.sheet && p.restore ? p.restore : null;
+      const restore = sheet && p.restore ? p.restore : null;
       const handle = undoable.length > 0 || restore ? { commands: undoable, sheet: restore } : null;
-      return { handle, queued: queued.length + (p.sheet ? 1 : 0) };
+      return { handle, queued: queued.length + (sheet ? 1 : 0) };
     });
     if (notices.length > 0) onRejection(notices);
     if (outcome.queued > 0) notify();
@@ -231,7 +238,7 @@ export function createPantryOps({
         if (draft.amount !== undefined) start.amount = draft.amount;
         if (draft.to_buy !== undefined) start.to_buy = draft.to_buy;
         if (draft.best_before !== undefined) start.best_before = draft.best_before;
-        const item: ItemMetadata = {
+        const item: CreateMetadata = {
           name,
           aliases: normalizeAliases(name, draft.aliases ?? []),
           tags: normalizeTags(draft.tags ?? []),
@@ -239,7 +246,12 @@ export function createPantryOps({
           default_amount: draft.default_amount ?? 1,
           shelf_life_days: draft.shelf_life_days ?? null
         };
-        return { commands: [{ ...base(ctx, id), kind: 'create', item, start }] };
+        const commands: Command[] = [{ ...base(ctx, id), kind: 'create', item, start }];
+        if (!draft.season) return { commands };
+        if (!isSeason(draft.season)) throw new RangeError(`Invalid season for ${name}`);
+        const sheet: ItemSheet = { id, household_id: ctx.household, ...item, season: draft.season, deleted_at: null };
+        // The create lands stamped `at`; a sheet stamped the same would count as already settled and be dropped.
+        return { commands, sheet: { store: 'items', ...sheet, updated_at: stampAbove(ctx.at, ctx.at) } };
       });
       return queued > 0 ? id : null;
     },

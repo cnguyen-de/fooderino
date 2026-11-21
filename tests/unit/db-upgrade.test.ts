@@ -223,7 +223,7 @@ describe('Dexie v4 upgrade', () => {
     const db = openFooderinoDb(name);
     await db.open();
 
-    expect(await db.edits.where('store').equals('items').toArray()).toEqual([{ ...sheet, store: 'items' }]);
+    expect(await db.edits.where('store').equals('items').toArray()).toEqual([{ ...sheet, store: 'items', season: null }]);
     db.close();
   });
 
@@ -232,8 +232,35 @@ describe('Dexie v4 upgrade', () => {
     names.push(name);
     const db = openFooderinoDb(name);
     await db.open();
-    expect(db.verno).toBe(4);
+    expect(db.verno).toBe(5);
     expect(await db.commands.count()).toBe(0);
+    db.close();
+  });
+});
+
+describe('Dexie v5 upgrade', () => {
+  it('reads items and item sheets stored before seasons as having no season, leaving other sheets alone', async () => {
+    const name = `upgrade-v5-${crypto.randomUUID()}`;
+    names.push(name);
+    const v4 = openV3(name);
+    v4.version(4).stores({ recipes: 'id, seq', cooked: 'id, seq', edits: 'id, store' });
+    const meta = {
+      household_id: LIST, name: 'Kale', aliases: [], tags: [], unit: 'count', default_amount: 1,
+      shelf_life_days: null, deleted_at: null, updated_at: '2026-11-01T00:00:00.000Z'
+    };
+    const row = { ...meta, id: crypto.randomUUID(), amount: 1, to_buy: 0, best_before: null, merged_into: null, seq: 3 };
+    const sheet = { ...meta, id: crypto.randomUUID(), store: 'items' };
+    const recipe = { id: crypto.randomUUID(), store: 'recipes', household_id: LIST, name: 'Soup', updated_at: meta.updated_at };
+    await v4.table('items').add(row);
+    await v4.table('edits').bulkAdd([sheet, recipe]);
+    v4.close();
+
+    const db = openFooderinoDb(name);
+    await db.open();
+
+    expect(await db.table('items').get(row.id)).toEqual({ ...row, season: null });
+    expect(await db.table('edits').get(sheet.id)).toEqual({ ...sheet, season: null });
+    expect(await db.table('edits').get(recipe.id)).toEqual(recipe);
     db.close();
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandId, ItemId, LocalDate } from '~~/types/pantry';
+import { createSyncEngine } from '~~/utils/sync-engine';
 import { FakeServer, HOUSEHOLD } from '../support/fake-server';
 import { makeDevice, project } from '../support/device';
 
@@ -204,5 +205,73 @@ describe('pantry ops replay over confirmed state', () => {
     expect({ milk: await stockOf(d, milk), eggs: await stockOf(d, eggs) }).toEqual(offline);
     const { amount, to_buy, best_before } = d.server.items.get(milk)!;
     expect({ amount, to_buy, best_before }).toEqual(offline.milk);
+  });
+});
+
+describe('item seasons', () => {
+  const kale = { from: 11, to: 2 } as const;
+
+  it('shows a new item\'s season offline and lands it on the server once the create has', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Grünkohl', season: kale, to_buy: 1 }))!;
+    expect(await d.item(id)).toMatchObject({ name: 'Grünkohl', season: kale, to_buy: 1 });
+
+    await d.engine.sync('full');
+
+    expect(d.server.items.get(id)).toMatchObject({ name: 'Grünkohl', season: kale, to_buy: 1 });
+    expect(await d.db.edits.count()).toBe(0);
+    expect(await d.item(id)).toMatchObject({ season: kale });
+  });
+
+  it('holds the season sheet while its create is still queued, then sends it', async () => {
+    const d = await device();
+    const transport = d.server.transport(ALICE);
+    const id = (await d.ops.createItem({ name: 'Wildgulasch', season: { from: 10, to: 12 } }))!;
+    const engine = createSyncEngine({ db: d.db, transport });
+
+    d.server.failNextApply('before');
+    await expect(engine.sync('full')).rejects.toThrow('network down');
+    expect(transport.calls.filter((c) => c.startsWith('push:items'))).toEqual([]);
+    expect(d.server.items.has(id)).toBe(false);
+    expect(await d.item(id)).toMatchObject({ season: { from: 10, to: 12 } });
+
+    await engine.sync('full');
+    expect(d.server.items.get(id)?.season).toEqual({ from: 10, to: 12 });
+  });
+
+  it('keeps the season when the create lands but the sheet push fails', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Spargel', season: { from: 4, to: 6 } }))!;
+
+    d.server.failNextPush();
+    await expect(d.engine.sync('full')).rejects.toThrow('network down');
+    expect(d.server.items.get(id)?.season).toBeNull();
+    expect(await d.item(id)).toMatchObject({ season: { from: 4, to: 6 } });
+
+    await d.engine.sync('full');
+    expect(d.server.items.get(id)?.season).toEqual({ from: 4, to: 6 });
+  });
+
+  it('queues nothing for a refused create, season included', async () => {
+    const d = await device();
+    expect(await d.ops.createItem({ name: '   ', season: kale })).toBeNull();
+    expect(await d.db.commands.count()).toBe(0);
+    expect(await d.db.edits.count()).toBe(0);
+  });
+
+  it('sets, clears and undoes a season through the metadata sheet, and refuses a month out of range', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Kürbis' }))!;
+    await d.engine.sync('full');
+
+    const handle = await d.ops.editItem(id, { season: { from: 9, to: 11 } });
+    await d.engine.sync('full');
+    expect(d.server.items.get(id)?.season).toEqual({ from: 9, to: 11 });
+
+    await d.ops.undo(handle!);
+    await d.engine.sync('full');
+    expect(d.server.items.get(id)?.season).toBeNull();
+
+    await expect(d.ops.editItem(id, { season: { from: 0, to: 13 } as never })).rejects.toThrow(RangeError);
   });
 });
