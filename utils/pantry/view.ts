@@ -10,6 +10,7 @@ import type {
   Snapshot,
   TagKind
 } from '~~/types/pantry';
+import { inSeasonOn } from '~~/utils/seasons';
 import { normName } from './ids';
 import { isLive, resolveItem } from './merge';
 import { suggest, useCounts, type SuggestRules } from './suggest';
@@ -30,6 +31,11 @@ function toPantryItem(item: Item): PantryItem {
 }
 
 const byName = (a: PantryItem, b: PantryItem) => a.name.localeCompare(b.name);
+
+/** In-season items first; the sort is stable, so each group keeps the order it came in. */
+function seasonFirst<T>(rows: T[], itemOf: (row: T) => PantryItem, today: LocalDate): T[] {
+  return rows.sort((a, b) => Number(inSeasonOn(itemOf(b), today)) - Number(inSeasonOn(itemOf(a), today)));
+}
 
 /** Groups by each item's first tag of `kind`; items without one go in the Unsorted group, which comes last. */
 function groupBy(items: readonly PantryItem[], kind: TagKind, order: (a: PantryItem, b: PantryItem) => number) {
@@ -88,8 +94,12 @@ export function buildPantryView({ snapshot, events, today, rules, historyComplet
         'store',
         byName
       ),
-      probablyNeed: s.probablyNeed.map((p) => ({ item: project(p.item), qty: p.qty })),
-      ranOut: s.ranOut.map(project),
+      probablyNeed: seasonFirst(
+        s.probablyNeed.map((p) => ({ item: project(p.item), qty: p.qty })),
+        (p) => p.item,
+        today
+      ),
+      ranOut: seasonFirst(s.ranOut.map(project), (i) => i, today),
       bag: bagLines
     },
     byId(id) {

@@ -28,6 +28,11 @@ export function inSeason(season: Season, month: Month): boolean {
     : month >= season.from || month <= season.to;
 }
 
+/** Whether the item's own season includes the month of `date`. */
+export function inSeasonOn(item: { season: Season | null }, date: LocalDate): boolean {
+  return item.season !== null && inSeason(item.season, monthOf(date));
+}
+
 /** 0 while in season, else the months until it starts. */
 export function monthsUntil(season: Season, month: Month): number {
   return inSeason(season, month) ? 0 : (season.from - month + 12) % 12;

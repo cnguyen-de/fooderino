@@ -7,7 +7,8 @@ import type { UndoHandle } from '~/composables/usePantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
 import { House, Leaf, X } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
-const { view, search, ops, historyComplete } = usePantry();
+import { inSeasonOn } from '~~/utils/seasons';
+const { view, search, ops, historyComplete, today } = usePantry();
 const act = usePantryAction();
 const query = ref('');
 const listPane = ref<HTMLElement | null>(null);
@@ -105,6 +106,11 @@ async function create() {
             @click="selected = entry.item.id">
             <span class="min-w-0 flex-1 truncate font-medium" :title="entry.item.name">{{ entry.item.name }}</span>
             <span
+              v-if="inSeasonOn(entry.item, today)"
+              class="flex shrink-0 items-center gap-0.5 text-[11px] text-primary"
+              ><Leaf class="size-3" aria-hidden="true" />In season</span
+            >
+            <span
               class="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-muted-foreground"
               :title="`${entry.item.amount}${unit(entry.item)} at home`"
               ><House class="size-3" aria-hidden="true" /><span class="sr-only">At home: </span>{{ entry.item.amount
@@ -142,7 +148,11 @@ async function create() {
             v-for="item in view.shopping.ranOut"
             :key="item.id"
             class="flex min-h-9 items-center gap-2 border-t text-sm">
-            <button class="min-w-0 flex-1 truncate text-left" @click="selected = item.id">{{ item.name }}</button
+            <button class="flex min-w-0 flex-1 items-center gap-2 text-left" @click="selected = item.id">
+              <span class="min-w-0 truncate">{{ item.name }}</span
+              ><span v-if="inSeasonOn(item, today)" class="flex shrink-0 items-center gap-0.5 text-[11px] text-primary"
+                ><Leaf class="size-3" aria-hidden="true" />In season</span
+              ></button
             ><Button
               variant="ghost"
               size="xs"

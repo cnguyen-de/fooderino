@@ -207,6 +207,27 @@ describe('buildPantryView: shopping', () => {
   });
 });
 
+describe('buildPantryView: seasons', () => {
+  it('puts in-season items first in both suggestion lists, by name within each group, and drops none', () => {
+    const nov = { from: 11, to: 2 } as const;
+    const june = { from: 6, to: 6 } as const;
+    const ids = ['apple', 'kale', 'leek', 'peas', 'turnip'];
+    const seasons: Record<string, Item['season']> = { apple: null, kale: nov, leek: null, peas: june, turnip: { from: 9, to: 11 } };
+    const purchase = (id: string, offset: number): ItemEvent => ({ ...use(id, offset), kind: 'purchase', qty: 1 });
+    const v = view(
+      ids.map((id) => item(id, { name: id, amount: 0, season: seasons[id]! })),
+      {
+        events: [
+          ...['apple', 'kale', 'peas'].flatMap((id) => [purchase(id, -30), purchase(id, -20), purchase(id, -10)]),
+          ...['leek', 'turnip'].map((id) => use(id, -1, 'consume', 0))
+        ]
+      }
+    );
+    expect(v.shopping.probablyNeed.map((p) => p.item.id)).toEqual(['kale', 'apple', 'peas']);
+    expect(v.shopping.ranOut.map((i) => i.id)).toEqual(['turnip', 'leek']);
+  });
+});
+
 describe('buildPantryView: lookups', () => {
   it('exposes domain fields only, never sync columns', () => {
     const row: ItemRow = { ...item('milk'), seq: 42, updated_at: on(0) };
