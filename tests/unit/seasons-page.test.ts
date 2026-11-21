@@ -109,6 +109,8 @@ describe('Seasons page', () => {
   it('fills only seasons still empty at click time, once', async () => {
     const { page, ops, setSeason } = renderPage([item('Kale'), item('Brussels sprouts'), item('Salt')]);
     expect(page.text()).toContain('2 of your items match the season calendar');
+    expect(rowOf(page, 'Kale').text()).toMatch(/Nov–Feb.*calendar season/);
+    expect(page.text()).not.toContain('Salt');
 
     setSeason('Brussels sprouts' as ItemId, { from: 9, to: 9 });
     await page.findAll('button').find((b) => b.text() === 'Fill seasons')!.trigger('click');
@@ -116,6 +118,7 @@ describe('Seasons page', () => {
 
     expect(ops.editItem.mock.calls).toEqual([['Kale', { season: { from: 11, to: 2 } }]]);
     expect(page.text()).not.toContain('Fill seasons');
+    expect(rowOf(page, 'Kale').text()).not.toContain('calendar season');
   });
 
   it('pages through months and says when a month has nothing', async () => {

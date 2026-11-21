@@ -85,11 +85,27 @@ describe('buildSeasonView', () => {
     expect(v.now[0]).toMatchObject({ source: 'item', item: kale, kind: 'vegetable' });
   });
 
-  it('leaves out items with no season, offering the ones the calendar knows to fill', () => {
+  it('shows an item with no season under its calendar entry\'s season, offering it to fill', () => {
     const sprouts = item('Brussels sprouts');
     const v = buildSeasonView({ items: [sprouts, item('Salt')], calendar: CALENDAR, month: 11 });
-    expect(names(v.now)).toEqual(['calendar:Grünkohl', 'calendar:Äpfel']);
+    expect(names(v.now)).toEqual(['item:Brussels sprouts', 'calendar:Grünkohl', 'calendar:Äpfel']);
+    expect(v.now[0]).toMatchObject({ season: { from: 10, to: 3 }, seasonFrom: 'calendar', kind: 'vegetable' });
     expect(v.fillable).toEqual([{ item: sprouts, season: { from: 10, to: 3 } }]);
+  });
+
+  it('marks a season the item sets itself as its own', () => {
+    const v = buildSeasonView({ items: [item('Kale', { season: { from: 10, to: 12 } })], calendar: CALENDAR, month: 10 });
+    expect(v.now.find((r) => r.source === 'item')).toMatchObject({ season: { from: 10, to: 12 }, seasonFrom: 'item' });
+  });
+
+  it('places unfilled items by the calendar season in soon, soonest first, then by name', () => {
+    const v = buildSeasonView({
+      items: [item('Strawberries'), item('Asparagus'), item('Rhubarb', { season: { from: 5, to: 6 } })],
+      calendar: CALENDAR,
+      month: 3
+    });
+    expect(names(v.soon)).toEqual(['item:Asparagus', 'item:Rhubarb', 'item:Strawberries']);
+    expect(v.soon.map((r) => r.source === 'item' && r.seasonFrom)).toEqual(['calendar', 'item', 'calendar']);
   });
 
   it('shows what starts within the window, soonest first, and nothing further out', () => {

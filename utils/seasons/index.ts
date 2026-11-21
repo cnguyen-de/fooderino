@@ -100,7 +100,15 @@ export function linkEdit(item: PantryItem, entry: CalendarEntry): ItemEdit {
 }
 
 export type SeasonRow =
-  | { source: 'item'; item: PantryItem; season: Season; kind: ProduceKind | 'other'; endsThisMonth: boolean }
+  | {
+      source: 'item';
+      item: PantryItem;
+      season: Season;
+      /** `calendar` while the item has no season of its own and shows the one its calendar entry gives. */
+      seasonFrom: 'item' | 'calendar';
+      kind: ProduceKind | 'other';
+      endsThisMonth: boolean;
+    }
   | { source: 'calendar'; entry: CalendarEntry; endsThisMonth: boolean };
 
 export const rowName = (row: SeasonRow): string => (row.source === 'item' ? row.item.name : row.entry.name);
@@ -110,7 +118,7 @@ export const rowKind = (row: SeasonRow): ProduceKind | 'other' => (row.source ==
 export interface SeasonView {
   now: SeasonRow[];
   soon: SeasonRow[];
-  /** Items with no season whose name the calendar knows. */
+  /** Items with no season whose name the calendar knows; they show in `now` and `soon` with the calendar's season. */
   fillable: { item: PantryItem; season: Season }[];
 }
 
@@ -137,12 +145,11 @@ export function buildSeasonView({ items, calendar, month, soonMonths = 2 }: Seas
       const named = matchCalendar(calendar, [name]);
       if (named) claimed.add(named);
     }
-    if (item.season) {
-      const { season } = item;
-      rows.push({ source: 'item', item, season, kind: entry?.kind ?? 'other', endsThisMonth: endsThisMonth(season) });
-    } else if (entry) {
-      fillable.push({ item, season: entry.season });
-    }
+    if (!item.season && entry) fillable.push({ item, season: entry.season });
+    const season = item.season ?? entry?.season;
+    if (!season) continue;
+    const seasonFrom = item.season ? 'item' : 'calendar';
+    rows.push({ source: 'item', item, season, seasonFrom, kind: entry?.kind ?? 'other', endsThisMonth: endsThisMonth(season) });
   }
   for (const entry of calendar) {
     if (claimed.has(entry)) continue;

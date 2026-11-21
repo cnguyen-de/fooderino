@@ -42,6 +42,7 @@ function pick(item: PantryItem) {
         <span class="block truncate font-medium" :title="name">{{ name }}</span>
         <span class="flex flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
           <span>{{ when }}</span>
+          <span v-if="row.source === 'item' && row.seasonFrom === 'calendar'" class="italic">· calendar season</span>
           <span v-if="status">· {{ status }}</span>
           <span v-if="row.endsThisMonth" class="font-medium text-amber-600 dark:text-amber-400">· Ends this month</span>
         </span>
