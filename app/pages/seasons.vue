@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, Leaf } from 'lucide-vue-next';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import ItemSheet from '~/components/pantry/ItemSheet.vue';
 import SeasonRow from '~/components/seasons/SeasonRow.vue';
 import type { ItemId, PantryItem } from '~~/types/pantry';
-import type { CalendarEntry, ProduceKind } from '~~/types/season';
+import type { CalendarEntry, Month, ProduceKind } from '~~/types/season';
 import type { UndoHandle } from '~/composables/usePantry';
 import {
   addMonths,
@@ -19,8 +19,21 @@ import { SEASON_CALENDAR } from '~~/utils/seasons/calendar';
 const { view, ops, today } = usePantry();
 const act = usePantryAction();
 const current = computed(() => monthOf(today.value));
-const offset = ref(0);
-const month = computed(() => addMonths(current.value, offset.value));
+/** Null follows the current month, also across a month change while the page is open. */
+const chosen = ref<Month | null>(null);
+const month = computed(() => chosen.value ?? current.value);
+const allMonths = ref(false);
+const MONTHS = Array.from({ length: 12 }, (_, i) => (i + 1) as Month);
+const toggle = ref<{ $el: HTMLElement } | null>(null);
+function choose(m: Month) {
+  chosen.value = m === current.value ? null : m;
+}
+function pick(m: Month) {
+  choose(m);
+  allMonths.value = false;
+  // The grid's buttons unmount with it, so focus would fall back to the page.
+  nextTick(() => toggle.value?.$el.focus());
+}
 const seasons = computed(() => buildSeasonView({ items: view.value.items, calendar: SEASON_CALENDAR, month: month.value }));
 const KINDS: { kind: ProduceKind | 'other'; label: string }[] = [
   { kind: 'vegetable', label: 'Vegetables' },
@@ -88,29 +101,63 @@ async function fill() {
 <template>
   <NuxtLayout name="app">
     <div class="space-y-4 p-3">
-      <div class="flex items-center justify-between gap-2">
-        <h1 class="text-xl font-semibold tracking-tight">Seasons<span class="text-primary">.</span></h1>
-        <Leaf class="size-4 text-primary" aria-hidden="true" />
-      </div>
-      <div class="flex items-center justify-between gap-2 rounded-lg bg-muted p-0.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          class="size-8 text-muted-foreground"
-          aria-label="Previous month"
-          @click="offset--"
-          ><ChevronLeft class="size-4" aria-hidden="true"
-        /></Button>
-        <div class="min-w-0 text-center" aria-live="polite">
-          <p class="text-sm font-semibold">{{ monthName(month, 'long') }}</p>
-          <button v-if="offset !== 0" type="button" class="text-[11px] text-primary" @click="offset = 0">
-            Back to {{ monthName(current, 'long') }}
-          </button>
-          <p v-else class="text-[11px] text-muted-foreground">This month</p>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <h1 class="text-xl font-semibold tracking-tight">Seasons<span class="text-primary">.</span></h1>
+          <div class="flex items-center gap-1.5">
+            <div class="flex w-44 items-center rounded-lg bg-muted p-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-8 shrink-0 text-muted-foreground focus-visible:ring-inset focus-visible:ring-offset-0"
+                aria-label="Previous month"
+                @click="choose(addMonths(month, -1))"
+                ><ChevronLeft class="size-4" aria-hidden="true"
+              /></Button>
+              <h2 class="min-w-0 flex-1 text-center text-sm font-semibold" aria-live="polite">
+                {{ monthName(month, 'long') }}
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-8 shrink-0 text-muted-foreground focus-visible:ring-inset focus-visible:ring-offset-0"
+                aria-label="Next month"
+                @click="choose(addMonths(month, 1))"
+                ><ChevronRight class="size-4" aria-hidden="true"
+              /></Button>
+            </div>
+            <Button
+              ref="toggle"
+              variant="ghost"
+              size="icon"
+              class="size-9 shrink-0 text-muted-foreground focus-visible:ring-inset focus-visible:ring-offset-0 aria-expanded:bg-primary/10 aria-expanded:text-primary"
+              aria-label="All months"
+              :aria-expanded="allMonths"
+              @click="allMonths = !allMonths"
+              ><CalendarDays class="size-4" aria-hidden="true"
+            /></Button>
+          </div>
         </div>
-        <Button variant="ghost" size="icon" class="size-8 text-muted-foreground" aria-label="Next month" @click="offset++"
-          ><ChevronRight class="size-4" aria-hidden="true"
-        /></Button>
+        <div v-if="allMonths" role="group" aria-label="Months" class="grid grid-cols-3 gap-1 rounded-lg bg-muted p-0.5">
+          <button
+            v-for="m in MONTHS"
+            :key="m"
+            type="button"
+            :aria-pressed="m === month"
+            :aria-label="m === current ? `${monthName(m, 'long')}, this month` : monthName(m, 'long')"
+            class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            :class="m === month ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+            @click="pick(m)">
+            <span class="relative"
+              >{{ monthName(m)
+              }}<span
+                v-if="m === current"
+                data-today
+                class="absolute -right-2 top-0 size-1.5 rounded-full bg-primary"
+                aria-hidden="true"
+            /></span>
+          </button>
+        </div>
       </div>
       <div
         v-if="seasons.fillable.length"

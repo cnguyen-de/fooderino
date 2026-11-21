@@ -121,21 +121,59 @@ describe('Seasons page', () => {
     expect(rowOf(page, 'Kale').text()).not.toContain('calendar season');
   });
 
-  it('pages through months and says when a month has nothing', async () => {
+  it('steps through the months across the year end', async () => {
     const { page } = renderPage([]);
-    const next = page.findAll('button').find((b) => b.attributes('aria-label') === 'Next month')!;
-    for (let i = 0; i < 9; i++) await next.trigger('click');
+    const heading = () => page.get('h2').text();
+    const click = (label: string) => page.get(`button[aria-label="${label}"]`).trigger('click');
 
-    expect(page.text()).toContain('August');
-    expect(page.text()).toContain('Back to November');
+    expect(heading()).toBe('November');
+    await click('Next month');
+    expect(heading()).toBe('December');
+    expect(rowOf(page, 'Chicorée').text()).not.toContain('next month');
+    await click('Next month');
+    expect(heading()).toBe('January');
+    await click('Previous month');
+    await click('Previous month');
+    await click('Previous month');
+    expect(heading()).toBe('October');
+  });
+
+  it('jumps to any month from the grid, marking today, and says when a month has nothing', async () => {
+    const { page } = renderPage([]);
+    const toggle = page.get('button[aria-label="All months"]');
+    const months = () => page.findAll('[role="group"] button');
+    const jump = async (month: string) => {
+      await toggle.trigger('click');
+      await page.get(`[role="group"] button[aria-label="${month}"]`).trigger('click');
+    };
+
+    expect(months()).toHaveLength(0);
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    expect(months().map((b) => b.text())).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+    const november = page.get('[aria-label="November, this month"]');
+    expect(november.attributes('aria-pressed')).toBe('true');
+    expect(november.find('[data-today]').exists()).toBe(true);
+    expect(page.findAll('[data-today]')).toHaveLength(1);
+    await toggle.trigger('click');
+
+    await jump('August');
+    expect(months()).toHaveLength(0);
+    expect(page.get('h2').text()).toBe('August');
     expect(page.text()).toContain('Äpfel');
-    const previous = page.findAll('button').find((b) => b.attributes('aria-label') === 'Previous month')!;
-    await previous.trigger('click');
+    await toggle.trigger('click');
+    expect(page.get('[aria-label="August"]').attributes('aria-pressed')).toBe('true');
+    expect(page.get('[aria-label="November, this month"]').find('[data-today]').exists()).toBe(true);
+    await toggle.trigger('click');
+
+    await jump('July');
     expect(page.text()).toContain('Nothing on the season calendar for July.');
-    await previous.trigger('click');
-    expect(page.text()).toContain('June');
+    await jump('June');
     expect(page.text()).toContain('Spargel');
     expect(page.text()).toContain('Ends this month');
+
+    await jump('November, this month');
+    expect(page.get('h2').text()).toBe('November');
   });
 
   it('links a never-bought entry to the household item it is, with an undo', async () => {
