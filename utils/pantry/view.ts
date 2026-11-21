@@ -73,6 +73,7 @@ export function buildPantryView({ snapshot, events, today, rules, historyComplet
     .sort((a, b) => a.bought_at.localeCompare(b.bought_at));
 
   return {
+    items: [...live].sort(byName),
     home: {
       useSoon,
       mostUsed: inStock

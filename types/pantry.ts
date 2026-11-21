@@ -235,6 +235,8 @@ export interface BagLine {
 }
 
 export interface PantryView {
+  /** Every live item, by name. */
+  items: PantryItem[];
   home: { useSoon: UseSoonEntry[]; mostUsed: PantryItem[]; byPlace: ItemGroup[] };
   shopping: { byStore: ItemGroup[]; probablyNeed: BuyEntry[]; ranOut: PantryItem[]; bag: BagLine[] };
   byId(id: ItemId): PantryItem | undefined;

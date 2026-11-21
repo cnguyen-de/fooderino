@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import HouseholdGate from '~/components/pantry/HouseholdGate.vue';
 import PantryNotices from '~/components/pantry/PantryNotices.vue';
-import { ChefHat, History, House, Settings, ShoppingBasket } from 'lucide-vue-next';
+import { ChefHat, History, House, Leaf, Settings, ShoppingBasket } from 'lucide-vue-next';
 const hydrated = useState<boolean>('sync-hydrated', () => false);
 const route = useRoute();
 const hasDock = computed(() => route.name === 'home' || route.name === 'shop');
 const active = (path: string) => route.path === path || route.path.startsWith(path + '/');
-const gated = computed(() => ['/home', '/shop', '/household', '/logs', '/cook'].some(active));
+const gated = computed(() => ['/home', '/shop', '/household', '/logs', '/cook', '/seasons'].some(active));
 const viewport = ref<{ height: string; top: string }>();
 onMounted(() => {
   const visible = window.visualViewport;
@@ -43,6 +43,14 @@ onMounted(() => {
             :aria-current="route.path === '/household' ? 'page' : undefined"
             >Household</NuxtLink
           >
+          <NuxtLink
+            to="/seasons"
+            aria-label="Seasons"
+            title="Seasons"
+            class="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary"
+            :aria-current="route.path === '/seasons' ? 'page' : undefined"
+            ><Leaf class="size-4" aria-hidden="true"
+          /></NuxtLink>
           <NuxtLink
             to="/logs"
             aria-label="Activity log"

@@ -5,7 +5,7 @@ import ItemSheet from '~/components/pantry/ItemSheet.vue';
 import UnpackSheet from '~/components/pantry/UnpackSheet.vue';
 import type { UndoHandle } from '~/composables/usePantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
-import { House, X } from 'lucide-vue-next';
+import { House, Leaf, X } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 const { view, search, ops, historyComplete } = usePantry();
 const act = usePantryAction();
@@ -87,6 +87,9 @@ async function create() {
         </PantryRow>
       </section>
       <p v-if="!view.shopping.byStore.length" class="text-muted-foreground">Your list is clear. Add something below.</p>
+      <NuxtLink to="/seasons" class="flex items-center justify-end gap-1 text-xs font-medium text-primary hover:underline"
+        ><Leaf class="size-3" aria-hidden="true" />In season now →</NuxtLink
+      >
       <section v-if="view.shopping.probablyNeed.length" class="space-y-1">
         <div class="flex items-baseline justify-between gap-2">
           <h2 class="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Probably need</h2>
