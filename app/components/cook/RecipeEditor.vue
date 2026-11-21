@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Plus, X } from 'lucide-vue-next';
+import ItemCombobox from '~/components/pantry/ItemCombobox.vue';
 import type { Ingredient, RecipeKind, RecipeView } from '~/composables/useCook';
 import type { ItemId, PantryItem, Unit } from '~~/types/pantry';
 const props = defineProps<{ recipe?: RecipeView }>();
@@ -93,7 +94,7 @@ async function save() {
     <section class="space-y-2 rounded-xl bg-muted/40 p-3">
       <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ingredients</h3>
       <div v-for="(r, index) in rows" :key="r.key" class="flex items-center gap-1.5">
-        <IngredientCombobox
+        <ItemCombobox
           :model-value="r.name"
           :linked="!!r.item_id"
           :label="`Ingredient ${index + 1}`"

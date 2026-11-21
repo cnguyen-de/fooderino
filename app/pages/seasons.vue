@@ -3,10 +3,18 @@ import { ChevronLeft, ChevronRight, Leaf } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import ItemSheet from '~/components/pantry/ItemSheet.vue';
 import SeasonRow from '~/components/seasons/SeasonRow.vue';
-import type { ItemId } from '~~/types/pantry';
-import type { ProduceKind } from '~~/types/season';
+import type { ItemId, PantryItem } from '~~/types/pantry';
+import type { CalendarEntry, ProduceKind } from '~~/types/season';
 import type { UndoHandle } from '~/composables/usePantry';
-import { addMonths, buildSeasonView, monthName, monthOf, rowKind, type SeasonRow as Row } from '~~/utils/seasons';
+import {
+  addMonths,
+  buildSeasonView,
+  linkEdit,
+  monthName,
+  monthOf,
+  rowKind,
+  type SeasonRow as Row
+} from '~~/utils/seasons';
 import { SEASON_CALENDAR } from '~~/utils/seasons/calendar';
 const { view, ops, today } = usePantry();
 const act = usePantryAction();
@@ -36,6 +44,28 @@ async function list(row: Row) {
     toast.error(e instanceof Error ? e.message : 'Could not add that item.');
   }
 }
+function toastUndo(message: string, handles: UndoHandle[]) {
+  toast(message, {
+    action: {
+      label: 'Undo',
+      onClick: async () => {
+        try {
+          for (const handle of handles.reverse()) await ops.undo(handle);
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : 'Could not undo.');
+        }
+      }
+    }
+  });
+}
+async function link(entry: CalendarEntry, item: PantryItem) {
+  try {
+    const handle = await ops.editItem(item.id, linkEdit(item, entry));
+    if (handle) toastUndo(`${item.name} now counts as ${entry.name}`, [handle]);
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Could not link that item.');
+  }
+}
 const filling = ref(false);
 async function fill() {
   if (filling.value) return;
@@ -52,19 +82,7 @@ async function fill() {
   } finally {
     filling.value = false;
   }
-  if (handles.length === 0) return;
-  toast(`Filled ${handles.length} season${handles.length === 1 ? '' : 's'}`, {
-    action: {
-      label: 'Undo',
-      onClick: async () => {
-        try {
-          for (const handle of handles.reverse()) await ops.undo(handle);
-        } catch (e) {
-          toast.error(e instanceof Error ? e.message : 'Could not undo.');
-        }
-      }
-    }
-  });
+  if (handles.length) toastUndo(`Filled ${handles.length} season${handles.length === 1 ? '' : 's'}`, handles);
 }
 </script>
 <template>
@@ -117,7 +135,8 @@ async function fill() {
             :row="row"
             :month="month"
             @edit="row.source === 'item' && (selected = row.item.id)"
-            @list="list(row)" />
+            @list="list(row)"
+            @link="row.source === 'calendar' && link(row.entry, $event)" />
         </div>
       </section>
       <section class="space-y-1" aria-labelledby="coming-soon">
@@ -134,7 +153,8 @@ async function fill() {
           :month="month"
           upcoming
           @edit="row.source === 'item' && (selected = row.item.id)"
-          @list="list(row)" />
+          @list="list(row)"
+          @link="row.source === 'calendar' && link(row.entry, $event)" />
       </section>
     </div>
     <ItemSheet :id="selected" @close="selected = null" />

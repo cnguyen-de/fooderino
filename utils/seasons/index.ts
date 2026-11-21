@@ -1,6 +1,7 @@
 import type { LocalDate, PantryItem } from '~~/types/pantry';
 import type { CalendarEntry, Month, ProduceKind, Season } from '~~/types/season';
 import { normName } from '~~/utils/pantry/ids';
+import type { ItemEdit } from '~~/utils/pantry-ops';
 
 export function isMonth(v: unknown): v is Month {
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 12;
@@ -93,6 +94,11 @@ export function matchCalendar(calendar: readonly CalendarEntry[], names: readonl
 
 export const itemNames = (item: PantryItem): string[] => [item.name, ...item.aliases];
 
+/** "We buy this": the entry's name becomes another name of the item, and fills its season only when it has none. */
+export function linkEdit(item: PantryItem, entry: CalendarEntry): ItemEdit {
+  return { aliases: [...item.aliases, entry.name], season: item.season ?? entry.season };
+}
+
 export type SeasonRow =
   | { source: 'item'; item: PantryItem; season: Season; kind: ProduceKind | 'other'; endsThisMonth: boolean }
   | { source: 'calendar'; entry: CalendarEntry; endsThisMonth: boolean };
@@ -127,7 +133,10 @@ export function buildSeasonView({ items, calendar, month, soonMonths = 2 }: Seas
   const fillable: SeasonView['fillable'] = [];
   for (const item of items) {
     const entry = matchCalendar(calendar, itemNames(item));
-    if (entry) claimed.add(entry);
+    for (const name of itemNames(item)) {
+      const named = matchCalendar(calendar, [name]);
+      if (named) claimed.add(named);
+    }
     if (item.season) {
       const { season } = item;
       rows.push({ source: 'item', item, season, kind: entry?.kind ?? 'other', endsThisMonth: endsThisMonth(season) });

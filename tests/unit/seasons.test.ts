@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemId, PantryItem } from '~~/types/pantry';
 import type { CalendarEntry, Month, Season } from '~~/types/season';
-import { buildSeasonView, formatSeason, inSeason, matchCalendar, monthsUntil, rowName, type SeasonRow } from '~~/utils/seasons';
+import {
+  buildSeasonView,
+  formatSeason,
+  inSeason,
+  linkEdit,
+  matchCalendar,
+  monthsUntil,
+  rowName,
+  type SeasonRow
+} from '~~/utils/seasons';
 
 const NOV_FEB: Season = { from: 11, to: 2 };
 
@@ -111,5 +120,38 @@ describe('buildSeasonView', () => {
   it('is empty for a month the calendar has nothing for', () => {
     const v = buildSeasonView({ items: [], calendar: [CALENDAR[3]!], month: 9 });
     expect(v).toEqual({ now: [], soon: [], fillable: [] });
+  });
+});
+
+describe('linkEdit', () => {
+  it('adds the entry name to the item names and fills the season only when the item has none', () => {
+    const grunkohl = CALENDAR[0]!;
+    expect(linkEdit(item('Cải xoăn', { aliases: ['Curly kale'] }), grunkohl)).toEqual({
+      aliases: ['Curly kale', 'Grünkohl'],
+      season: NOV_FEB
+    });
+    expect(linkEdit(item('Cải xoăn', { season: { from: 10, to: 1 } }), grunkohl)).toEqual({
+      aliases: ['Grünkohl'],
+      season: { from: 10, to: 1 }
+    });
+  });
+
+  it('swaps the never-bought entry for the linked item', () => {
+    const kale = item('Cải xoăn', { amount: 1 });
+    const before = buildSeasonView({ items: [kale], calendar: CALENDAR, month: 11 });
+    expect(names(before.now)).toContain('calendar:Grünkohl');
+
+    const linked = { ...kale, ...linkEdit(kale, CALENDAR[0]!) };
+    const after = buildSeasonView({ items: [linked], calendar: CALENDAR, month: 11 });
+    expect(names(after.now)).toEqual(['item:Cải xoăn', 'calendar:Rosenkohl', 'calendar:Äpfel']);
+    expect(after.now[0]).toMatchObject({ kind: 'vegetable', season: NOV_FEB });
+  });
+
+  it('lets one item stand for a second entry, keeping its own season', () => {
+    const kohl = item('Kale', { season: { from: 9, to: 3 } });
+    const linked = { ...kohl, ...linkEdit(kohl, CALENDAR[2]!) };
+    expect(linked.season).toEqual({ from: 9, to: 3 });
+    const v = buildSeasonView({ items: [linked], calendar: CALENDAR, month: 11 });
+    expect(names(v.now)).toEqual(['item:Kale', 'calendar:Äpfel']);
   });
 });

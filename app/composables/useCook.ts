@@ -23,7 +23,6 @@ import {
 import { db, SYNC_STATE_KEY } from '~~/utils/db';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 import { notifyLocalChange } from '~~/utils/sync-hook';
-import type { SearchResult } from './usePantry';
 
 export type { CookLine, Meal, MealDish, MealSuggestions, RecipeView, Suggestion } from '~~/utils/cook';
 export type { RecipeInput } from '~~/utils/cook';
@@ -75,7 +74,6 @@ export interface Cook {
   today: Readonly<Ref<LocalDate>>;
   todayMeal: ComputedRef<Meal>;
   suggestions: ComputedRef<MealSuggestions>;
-  ingredientOptions(query: string): readonly SearchResult[];
   plan(id: RecipeId): CookLine[];
   choose(line: CookLine, id: ItemId | null): CookLine;
   check(lines: readonly CookLine[]): CookCheck;
@@ -134,7 +132,6 @@ export function useCook(): Cook {
     today,
     todayMeal,
     suggestions,
-    ingredientOptions: search,
     plan: (id) => planCook(byId.value.get(id)?.ingredients ?? [], lookup),
     choose: (line, id) => chooseItem(line, id, lookup),
     check: (lines) => checkCook(lines, lookup),

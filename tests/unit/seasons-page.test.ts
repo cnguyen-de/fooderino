@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'vue-sonner';
 import { flushPromises, mount } from '@vue/test-utils';
 import { computed, ref } from 'vue';
 import type { ItemId, LocalDate, PantryItem } from '~~/types/pantry';
 import type { Season } from '~~/types/season';
 import Seasons from '../../app/pages/seasons.vue';
 import ItemSheet from '../../app/components/pantry/ItemSheet.vue';
+import ItemCombobox from '../../app/components/pantry/ItemCombobox.vue';
 
 vi.mock('~~/utils/seasons/calendar', () => ({
   SEASON_CALENDAR: [
@@ -23,14 +25,15 @@ const item = (name: string, over: Partial<PantryItem> = {}): PantryItem => ({
 
 function renderPage(start: PantryItem[]) {
   const items = ref(start);
-  const setSeason = (id: ItemId, season: Season) => {
-    items.value = items.value.map((i) => (i.id === id ? { ...i, season } : i));
+  const edit = (id: ItemId, change: Partial<PantryItem>) => {
+    items.value = items.value.map((i) => (i.id === id ? { ...i, ...change } : i));
   };
+  const setSeason = (id: ItemId, season: Season) => edit(id, { season });
   const ops = {
     addToShopping: vi.fn(async () => ({ commands: [], sheet: null })),
     createItem: vi.fn(async () => 'new' as ItemId),
-    editItem: vi.fn(async (id: ItemId, edit: { season: Season }) => {
-      setSeason(id, edit.season);
+    editItem: vi.fn(async (id: ItemId, change: Partial<PantryItem>) => {
+      edit(id, change);
       return { commands: [], sheet: null };
     }),
     undo: vi.fn(async () => null)
@@ -38,6 +41,8 @@ function renderPage(start: PantryItem[]) {
   vi.stubGlobal('usePantry', () => ({
     view: computed(() => ({ items: items.value, byId: (id: ItemId) => items.value.find((i) => i.id === id) })),
     ops,
+    search: (q: string) =>
+      items.value.filter((i) => i.name.toLowerCase().includes(q.toLowerCase())).map((i) => ({ item: i })),
     today: ref('2026-11-21' as LocalDate)
   }));
   vi.stubGlobal('usePantryAction', () => (work: () => Promise<unknown>) => work());
@@ -57,7 +62,15 @@ function renderPage(start: PantryItem[]) {
 const rowOf = (page: ReturnType<typeof mount>, name: string) =>
   page.findAll('div.rounded-lg').find((r) => r.text().startsWith(name))!;
 
-afterEach(() => vi.unstubAllGlobals());
+const listButton = (page: ReturnType<typeof mount>, name: string) =>
+  rowOf(page, name).get(`button[aria-label="Add ${name} to shopping list"]`);
+
+vi.mock('vue-sonner', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.mocked(toast).mockClear();
+});
 
 describe('Seasons page', () => {
   it('groups this month\'s produce by kind with each row\'s stock, and what starts next', () => {
@@ -78,8 +91,8 @@ describe('Seasons page', () => {
   it('lists a calendar entry as a new item carrying its names and season, and a household item by its id', async () => {
     const { page, ops } = renderPage([item('Apples', { season: { from: 8, to: 11 } })]);
 
-    await rowOf(page, 'Grünkohl').get('button').trigger('click');
-    await rowOf(page, 'Apples').findAll('button').at(-1)!.trigger('click');
+    await listButton(page, 'Grünkohl').trigger('click');
+    await listButton(page, 'Apples').trigger('click');
 
     expect(ops.createItem).toHaveBeenCalledWith({
       name: 'Grünkohl', aliases: ['Kale'], season: { from: 11, to: 2 }, to_buy: 1
@@ -120,5 +133,24 @@ describe('Seasons page', () => {
     expect(page.text()).toContain('June');
     expect(page.text()).toContain('Spargel');
     expect(page.text()).toContain('Ends this month');
+  });
+
+  it('links a never-bought entry to the household item it is, with an undo', async () => {
+    const { page, ops } = renderPage([item('Cải xoăn', { amount: 1 }), item('Salt')]);
+    expect(rowOf(page, 'Grünkohl').text()).toContain('Never bought');
+
+    await rowOf(page, 'Grünkohl').get('button[aria-expanded]').trigger('click');
+    page.findComponent(ItemCombobox).vm.$emit('pick', item('Cải xoăn', { amount: 1 }));
+    await flushPromises();
+
+    expect(ops.editItem).toHaveBeenCalledWith('Cải xoăn', { aliases: ['Grünkohl'], season: { from: 11, to: 2 } });
+    expect(page.text()).not.toContain('Grünkohl');
+    expect(rowOf(page, 'Cải xoăn').text()).toMatch(/Nov–Feb.*in stock/);
+    expect(page.findComponent(ItemCombobox).exists()).toBe(false);
+
+    const [message, options] = vi.mocked(toast).mock.calls.at(-1)! as [string, { action: { onClick: () => Promise<void> } }];
+    expect(message).toBe('Cải xoăn now counts as Grünkohl');
+    await options.action.onClick();
+    expect(ops.undo).toHaveBeenCalledTimes(1);
   });
 });

@@ -12,15 +12,26 @@ import { Link2, Plus } from 'lucide-vue-next';
 import type { PantryItem } from '~~/types/pantry';
 import { normName } from '~~/utils/pantry';
 import { amountText } from '~/utils/cook-format';
-const props = defineProps<{ modelValue: string; linked: boolean; label: string }>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: string;
+    linked: boolean;
+    label: string;
+    placeholder?: string;
+    /** Offers only the household's items, never the typed name. */
+    itemsOnly?: boolean;
+    autoFocus?: boolean;
+  }>(),
+  { placeholder: 'Ingredient' }
+);
 const emit = defineEmits<{ 'update:modelValue': [value: string]; pick: [item: PantryItem]; typed: [name: string] }>();
-const { ingredientOptions } = useCook();
+const { search } = usePantry();
 const open = ref(false);
 const TYPED = 'typed';
-const options = computed(() => (props.modelValue.trim() ? ingredientOptions(props.modelValue).slice(0, 8) : []));
+const options = computed(() => (props.modelValue.trim() ? search(props.modelValue).slice(0, 8) : []));
 const typed = computed(() => {
   const name = props.modelValue.trim();
-  return name && !options.value.some((o) => normName(o.item.name) === normName(name)) ? name : '';
+  return name && !props.itemsOnly && !options.value.some((o) => normName(o.item.name) === normName(name)) ? name : '';
 });
 // Radix shows only items its filter returns, and refreshes its own list only when the item count changes.
 const values = computed(() => [...options.value.map((o) => o.item.id), ...(typed.value ? [TYPED] : [])]);
@@ -47,7 +58,8 @@ function select(value: unknown) {
     <ComboboxAnchor class="relative">
       <ComboboxInput
         :aria-label="label"
-        placeholder="Ingredient"
+        :placeholder="placeholder"
+        :auto-focus="autoFocus"
         class="h-9 w-full rounded-lg border border-input bg-background pl-3 pr-8 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
         @focus="open = true" />
       <Link2
