@@ -18,7 +18,7 @@ export const SEASON_CALENDAR: readonly CalendarEntry[] = [
   { name: 'Birnen', aliases: ['Birne', 'Pear', 'Pears', 'Lê'], kind: 'fruit', season: { from: 8, to: 2 } },
   {
     name: 'Blumenkohl',
-    aliases: ['Cauliflower', 'Karfiol', 'Cauliflowers', 'Súp lơ trắng', 'Bông cải trắng'],
+    aliases: ['Cauliflower', 'Karfiol', 'Cauliflowers', 'Súp lơ', 'Súp lơ trắng', 'Bông cải trắng'],
     kind: 'vegetable',
     season: { from: 5, to: 11 }
   },
