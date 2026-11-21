@@ -1,60 +1,56 @@
 <script setup lang="ts">
-import { Sparkle, Tag, Paintbrush, Blocks, LineChart, Wallet } from 'lucide-vue-next';
+import { Refrigerator, ShoppingCart, ShoppingBag, CookingPot } from 'lucide-vue-next';
+
+const iconMap = {
+  refrigerator: Refrigerator,
+  shoppingCart: ShoppingCart,
+  shoppingBag: ShoppingBag,
+  cookingPot: CookingPot
+};
 
 interface BenefitsProps {
-  icon: string;
+  icon: keyof typeof iconMap;
   title: string;
   description: string;
 }
 
 const benefitList: BenefitsProps[] = [
   {
-    icon: 'blocks',
-    title: 'Ingredient Management',
+    icon: 'refrigerator',
+    title: 'Check what’s at home',
     description:
-      'Have you ever wondered while shopping if you still have tomatoes at home? Fooderino helps you keep track of your ingredients.'
+      'See stock grouped by place, from fridge to freezer. Check “Use soon” for items near their best-before date and find your most-used items in Quick picks.'
   },
   {
-    icon: 'lineChart',
-    title: 'Shopping List',
+    icon: 'shoppingCart',
+    title: 'Make your shopping list',
     description:
-      'Easily add ingredients to shopping manually or let Fooderino automatically manages based on the recipes or your inventory.'
+      'Keep your list grouped by store. Add suggestions based on your purchase rhythm or pick from items that ran out.'
   },
   {
-    icon: 'wallet',
-    title: 'Dynamic Recipes',
+    icon: 'shoppingBag',
+    title: 'Pick up and unpack',
     description:
-      'Save your own recipes and add their ingredients to your shopping list in one tap.'
+      'Tick off what you pick up to move it into your bag. Unpack into a storage place at home. Items with a shelf life get a best-before date.'
   },
   {
-    icon: 'sparkle',
-    title: 'Shopping',
-    description: 'Planning your meals and shopping has never been easier with Fooderino.'
+    icon: 'cookingPot',
+    title: 'Cook and keep a history',
+    description:
+      'Save household recipes with ingredients linked to pantry items. Use Cook Today to record a dish and deduct its ingredients from stock. Look back at meals in cooking history.'
   }
 ];
-
-const iconMap: Record<
-  string,
-  typeof Sparkle | typeof Tag | typeof Paintbrush | typeof Blocks | typeof LineChart | typeof Wallet
-> = {
-  sparkle: Sparkle,
-  tag: Tag,
-  paintbrush: Paintbrush,
-  blocks: Blocks,
-  lineChart: LineChart,
-  wallet: Wallet
-};
 </script>
 
 <template>
   <section id="usage" class="container py-24 sm:py-32">
     <div class="grid place-items-center lg:grid-cols-2 lg:gap-24">
       <div>
-        <h2 class="mb-2 text-lg tracking-wider text-primary">Usage</h2>
+        <h2 class="mb-2 text-lg tracking-wider text-primary">Everyday use</h2>
 
         <h2 class="mb-4 text-3xl font-bold md:text-4xl">How to use Fooderino</h2>
         <p class="mb-8 text-xl text-muted-foreground">
-          Whether utilizing all the features or just a few, Fooderino is designed to make your life easier.
+          From checking the fridge to cooking dinner, keep your pantry and shopping list in step.
         </p>
       </div>
 

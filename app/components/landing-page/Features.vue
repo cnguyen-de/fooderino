@@ -1,57 +1,65 @@
 <script setup lang="ts">
-import {
-  Paintbrush,
-  MessageCircle,
-  TabletSmartphone,
-  BadgeCheck,
-  MousePointerClick,
-  Newspaper
-} from 'lucide-vue-next';
+import { Users, WifiOff, Leaf, History, Search, FileJson } from 'lucide-vue-next';
+
+const iconMap = {
+  users: Users,
+  wifiOff: WifiOff,
+  leaf: Leaf,
+  history: History,
+  search: Search,
+  fileJson: FileJson
+};
 
 interface FeaturesProps {
-  icon: string;
+  icon: keyof typeof iconMap;
   title: string;
   description: string;
 }
 
 const featureList: FeaturesProps[] = [
   {
-    icon: 'tabletSmartphone',
-    title: 'Mobile First',
-    description: 'Fooderino is designed with mobile first approach, while still looking great on desktops.'
+    icon: 'users',
+    title: 'One household pantry',
+    description:
+      'Share your pantry, shopping list and recipes. Join by QR code and see each other’s changes live when online.'
   },
   {
-    icon: 'badgeCheck',
-    title: 'Easy to Use',
-    description:
-      'Inventory management is boring, so we made it as easy as possible to use.'
+    icon: 'wifiOff',
+    title: 'Works offline',
+    description: 'Every tap updates your device at once, even offline. Changes sync when you are back online.'
   },
   {
-    icon: 'mousePointerClick',
-    title: 'Recurring Purchase',
+    icon: 'leaf',
+    title: 'Seasons',
     description:
-      "Ingredients can be automatically added to your shopping list based on the default amount setting so you'll always have enough when needed."
+      'See which fruits and vegetables are in season in Germany this month and what’s coming next. In-season items come first in shopping suggestions.'
+  },
+  {
+    icon: 'history',
+    title: 'See who changed what',
+    description: 'Check household activity or the history of one item, including changes waiting to sync.'
+  },
+  {
+    icon: 'search',
+    title: 'Find items by any name',
+    description: 'Give items alternate names and search by any of them. Search matches with or without accents.'
+  },
+  {
+    icon: 'fileJson',
+    title: 'Export and import',
+    description: 'Export your household’s items and recipes as JSON, or import them from a Fooderino export in Settings.'
   }
 ];
-
-const iconMap = {
-  tabletSmartphone: TabletSmartphone,
-  badgeCheck: BadgeCheck,
-  paintbrush: Paintbrush,
-  mousePointerClick: MousePointerClick,
-  messageCircle: MessageCircle,
-  newspaper: Newspaper
-};
 </script>
 
 <template>
   <section id="features" class="container py-24 sm:py-32">
     <h2 class="mb-2 text-center text-lg tracking-wider text-primary">Features</h2>
 
-    <h2 class="mb-4 text-center text-3xl font-bold md:text-4xl">What Makes Us Different</h2>
+    <h2 class="mb-4 text-center text-3xl font-bold md:text-4xl">Keep your household up to date</h2>
 
     <h3 class="mx-auto mb-8 text-center text-xl text-muted-foreground md:w-1/2">
-      Fooderino is designed to make your life easier. Here are some of the features that make us different.
+      Keep track of what you have, what you need and what you cook, together.
     </h3>
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

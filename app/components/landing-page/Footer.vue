@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronsDown } from 'lucide-vue-next';
+const year = new Date().getFullYear();
 </script>
 
 <template>
@@ -7,7 +7,7 @@ import { ChevronsDown } from 'lucide-vue-next';
     <div class="rounded-2xl p-10">
       <div class="grid grid-cols-2 gap-x-12 gap-y-8 md:grid-cols-2">
         <div class="col-span-full xl:col-span-2">
-          <a href="#" class="flex items-center font-bold">
+          <a href="#hero" class="flex items-center font-bold">
             <span
               class="bg-gradient-to-r from-red-600 to-yellow-300 bg-clip-text text-lg font-bold tracking-wide text-transparent">
               FOODERINO
@@ -46,15 +46,16 @@ import { ChevronsDown } from 'lucide-vue-next';
         </div>
 
         <div class="flex flex-col gap-2">
-          <h3 class="text-lg font-bold">Help</h3>
-          <a href="#contact" class="opacity-60 hover:opacity-100"> Contact Us </a>
-          <a href="#" class="opacity-60 hover:opacity-100"> Feedback </a>
+          <h3 class="text-lg font-bold">Fooderino</h3>
+          <a href="#features" class="opacity-60 hover:opacity-100"> Features </a>
+          <a href="#usage" class="opacity-60 hover:opacity-100"> Everyday use </a>
+          <a href="#contact" class="opacity-60 hover:opacity-100"> Contact and feedback </a>
         </div>
       </div>
 
       <Separator class="my-6" />
       <section>
-        <h3 class="">&copy; 2024 May Solutions UG. All rights reserved.</h3>
+        <h3 class="">&copy; {{ year }} May Solutions UG. All rights reserved.</h3>
       </section>
     </div>
   </footer>

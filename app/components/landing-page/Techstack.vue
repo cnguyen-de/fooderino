@@ -1,71 +1,35 @@
 <script setup lang="ts">
 import { Marquee } from '@selemondev/vue3-marquee';
 import '@selemondev/vue3-marquee/dist/style.css';
+import { Layers, Code, Database, Cloud, Paintbrush, Blocks } from 'lucide-vue-next';
 
-import { Crown, Vegan, Ghost, Puzzle, Squirrel, Cookie, Drama, CreditCard } from 'lucide-vue-next';
+const iconMap = {
+  layers: Layers,
+  code: Code,
+  database: Database,
+  cloud: Cloud,
+  paintbrush: Paintbrush,
+  blocks: Blocks
+};
 
-interface sponsorsProps {
-  icon: string;
+interface StackProps {
+  icon: keyof typeof iconMap;
   name: string;
 }
 
-const stacks: sponsorsProps[] = [
-  {
-    icon: 'crown',
-    name: 'Vue'
-  },
-  {
-    icon: 'vegan',
-    name: 'Nuxt'
-  },
-  {
-    icon: 'ghost',
-    name: 'Supabase'
-  },
-  {
-    icon: 'puzzle',
-    name: 'Github Auth'
-  },
-  {
-    icon: 'squirrel',
-    name: 'Google Auth'
-  },
-  {
-    icon: 'cookie',
-    name: 'Vercel'
-  },
-  {
-    icon: 'drama',
-    name: 'TailwindCSS'
-  },
-  {
-    icon: 'crown',
-    name: 'Shadcn UI'
-  },
-  {
-    icon: 'creditcard',
-    name: 'Stripe'
-  }
+const stacks: StackProps[] = [
+  { icon: 'layers', name: 'Nuxt' },
+  { icon: 'code', name: 'Vue' },
+  { icon: 'database', name: 'Dexie / IndexedDB' },
+  { icon: 'cloud', name: 'Supabase' },
+  { icon: 'paintbrush', name: 'Tailwind CSS' },
+  { icon: 'blocks', name: 'shadcn-vue' }
 ];
-
-const iconMap: Record<
-  string,
-  typeof Crown | typeof Vegan | typeof Ghost | typeof Puzzle | typeof Squirrel | typeof Cookie | typeof Drama
-> = {
-  crown: Crown,
-  vegan: Vegan,
-  ghost: Ghost,
-  puzzle: Puzzle,
-  squirrel: Squirrel,
-  cookie: Cookie,
-  drama: Drama,
-  creditcard: CreditCard
-};
 </script>
 
 <template>
   <section id="techstack" class="mx-auto max-w-[75%] pb-24 sm:pb-32">
-    <h2 class="mb-6 text-center text-lg md:text-xl">Our Techstacks</h2>
+    <h2 class="mb-6 text-center text-lg md:text-xl">Built with</h2>
 
     <div class="mx-auto">
       <Marquee class="gap-[3rem]" :pauseOnHover="true" :fade="true" innerClassName="gap-[3rem]">

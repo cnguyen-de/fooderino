@@ -15,7 +15,7 @@ const routeList: RouteProps[] = [
   },
   {
     href: '#usage',
-    label: 'Usage'
+    label: 'Everyday use'
   },
   {
     href: '#contact',
@@ -35,7 +35,6 @@ const isOpen = ref<boolean>(false);
         FOODERINO
       </span>
     </a>
-    <!-- Mobile -->
     <div class="block items-center lg:hidden">
       <Sheet v-model:open="isOpen">
         <SheetTrigger as-child>
@@ -78,7 +77,6 @@ const isOpen = ref<boolean>(false);
       </Sheet>
     </div>
 
-    <!-- Desktop -->
     <NavigationMenu class="hidden lg:block">
       <NavigationMenuList>
         <NavigationMenuItem>
@@ -101,7 +99,7 @@ const isOpen = ref<boolean>(false);
     <div class="hidden gap-2 lg:flex">
       <ToggleTheme />
       <Button as-child variant="ghost" class="justify-start text-base hover:bg-gray-500/20">
-        <NuxtLink class="group/arrow font-bold" to="/login"> Login </NuxtLink>
+        <NuxtLink class="group/arrow font-bold" to="/login"> Log in </NuxtLink>
       </Button>
     </div>
   </header>

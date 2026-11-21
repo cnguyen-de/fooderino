@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertCircle, Building2, Phone, Mail, Clock } from 'lucide-vue-next';
+import { AlertCircle, Mail } from 'lucide-vue-next';
 
 interface ContactFormProps {
   firstName: string;
@@ -33,24 +33,22 @@ const handleSubmit = () => {
         <div class="mb-4">
           <h2 class="mb-2 text-lg tracking-wider text-primary">Contact</h2>
 
-          <h2 class="text-3xl font-bold md:text-4xl">Contact Us</h2>
+          <h2 class="text-3xl font-bold md:text-4xl">Get in touch</h2>
         </div>
         <p class="mb-8 text-muted-foreground lg:w-5/6">
-          Do you have any questions, feedback, or suggestions? We would love to hear from you! Feel free to reach out to
-          us
+          Send a question, report a problem or suggest a change to Fooderino. The form opens your email app.
         </p>
 
         <div class="flex flex-col gap-4">
           <div class="mb-1 flex gap-2">
             <Mail />
-            <h4 class="font-bold">Mail Us</h4>
+            <h4 class="font-bold">Email</h4>
           </div>
 
           <p>contact+fooderino@may-solutions.io</p>
         </div>
       </div>
 
-      <!-- form -->
       <Card class="bg-muted/60 dark:bg-card">
         <CardHeader class="text-2xl text-primary"> </CardHeader>
         <CardContent>
