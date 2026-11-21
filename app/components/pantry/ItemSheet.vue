@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { ItemId, ItemMetadata } from '~~/types/pantry';
+import type { Month } from '~~/types/season';
 import TagCombobox from '~/components/pantry/TagCombobox.vue';
 import { localDate, normName } from '~~/utils/pantry';
+import { formatSeason, matchCalendar, monthName } from '~~/utils/seasons';
+import { SEASON_CALENDAR } from '~~/utils/seasons/calendar';
 import { toast } from 'vue-sonner';
 import { ChevronDown, History, MapPin, Plus, Store, Tag, X } from 'lucide-vue-next';
 import {
@@ -49,6 +52,31 @@ const deleting = ref(false);
 const removing = ref(false);
 const busy = ref(false);
 const more = ref(false);
+const MONTHS = Array.from({ length: 12 }, (_, i) => (i + 1) as Month);
+/** A calendar season follows the name as it is typed; one the user picked or cleared stays. */
+const seasonOrigin = ref<'calendar' | 'user' | null>(null);
+const calendarSeason = computed(() =>
+  props.creating ? (matchCalendar(SEASON_CALENDAR, [draft.value.name, ...draft.value.aliases])?.season ?? null) : null
+);
+function prefillSeason() {
+  if (!props.creating || seasonOrigin.value === 'user') return;
+  draft.value.season = calendarSeason.value && { ...calendarSeason.value };
+  seasonOrigin.value = calendarSeason.value ? 'calendar' : null;
+}
+watch(calendarSeason, prefillSeason);
+function pickMonth(end: 'from' | 'to', value: string) {
+  seasonOrigin.value = 'user';
+  if (value === '') {
+    draft.value.season = null;
+    return;
+  }
+  const month = Number(value) as Month;
+  draft.value.season = { ...(draft.value.season ?? { from: month, to: month }), [end]: month };
+}
+function clearSeason() {
+  draft.value.season = null;
+  seasonOrigin.value = 'user';
+}
 watch([() => props.id, () => props.creating], ([id, creating]) => {
   const item = id ? view.value.byId(id) : null;
   if (!item && !creating) return;
@@ -70,6 +98,8 @@ watch([() => props.id, () => props.creating], ([id, creating]) => {
   alias.value = '';
   tag.value = '';
   more.value = false;
+  seasonOrigin.value = null;
+  prefillSeason();
   merging.value = false;
   deleting.value = false;
   mergeQuery.value = '';
@@ -288,9 +318,52 @@ async function remove() {
           <Collapsible v-model:open="more" class="border-t pt-2">
             <CollapsibleTrigger
               class="flex h-8 w-full items-center justify-between text-xs font-medium text-muted-foreground"
-              >More options<ChevronDown class="size-3.5 transition-transform" :class="more && 'rotate-180'"
+              ><span
+                >More options<span v-if="draft.season" class="font-normal">
+                  · Season {{ formatSeason(draft.season) }}</span
+                ></span
+              ><ChevronDown class="size-3.5 transition-transform" :class="more && 'rotate-180'"
             /></CollapsibleTrigger>
             <CollapsibleContent class="space-y-3 pt-2">
+              <fieldset class="space-y-2">
+                <div class="flex items-baseline justify-between gap-2">
+                  <legend class="text-xs font-medium">Season</legend>
+                  <span v-if="seasonOrigin === 'calendar' && draft.season" class="text-[11px] text-muted-foreground"
+                    >Filled from the season calendar</span
+                  >
+                </div>
+                <div class="flex items-end gap-2">
+                  <label class="min-w-0 flex-1 space-y-1 text-xs"
+                    ><span class="text-muted-foreground">Begin</span
+                    ><select
+                      aria-label="Season begins"
+                      class="h-9 w-full rounded-lg border bg-muted/40 px-2 text-sm"
+                      :value="draft.season?.from ?? ''"
+                      @change="pickMonth('from', ($event.target as HTMLSelectElement).value)">
+                      <option value="">No season</option>
+                      <option v-for="m in MONTHS" :key="m" :value="m">{{ monthName(m, 'long') }}</option>
+                    </select></label
+                  ><label class="min-w-0 flex-1 space-y-1 text-xs"
+                    ><span class="text-muted-foreground">End</span
+                    ><select
+                      aria-label="Season ends"
+                      class="h-9 w-full rounded-lg border bg-muted/40 px-2 text-sm"
+                      :value="draft.season?.to ?? ''"
+                      @change="pickMonth('to', ($event.target as HTMLSelectElement).value)">
+                      <option value="">No season</option>
+                      <option v-for="m in MONTHS" :key="m" :value="m">{{ monthName(m, 'long') }}</option>
+                    </select></label
+                  ><Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    class="h-9 shrink-0 text-xs text-muted-foreground"
+                    :disabled="!draft.season"
+                    @click="clearSeason"
+                    >No season</Button
+                  >
+                </div>
+              </fieldset>
               <div class="space-y-2">
                 <label for="item-alias" class="text-xs font-medium">Other names</label>
                 <div v-if="draft.aliases.length" class="flex flex-wrap gap-1.5">
