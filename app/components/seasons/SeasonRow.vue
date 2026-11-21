@@ -4,8 +4,15 @@ import ItemCombobox from '~/components/pantry/ItemCombobox.vue';
 import type { PantryItem } from '~~/types/pantry';
 import type { Month } from '~~/types/season';
 import { formatSeason, monthName, monthsUntil, rowName, rowSeason, type SeasonRow } from '~~/utils/seasons';
-const props = defineProps<{ row: SeasonRow; month: Month; upcoming?: boolean }>();
-const emit = defineEmits<{ edit: []; list: []; link: [item: PantryItem] }>();
+const props = defineProps<{
+  row: SeasonRow;
+  month: Month;
+  upcoming?: boolean;
+  /** Whether this row's "We buy this" picker is open; the page keeps one open at a time. */
+  linking?: boolean;
+  candidates?: readonly PantryItem[];
+}>();
+defineEmits<{ edit: []; list: []; link: [item: PantryItem]; toggleLink: []; cancelLink: [] }>();
 const name = computed(() => rowName(props.row));
 const season = computed(() => rowSeason(props.row));
 const when = computed(() => {
@@ -19,16 +26,13 @@ const status = computed(() => {
   const { amount, to_buy } = props.row.item;
   return [amount > 0 && 'in stock', to_buy > 0 && 'on list'].filter(Boolean).join(' · ');
 });
-const linking = ref(false);
 const query = ref('');
-function toggle() {
-  query.value = '';
-  linking.value = !linking.value;
-}
-function pick(item: PantryItem) {
-  linking.value = false;
-  emit('link', item);
-}
+watch(
+  () => props.linking,
+  () => {
+    query.value = '';
+  }
+);
 </script>
 <template>
   <div class="space-y-1">
@@ -52,9 +56,9 @@ function pick(item: PantryItem) {
         variant="ghost"
         size="xs"
         class="shrink-0 gap-0.5 text-xs text-muted-foreground"
-        :aria-expanded="linking"
+        :aria-expanded="!!linking"
         :aria-label="`We buy ${name} under another name`"
-        @click="toggle"
+        @click="$emit('toggleLink')"
         ><Link2 class="size-3" aria-hidden="true" />We buy this</Button
       >
       <Button
@@ -74,8 +78,9 @@ function pick(item: PantryItem) {
         placeholder="Which of your items is it?"
         items-only
         auto-focus
-        @pick="pick" />
-      <Button variant="ghost" size="sm" class="h-9 shrink-0 text-xs" @click="linking = false">Cancel</Button>
+        :suggestions="candidates"
+        @pick="$emit('link', $event)" />
+      <Button variant="ghost" size="sm" class="h-9 shrink-0 text-xs" @click="$emit('cancelLink')">Cancel</Button>
     </div>
   </div>
 </template>

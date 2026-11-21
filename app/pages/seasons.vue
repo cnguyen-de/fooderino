@@ -9,6 +9,7 @@ import type { UndoHandle } from '~/composables/usePantry';
 import {
   addMonths,
   buildSeasonView,
+  linkCandidates,
   linkEdit,
   monthName,
   monthOf,
@@ -71,7 +72,13 @@ function toastUndo(message: string, handles: UndoHandle[]) {
     }
   });
 }
+const linkingEntry = shallowRef<CalendarEntry | null>(null);
+const candidates = computed(() => linkCandidates(view.value.items, SEASON_CALENDAR));
+function toggleLink(entry: CalendarEntry) {
+  linkingEntry.value = linkingEntry.value === entry ? null : entry;
+}
 async function link(entry: CalendarEntry, item: PantryItem) {
+  linkingEntry.value = null;
   try {
     const handle = await ops.editItem(item.id, linkEdit(item, entry));
     if (handle) toastUndo(`${item.name} now counts as ${entry.name}`, [handle]);
@@ -181,8 +188,12 @@ async function fill() {
             :key="key(row)"
             :row="row"
             :month="month"
+            :linking="row.source === 'calendar' && linkingEntry === row.entry"
+            :candidates="candidates"
             @edit="row.source === 'item' && (selected = row.item.id)"
             @list="list(row)"
+            @toggle-link="row.source === 'calendar' && toggleLink(row.entry)"
+            @cancel-link="linkingEntry = null"
             @link="row.source === 'calendar' && link(row.entry, $event)" />
         </div>
       </section>
@@ -199,8 +210,12 @@ async function fill() {
           :row="row"
           :month="month"
           upcoming
+          :linking="row.source === 'calendar' && linkingEntry === row.entry"
+          :candidates="candidates"
           @edit="row.source === 'item' && (selected = row.item.id)"
           @list="list(row)"
+          @toggle-link="row.source === 'calendar' && toggleLink(row.entry)"
+          @cancel-link="linkingEntry = null"
           @link="row.source === 'calendar' && link(row.entry, $event)" />
       </section>
     </div>

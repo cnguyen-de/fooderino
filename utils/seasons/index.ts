@@ -99,6 +99,12 @@ export function linkEdit(item: PantryItem, entry: CalendarEntry): ItemEdit {
   return { aliases: [...item.aliases, entry.name], season: item.season ?? entry.season };
 }
 
+/** Items offered for "We buy this": those no calendar entry knows come first, since they are the ones a link helps, then by name. */
+export function linkCandidates(items: readonly PantryItem[], calendar: readonly CalendarEntry[]): PantryItem[] {
+  const known = (item: PantryItem) => (matchCalendar(calendar, itemNames(item)) ? 1 : 0);
+  return [...items].sort((a, b) => known(a) - known(b) || a.name.localeCompare(b.name));
+}
+
 export type SeasonRow =
   | {
       source: 'item';

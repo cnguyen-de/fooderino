@@ -20,6 +20,8 @@ const props = withDefaults(
     placeholder?: string;
     /** Offers only the household's items, never the typed name. */
     itemsOnly?: boolean;
+    /** Offered while nothing is typed. */
+    suggestions?: readonly PantryItem[];
     autoFocus?: boolean;
   }>(),
   { placeholder: 'Ingredient' }
@@ -28,7 +30,9 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; pick: [item: Pa
 const { search } = usePantry();
 const open = ref(false);
 const TYPED = 'typed';
-const options = computed(() => (props.modelValue.trim() ? search(props.modelValue).slice(0, 8) : []));
+const options = computed(() =>
+  props.modelValue.trim() ? search(props.modelValue).slice(0, 8) : (props.suggestions ?? []).map((item) => ({ item }))
+);
 const typed = computed(() => {
   const name = props.modelValue.trim();
   return name && !props.itemsOnly && !options.value.some((o) => normName(o.item.name) === normName(name)) ? name : '';

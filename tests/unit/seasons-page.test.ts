@@ -194,4 +194,20 @@ describe('Seasons page', () => {
     await options.action.onClick();
     expect(ops.undo).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps one picker open, offering items the calendar does not know first', async () => {
+    const { page } = renderPage([item('Kale'), item('Tofu'), item('Cải xoăn'), item('Apples', { season: { from: 8, to: 11 } })]);
+    const weBuy = (name: string) => rowOf(page, name).get('button[aria-expanded]');
+
+    await weBuy('Rosenkohl').trigger('click');
+    await weBuy('Chicorée').trigger('click');
+    const pickers = page.findAllComponents(ItemCombobox);
+    expect(pickers).toHaveLength(1);
+    expect(pickers[0]!.props('label')).toBe('Which of your items is Chicorée?');
+    expect(weBuy('Rosenkohl').attributes('aria-expanded')).toBe('false');
+    expect(pickers[0]!.props('suggestions')!.map((i: PantryItem) => i.name)).toEqual(['Cải xoăn', 'Tofu', 'Apples', 'Kale']);
+
+    await weBuy('Chicorée').trigger('click');
+    expect(page.findAllComponents(ItemCombobox)).toHaveLength(0);
+  });
 });

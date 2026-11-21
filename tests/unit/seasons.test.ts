@@ -5,6 +5,7 @@ import {
   buildSeasonView,
   formatSeason,
   inSeason,
+  linkCandidates,
   linkEdit,
   matchCalendar,
   monthsUntil,
@@ -169,5 +170,12 @@ describe('linkEdit', () => {
     expect(linked.season).toEqual({ from: 9, to: 3 });
     const v = buildSeasonView({ items: [linked], calendar: CALENDAR, month: 11 });
     expect(names(v.now)).toEqual(['item:Kale', 'calendar:Äpfel']);
+  });
+});
+
+describe('linkCandidates', () => {
+  it('offers items no calendar entry knows first, then the rest, each by name', () => {
+    const items = [item('Kale'), item('Tofu'), item('Apples'), item('Bánh mì'), item('Rice', { aliases: ['Rosenkohl'] })];
+    expect(linkCandidates(items, CALENDAR).map((i) => i.name)).toEqual(['Bánh mì', 'Tofu', 'Apples', 'Kale', 'Rice']);
   });
 });
