@@ -72,9 +72,10 @@ describe('Cook Today page', () => {
     expect(page.text()).not.toContain('Add your first recipe');
   });
 
-  it('invites the first recipe when there are no recipes and nothing was cooked today', () => {
+  it('invites the first recipe under today\'s meal, which can still take an ingredient', () => {
     const page = renderToday([]);
 
     expect(page.text()).toContain('Add your first recipe');
+    expect(page.text()).toContain('Add ingredient');
   });
 });
