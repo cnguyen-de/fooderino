@@ -88,11 +88,24 @@ export function matchCalendar(calendar: readonly CalendarEntry[], names: readonl
 }
 
 /** The items with a season of their own: those in season first, then by how soon theirs starts, then by name. */
-export function seasonalItems(
-  items: readonly PantryItem[],
-  month: Month
-): { item: PantryItem; season: Season; until: number }[] {
+export function seasonalItems(items: readonly PantryItem[], month: Month): SeasonalItem[] {
   return items
-    .flatMap((item) => (item.season ? [{ item, season: item.season, until: monthsUntil(item.season, month) }] : []))
+    .flatMap((item) => {
+      if (!item.season) return [];
+      const until = monthsUntil(item.season, month);
+      const group: SeasonGroup = until === 0 ? 'now' : until <= SOON_MONTHS ? 'soon' : 'off';
+      return [{ item, season: item.season, until, group }];
+    })
     .sort((a, b) => a.until - b.until || a.item.name.localeCompare(b.item.name));
+}
+
+/** In season now, starting within `SOON_MONTHS`, or further out. */
+export type SeasonGroup = 'now' | 'soon' | 'off';
+export const SOON_MONTHS = 2;
+
+export interface SeasonalItem {
+  item: PantryItem;
+  season: Season;
+  until: number;
+  group: SeasonGroup;
 }

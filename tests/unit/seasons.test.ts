@@ -55,7 +55,9 @@ describe('seasonalItems', () => {
 
   it('lists only items with a season of their own, even when the calendar knows the rest', () => {
     const leeks = item('Leeks', { season: { from: 9, to: 4 } });
-    expect(seasonalItems([item('Kale'), item('Salt'), leeks], 11)).toEqual([{ item: leeks, season: leeks.season, until: 0 }]);
+    expect(seasonalItems([item('Kale'), item('Salt'), leeks], 11)).toEqual([
+      { item: leeks, season: leeks.season, until: 0, group: 'now' }
+    ]);
   });
 
   it('puts what is in season first, then the soonest to start, ties by name', () => {
@@ -72,6 +74,24 @@ describe('seasonalItems', () => {
     );
     expect(names(rows)).toEqual(['Apples', 'Kale', 'Chicory', 'Asparagus', 'Rhubarb', 'Strawberries']);
     expect(rows.map((r) => r.until)).toEqual([0, 0, 1, 5, 5, 6]);
+  });
+
+  it('groups into in season, starting within two months, and further out', () => {
+    const rows = seasonalItems(
+      [
+        item('Kale', { season: NOV_FEB }),
+        item('Chicory', { season: { from: 12, to: 3 } }),
+        item('Lamb lettuce', { season: { from: 1, to: 3 } }),
+        item('Asparagus', { season: { from: 4, to: 6 } })
+      ],
+      11
+    );
+    expect(rows.map((r) => [r.item.name, r.group])).toEqual([
+      ['Kale', 'now'],
+      ['Chicory', 'soon'],
+      ['Lamb lettuce', 'soon'],
+      ['Asparagus', 'off']
+    ]);
   });
 
   it('counts a season that runs past December as in season in January and starting soon in October', () => {
