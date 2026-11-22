@@ -48,14 +48,17 @@ const entry = (name: string, qty: MealIngredient['ingredient']['qty'], uses: str
   uses: uses as CommandId[]
 });
 
-const lookup = { byId: (id: ItemId) => (id === tofu.id ? tofu : undefined), search: () => [] };
+const lastTofu = { ...tofu, id: 'last-tofu' as ItemId, amount: 0.333333 } as PantryItem;
+const atHome = new Map([tofu, lastTofu].map((i) => [i.id, i]));
+const lookup = { byId: (id: ItemId) => atHome.get(id), search: () => [] };
 
 function renderCard(meal: Partial<Meal> & { date: LocalDate }, title = 'Sat, 15 Nov') {
   const cook = {
     removeDish: vi.fn(async () => true),
     removeIngredient: vi.fn(async () => true),
     addIngredient: vi.fn(async () => true),
-    checkIngredient: vi.fn((draft) => checkIngredient(draft, lookup)),
+    changeIngredient: vi.fn(async () => true),
+    checkIngredient: vi.fn((draft, changing) => checkIngredient(draft, lookup, changing)),
     findRecipes: (q: string) => (q.trim() ? [soup] : []),
     recipe: (id: RecipeId) => (id === soup.id ? soup : undefined),
     plan: () => [],
@@ -239,5 +242,78 @@ describe('add ingredient sheet', () => {
 
     expect(submit(card).attributes('disabled')).toBeDefined();
     expect(alert(card).exists()).toBe(false);
+  });
+});
+
+describe('changing the amount of an ingredient in a meal', () => {
+  const halfTaken = (): MealIngredient => ({
+    ...entry('Tofu', { amount: 0.5, unit: 'count' }, ['00000000-0000-4000-8000-0000000000e1']),
+    ingredient: { name: 'Tofu', item_id: lastTofu.id, qty: { amount: 0.5, unit: 'count' } }
+  });
+  const save = (card: ReturnType<typeof mount>) => card.findAll('button').find((b) => b.text() === 'Save amount')!;
+
+  async function openChange(used: MealIngredient) {
+    const rendered = renderCard({ date: OLD, ingredients: [used] });
+    await rendered.card.get(`button[aria-label="${used.ingredient.name}, options"]`).trigger('click');
+    await button(rendered.card, 'Change amount').trigger('click');
+    return rendered;
+  }
+
+  it('opens with the item fixed and the current amount filled in', async () => {
+    const { card } = await openChange(halfTaken());
+
+    expect(dialog(card).text()).toContain('Change Tofu');
+    expect(card.find('input[aria-label="Ingredient"]').exists()).toBe(false);
+    expect(card.get<HTMLInputElement>('input[aria-label="Amount used"]').element.value).toBe('½');
+    expect(dialog(card).text()).toContain('⅓ at home · ½ taken for this meal');
+  });
+
+  it('allows two thirds with a third left after the half, counting the half as at home', async () => {
+    const used = halfTaken();
+    const { card, cook } = await openChange(used);
+
+    await card.get('input[aria-label="Amount used"]').trigger('focus');
+    await button(card, '⅔').trigger('click');
+    expect(card.find('[role="alert"]').exists()).toBe(false);
+    expect(dialog(card).text()).toContain('Puts back ½ and takes ⅔ Tofu from home');
+    await card.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(cook.changeIngredient).toHaveBeenCalledWith(used, expect.objectContaining({ amount: '⅔' }));
+    expect(card.find('[role="dialog"]').exists()).toBe(false);
+  });
+
+  it('refuses more than the half and the third together', async () => {
+    const { card, cook } = await openChange(halfTaken());
+
+    await card.get('input[aria-label="Amount used"]').setValue('1');
+    expect(card.get('[role="alert"]').text()).toContain('counting the ½ this meal took');
+    expect(save(card).attributes('disabled')).toBeDefined();
+    await card.get('form').trigger('submit');
+    expect(cook.changeIngredient).not.toHaveBeenCalled();
+  });
+
+  it('changes to "some" with a blank amount, putting the half back', async () => {
+    const used = halfTaken();
+    const { card, cook } = await openChange(used);
+
+    await card.get('input[aria-label="Amount used"]').setValue('');
+    expect(dialog(card).text()).toContain('Puts ½ Tofu back home');
+    await card.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(cook.changeIngredient).toHaveBeenCalledWith(used, expect.objectContaining({ amount: '' }));
+  });
+
+  it('changes a pinch of salt that took nothing to an amount', async () => {
+    const salt = entry('Salt', null);
+    const { card, cook } = await openChange(salt);
+
+    expect(card.get<HTMLInputElement>('input[aria-label="Amount used"]').element.value).toBe('');
+    await card.get('input[aria-label="Amount used"]').setValue('5');
+    await card.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(cook.changeIngredient).toHaveBeenCalledWith(salt, expect.objectContaining({ name: 'Salt', amount: '5' }));
   });
 });

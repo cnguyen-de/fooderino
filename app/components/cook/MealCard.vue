@@ -2,8 +2,7 @@
 import { Check, Plus, X } from 'lucide-vue-next';
 import type { Meal, MealDish, MealIngredient } from '~/composables/useCook';
 import type { RecipeId } from '~~/types/cook';
-import { formatAmount } from '~~/utils/pantry';
-import { needsText } from '~/utils/cook-format';
+import { needsText, qtyText } from '~/utils/cook-format';
 const props = defineProps<{ meal: Meal; title: string }>();
 const cook = useCook();
 
@@ -12,7 +11,6 @@ const selected = ref<Entry | null>(null);
 const busy = ref(false);
 const entryName = (entry: Entry) => (entry.kind === 'dish' ? entry.dish.recipe.name : entry.used.ingredient.name);
 const entryUses = (entry: Entry) => (entry.kind === 'dish' ? entry.dish.uses : entry.used.uses);
-const amountText = ({ ingredient: { qty } }: MealIngredient) => (qty ? formatAmount(qty.amount, qty.unit) : 'some');
 async function remove(restock: boolean) {
   const entry = selected.value;
   if (!entry || busy.value) return;
@@ -38,6 +36,19 @@ function cookRecipe(id: RecipeId) {
   cooking.value = id;
 }
 const adding = ref(false);
+const changing = ref<MealIngredient | null>(null);
+const sheetOpen = computed({
+  get: () => adding.value || changing.value !== null,
+  set: (value) => {
+    if (value) return;
+    adding.value = false;
+    changing.value = null;
+  }
+});
+function changeAmount(used: MealIngredient) {
+  selected.value = null;
+  changing.value = used;
+}
 const empty = computed(() => !props.meal.dishes.length && !props.meal.ingredients.length);
 </script>
 <template>
@@ -71,7 +82,7 @@ const empty = computed(() => !props.meal.dishes.length && !props.meal.ingredient
           :aria-label="`${used.ingredient.name}, options`"
           @click="selected = { kind: 'ingredient', used }">
           <span class="min-w-0 flex-1 truncate">{{ used.ingredient.name }}</span
-          ><span class="shrink-0 text-xs tabular-nums text-muted-foreground">{{ amountText(used) }}</span>
+          ><span class="shrink-0 text-xs tabular-nums text-muted-foreground">{{ qtyText(used.ingredient.qty) }}</span>
         </button>
       </li>
     </ul>
@@ -108,6 +119,14 @@ const empty = computed(() => !props.meal.dishes.length && !props.meal.ingredient
             ><NuxtLink :to="`/cook/recipes/${selected.dish.recipe.id}`">Open recipe</NuxtLink></Button
           >
           <Button
+            v-if="selected?.kind === 'ingredient'"
+            variant="secondary"
+            class="h-10 w-full"
+            :disabled="busy"
+            @click="changeAmount(selected.used)"
+            >Change amount</Button
+          >
+          <Button
             v-if="selected && entryUses(selected).length"
             variant="secondary"
             class="h-10 w-full"
@@ -142,6 +161,6 @@ const empty = computed(() => !props.meal.dishes.length && !props.meal.ingredient
       </DrawerContent>
     </Drawer>
     <CookSheet v-model:open="cookOpen" :recipe="cooking ? cook.recipe(cooking) : undefined" :initial-date="meal.date" />
-    <IngredientSheet v-model:open="adding" :date="meal.date" :title="title" />
+    <IngredientSheet v-model:open="sheetOpen" :date="meal.date" :title="title" :entry="changing ?? undefined" />
   </section>
 </template>

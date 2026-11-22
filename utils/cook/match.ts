@@ -1,6 +1,6 @@
-import { amountField, formatAmount, parseAmount, snapUse, tidy, type Hit } from '~~/utils/pantry';
-import type { ItemId, PantryItem, Unit } from '~~/types/pantry';
-import type { Ingredient } from '~~/types/cook';
+import { amountField, formatAmount, parseAmount, roundAmount, snapUse, tidy, type Hit } from '~~/utils/pantry';
+import type { CommandId, ItemId, PantryItem, Unit } from '~~/types/pantry';
+import type { Ingredient, Quantity } from '~~/types/cook';
 
 export type PantryHit = Pick<Hit, 'match' | 'via'> & { item: PantryItem };
 
@@ -127,8 +127,25 @@ export type IngredientCheck =
   | { ok: true; ingredient: Ingredient; use: UseLine | null }
   | { ok: false; problem: string };
 
-/** A blank amount, or zero, records the ingredient as used but too little to count, and deducts nothing. */
-export function checkIngredient(draft: IngredientDraft, lookup: PantryLookup): IngredientCheck {
+export interface IngredientEntry {
+  ingredient: Ingredient;
+  uses: readonly CommandId[];
+}
+
+/** What the entry took from home, which a change puts back before taking the new amount. */
+export function takenBy(entry: IngredientEntry | undefined): Quantity | null {
+  return entry && entry.uses.length > 0 ? entry.ingredient.qty : null;
+}
+
+/**
+ * A blank amount, or zero, records the ingredient as used but too little to count, and deducts nothing.
+ * With `changing`, what that entry took of the item counts as at home.
+ */
+export function checkIngredient(
+  draft: IngredientDraft,
+  lookup: PantryLookup,
+  changing?: IngredientEntry
+): IngredientCheck {
   const name = tidy(draft.name);
   if (!name) return { ok: false, problem: 'Pick an item or type a name.' };
   const amount = draft.amount.trim() ? parseAmount(draft.amount) : 0;
@@ -142,11 +159,16 @@ export function checkIngredient(draft: IngredientDraft, lookup: PantryLookup): I
   }
   const item = lookup.byId(draft.item_id);
   if (!item) return { ok: false, problem: `${name} is no longer at home. Pick it again or type a name.` };
-  if (snapUse(amount, item.amount, item.unit) > item.amount)
+  const taken = takenBy(changing);
+  const back = taken?.unit === item.unit ? taken.amount : 0;
+  const available = roundAmount(item.amount + back);
+  if (snapUse(amount, available, item.unit) > available) {
+    const counting = back > 0 ? `, counting the ${formatAmount(back, item.unit)} this meal took` : '';
     return {
       ok: false,
-      problem: `Only ${formatAmount(item.amount, item.unit)} ${item.name} at home. Reduce the amount.`
+      problem: `Only ${formatAmount(available, item.unit)} ${item.name} at home${counting}. Reduce the amount.`
     };
+  }
   if (amount === 0) return { ok: true, ingredient: { name, item_id: item.id, qty: null }, use: null };
   return {
     ok: true,

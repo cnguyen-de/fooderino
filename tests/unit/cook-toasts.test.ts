@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { computed, ref, shallowRef } from 'vue';
+import { computed, reactive, ref, shallowRef } from 'vue';
 import { toast } from 'vue-sonner';
 import type { HouseholdId, Item, ItemId, LocalDate } from '~~/types/pantry';
 import type { Cook } from '../../app/composables/useCook';
@@ -7,6 +7,7 @@ import { dateText } from '../../app/utils/cook-format';
 import { db } from '~~/utils/db';
 import { createPantryOps } from '~~/utils/pantry-ops';
 import { setSyncState } from '~~/utils/sync-state';
+import { project } from '../support/device';
 
 vi.mock('vue-sonner', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
 
@@ -16,6 +17,9 @@ const OLDER = '2026-11-15' as LocalDate;
 
 const ops = createPantryOps({ db });
 const items = shallowRef<ReadonlyMap<ItemId, Item>>(new Map());
+const refresh = async () => {
+  items.value = (await project(db)).snapshot.items;
+};
 let cook: Cook;
 
 beforeAll(async () => {
@@ -63,5 +67,60 @@ describe('adding to a meal names the meal as its card does', () => {
 
     expect(await cook.addToMeal(recipe, date, [])).toBe(true);
     expect(lastToast()).toBe(text);
+  });
+});
+
+describe('changing the amount of an ingredient in a meal', () => {
+  const undoLast = () => {
+    const action = vi.mocked(toast).mock.calls.at(-1)?.[1]?.action;
+    if (!action || typeof action !== 'object' || !('onClick' in action)) throw new Error('no undo offered');
+    action.onClick({} as MouseEvent);
+  };
+
+  async function tofuWithHalfTaken() {
+    const tofu = (await ops.createItem({ name: 'Tofu', amount: 1 }))!;
+    await refresh();
+    await cook.addIngredient(TODAY, { name: 'Tofu', item_id: tofu, amount: '½', unit: 'count' });
+    await refresh();
+    await vi.waitFor(() =>
+      expect(cook.todayMeal.value.ingredients.some((i) => i.ingredient.item_id === tofu)).toBe(true)
+    );
+    const used = cook.todayMeal.value.ingredients.find((i) => i.ingredient.item_id === tofu)!;
+    return { tofu, used: reactive(used) };
+  }
+
+  it('says what it changed to, and undo brings back the half', async () => {
+    const { tofu, used } = await tofuWithHalfTaken();
+
+    expect(await cook.changeIngredient(used, { name: 'Tofu', item_id: tofu, amount: '1', unit: 'count' })).toBe(true);
+    expect(lastToast()).toBe('Changed Tofu to 1');
+    await refresh();
+    expect(items.value.get(tofu)?.amount).toBe(0);
+
+    undoLast();
+    await vi.waitFor(() => expect(lastToast()).toBe('Changed Tofu to ½'));
+    await refresh();
+    expect(items.value.get(tofu)?.amount).toBe(0.5);
+  });
+
+  it('says "some" for a blank amount', async () => {
+    const { tofu, used } = await tofuWithHalfTaken();
+
+    await cook.changeIngredient(used, { name: 'Tofu', item_id: tofu, amount: '', unit: 'count' });
+
+    expect(lastToast()).toBe('Changed Tofu to some');
+  });
+
+  it('refuses more than is at home with the half counted, and changes nothing', async () => {
+    const { tofu, used } = await tofuWithHalfTaken();
+
+    expect(await cook.changeIngredient(used, { name: 'Tofu', item_id: tofu, amount: '2', unit: 'count' })).toBe(false);
+
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining('Only 1 Tofu at home, counting the ½ this meal took')
+    );
+    expect(toast).not.toHaveBeenCalledWith(expect.stringContaining('Changed'), expect.anything());
+    await refresh();
+    expect(items.value.get(tofu)?.amount).toBe(0.5);
   });
 });

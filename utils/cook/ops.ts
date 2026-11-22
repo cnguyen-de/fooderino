@@ -5,6 +5,7 @@ import type {
   Ingredient,
   MealIngredientId,
   MealIngredientSheet,
+  Quantity,
   RecipeId,
   RecipeKind,
   RecipeSheet
@@ -41,6 +42,11 @@ export interface CookOps {
    */
   addIngredient(input: { date: LocalDate; ingredient: Ingredient; use: UseLine | null }): Promise<MealIngredientId>;
   removeIngredient(id: MealIngredientId, opts: { restock: boolean }): Promise<void>;
+  /**
+   * Puts back what the entry took and takes `qty` of its item instead, in one transaction.
+   * Throws, changing nothing, when the pantry refuses or the entry is gone. A null `qty` is "some".
+   */
+  changeIngredient(id: MealIngredientId, qty: Quantity | null): Promise<void>;
   /** Lists out or short items; untracked names become new count items to buy. Resolves with how many were listed. */
   addMissingToShopping(id: RecipeId): Promise<number>;
 }
@@ -193,6 +199,20 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
     },
 
     removeIngredient: (id, { restock }) => removeFromMeal('mealIngredients', id, restock),
+
+    async changeIngredient(id, qty) {
+      await db.transaction('rw', cookTables(), async () => {
+        const entry = await current('mealIngredients', id);
+        if (!entry || entry.deleted_at) throw new Error('This ingredient is no longer in the meal.');
+        const ingredient = tidyIngredients([{ ...entry.ingredient, qty }])[0]!;
+        if (entry.uses.length > 0) await pantry.undoCommands(entry.uses);
+        const item = ingredient.item_id;
+        const handle =
+          item && ingredient.qty ? await pantry.useItems([{ id: item, qty: ingredient.qty.amount }]) : null;
+        await queue('mealIngredients', { ...entry, ingredient, uses: handle?.commands.map((c) => c.id) ?? [] });
+      });
+      notify();
+    },
 
     async addMissingToShopping(id) {
       const recipe = await current('recipes', id);

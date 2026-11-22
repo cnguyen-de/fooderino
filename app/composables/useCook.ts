@@ -1,7 +1,15 @@
 import { liveQuery } from 'dexie';
 import { toast } from 'vue-sonner';
 import type { ComputedRef, Ref } from 'vue';
-import type { CookedId, CookedRow, MealIngredientId, MealIngredientRow, RecipeId, RecipeRow } from '~~/types/cook';
+import type {
+  CookedId,
+  CookedRow,
+  MealIngredientId,
+  MealIngredientRow,
+  Quantity,
+  RecipeId,
+  RecipeRow
+} from '~~/types/cook';
 import type { ItemId, LocalDate } from '~~/types/pantry';
 import {
   buildMeals,
@@ -18,6 +26,7 @@ import {
   type IngredientCheck,
   type IngredientDraft,
   type Meal,
+  type MealIngredient,
   type MealSuggestions,
   type PantryLookup,
   type RecipeInput,
@@ -25,7 +34,7 @@ import {
 } from '~~/utils/cook';
 import { db, SYNC_STATE_KEY } from '~~/utils/db';
 import { normName } from '~~/utils/pantry';
-import { addedText } from '~/utils/cook-format';
+import { addedText, qtyText } from '~/utils/cook-format';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 import { notifyLocalChange } from '~~/utils/sync-hook';
 
@@ -95,7 +104,7 @@ export interface Cook {
   plan(id: RecipeId): CookLine[];
   choose(line: CookLine, id: ItemId | null): CookLine;
   check(lines: readonly CookLine[]): CookCheck;
-  checkIngredient(draft: IngredientDraft): IngredientCheck;
+  checkIngredient(draft: IngredientDraft, changing?: MealIngredient): IngredientCheck;
   /** Live recipes whose name contains `query`, at most six. None for a blank query. */
   findRecipes(query: string): RecipeView[];
 
@@ -105,6 +114,7 @@ export interface Cook {
   removeDish(id: CookedId, opts: { restock: boolean }): Promise<boolean>;
   addIngredient(date: LocalDate, draft: IngredientDraft): Promise<boolean>;
   removeIngredient(id: MealIngredientId, opts: { restock: boolean }): Promise<boolean>;
+  changeIngredient(entry: MealIngredient, draft: IngredientDraft): Promise<boolean>;
   addMissingToShopping(id: RecipeId): Promise<boolean>;
   ready: ComputedRef<boolean>;
 }
@@ -169,6 +179,19 @@ export function useCook(): Cook {
     }
   }
 
+  async function setAmount(id: MealIngredientId, name: string, qty: Quantity | null, before: Quantity | null) {
+    try {
+      await ops.changeIngredient(id, qty);
+      toast(`Changed ${name} to ${qtyText(qty)}`, {
+        action: { label: 'Undo', onClick: () => void setAmount(id, name, before, qty) }
+      });
+      return true;
+    } catch (e) {
+      failed(e, 'Could not change the amount.');
+      return false;
+    }
+  }
+
   return {
     recipes,
     recipe: (id) => byId.value.get(id),
@@ -179,7 +202,7 @@ export function useCook(): Cook {
     plan: (id) => planCook(byId.value.get(id)?.ingredients ?? [], lookup),
     choose: (line, id) => chooseItem(line, id, lookup),
     check: (lines) => checkCook(lines, lookup),
-    checkIngredient: (draft) => checkIngredient(draft, lookup),
+    checkIngredient: (draft, changing) => checkIngredient(draft, lookup, changing),
     findRecipes(query) {
       const q = normName(query);
       return q ? recipes.value.filter((r) => normName(r.name).includes(q)).slice(0, 6) : [];
@@ -248,6 +271,15 @@ export function useCook(): Cook {
     },
 
     removeIngredient,
+
+    async changeIngredient(entry, draft) {
+      const checked = checkIngredient(draft, lookup, entry);
+      if (!checked.ok) {
+        toast.error(checked.problem);
+        return false;
+      }
+      return setAmount(entry.id, checked.ingredient.name, checked.ingredient.qty, entry.ingredient.qty);
+    },
 
     async addMissingToShopping(id) {
       try {

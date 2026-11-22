@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ItemId, LocalDate } from '~~/types/pantry';
+import type { CommandId, ItemId, LocalDate } from '~~/types/pantry';
 import type { CookedRow, MealIngredientRow, RecipeId, RecipeRow } from '~~/types/cook';
 import {
   checkCook,
@@ -450,6 +450,131 @@ describe('ingredients added to a meal', () => {
   });
 });
 
+describe('changing the amount of an ingredient in a meal', () => {
+  async function start(amount: number, used: string) {
+    const d = await device();
+    const tofu = (await d.ops.createItem({ name: 'Tofu', amount }))!;
+    const { items } = (await project(d.db)).snapshot;
+    const lookup: PantryLookup = { byId: (id) => items.get(id), search: () => [] };
+    const added = checkIngredient({ name: 'Tofu', item_id: tofu, amount: used, unit: 'count' }, lookup);
+    if (!added.ok) throw new Error(added.problem);
+    const id = await d.cook.addIngredient({ date: TODAY, ingredient: added.ingredient, use: added.use });
+    const entry = async () => (await d.used()).find((u) => u.id === id)!;
+    const check = async (amount: string) => {
+      const { items } = (await project(d.db)).snapshot;
+      return checkIngredient(
+        { name: 'Tofu', item_id: tofu, amount, unit: 'count' },
+        { byId: (i) => items.get(i), search: () => [] },
+        await entry()
+      );
+    };
+    return { d, tofu, id, entry, check };
+  }
+  const half = { amount: 0.5, unit: 'count' } as const;
+
+  it('takes more: puts the half back and takes two thirds instead, also on the server', async () => {
+    const { d, tofu, id, entry } = await start(2, '½');
+    const before = (await entry()).uses;
+
+    await d.cook.changeIngredient(id, { amount: 2 / 3, unit: 'count' });
+
+    expect(await amountOf(d, tofu)).toBeCloseTo(4 / 3, 5);
+    const after = await entry();
+    expect(after.ingredient).toEqual({ name: 'Tofu', item_id: tofu, qty: { amount: 2 / 3, unit: 'count' } });
+    expect(after.uses).toHaveLength(1);
+    expect(after.uses).not.toEqual(before);
+    await d.engine.sync('full');
+    expect(d.server.items.get(tofu)?.amount).toBeCloseTo(4 / 3, 5);
+    expect(d.server.mealIngredients.get(id)).toMatchObject({ ingredient: after.ingredient, uses: after.uses });
+  });
+
+  it('takes less: a quarter instead of the half', async () => {
+    const { d, tofu, id, entry } = await start(2, '½');
+
+    await d.cook.changeIngredient(id, { amount: 0.25, unit: 'count' });
+
+    expect(await amountOf(d, tofu)).toBe(1.75);
+    expect((await entry()).ingredient.qty).toEqual({ amount: 0.25, unit: 'count' });
+  });
+
+  it('changes to "some": puts the half back and takes nothing', async () => {
+    const { d, tofu, id, entry } = await start(2, '½');
+
+    await d.cook.changeIngredient(id, null);
+
+    expect(await amountOf(d, tofu)).toBe(2);
+    expect(await entry()).toMatchObject({ ingredient: { qty: null }, uses: [] });
+  });
+
+  it('changes "some" to an amount, taking it from home', async () => {
+    const { d, tofu, id, entry } = await start(2, '');
+
+    await d.cook.changeIngredient(id, half);
+
+    expect(await amountOf(d, tofu)).toBe(1.5);
+    expect((await entry()).uses).toHaveLength(1);
+  });
+
+  it('changes the amount of a typed name without touching the pantry', async () => {
+    const d = await device();
+    const id = await d.cook.addIngredient({
+      date: TODAY,
+      ingredient: { name: 'Bean sprouts', item_id: null, qty: null },
+      use: null
+    });
+    const queued = await d.db.commands.count();
+
+    await d.cook.changeIngredient(id, { amount: 200, unit: 'gram' });
+
+    expect((await d.used())[0]).toMatchObject({ ingredient: { qty: { amount: 200, unit: 'gram' } }, uses: [] });
+    expect(await d.db.commands.count()).toBe(queued);
+  });
+
+  it('changes nothing when the pantry refuses the new amount, not even the put-back', async () => {
+    const { d, tofu, id, entry } = await start(1, '½');
+    const before = await entry();
+    const queued = await d.db.commands.count();
+
+    await expect(d.cook.changeIngredient(id, { amount: 2, unit: 'count' })).rejects.toThrow(RangeError);
+
+    expect(await amountOf(d, tofu)).toBe(0.5);
+    expect(await entry()).toEqual(before);
+    expect(await d.db.commands.count()).toBe(queued);
+  });
+
+  it('counts what the entry took as at home: two thirds fit when a third is left after the half', async () => {
+    const { d, tofu, id, check } = await start(0.5 + 1 / 3, '½');
+    expect(await amountOf(d, tofu)).toBeCloseTo(1 / 3, 5);
+
+    const twoThirds = await check('⅔');
+    expect(twoThirds).toMatchObject({ ok: true, use: { id: tofu, qty: 0.666667 } });
+    expect(await check('1')).toMatchObject({
+      ok: false,
+      problem: expect.stringContaining('counting the ½ this meal took')
+    });
+
+    await d.cook.changeIngredient(id, twoThirds.ok ? twoThirds.ingredient.qty : null);
+    expect(await amountOf(d, tofu)).toBeCloseTo(1 / 6, 5);
+  });
+
+  it('puts back only the new amount when the changed entry is removed', async () => {
+    const { d, tofu, id } = await start(2, '½');
+    await d.cook.changeIngredient(id, { amount: 1, unit: 'count' });
+
+    await d.cook.removeIngredient(id, { restock: true });
+
+    expect(await amountOf(d, tofu)).toBe(2);
+  });
+
+  it('refuses an entry that is no longer in the meal', async () => {
+    const { d, id } = await start(2, '½');
+    await d.cook.removeIngredient(id, { restock: true });
+
+    await expect(d.cook.changeIngredient(id, half)).rejects.toThrow('no longer in the meal');
+    expect(await amountOf(d, (await d.used())[0]!.ingredient.item_id!)).toBe(2);
+  });
+});
+
 describe('checkIngredient', () => {
   const tofu = { id: 'tofu' as ItemId, name: 'Tofu', unit: 'count', amount: 1 } as never;
   const lookup: PantryLookup = { byId: (id) => (id === 'tofu' ? tofu : undefined), search: () => [] };
@@ -469,5 +594,16 @@ describe('checkIngredient', () => {
     const result = check(draft);
     expect(result.ok).toBe(false);
     expect(result.ok ? '' : result.problem).toContain(problem);
+  });
+
+  it('counts what a changed entry took as at home, but only when it took something', () => {
+    const ingredient = { name: 'Tofu', item_id: 'tofu' as ItemId, qty: { amount: 0.5, unit: 'count' as const } };
+    const draft = { name: 'Tofu', item_id: 'tofu' as ItemId, amount: '1.5', unit: 'count' as const };
+
+    expect(checkIngredient(draft, lookup, { ingredient, uses: ['use-1' as CommandId] })).toMatchObject({ ok: true });
+    expect(checkIngredient(draft, lookup, { ingredient, uses: [] })).toMatchObject({
+      ok: false,
+      problem: expect.stringContaining('Only 1 Tofu at home')
+    });
   });
 });

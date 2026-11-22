@@ -331,7 +331,20 @@ describe('two devices through PostgREST, RLS and Realtime', () => {
     });
     expect((await B.item(tofu))?.amount).toBe(1.5);
 
-    await createCookOps({ db: B.db, pantry: B.ops }).removeIngredient(half, { restock: true });
+    const cookB = createCookOps({ db: B.db, pantry: B.ops });
+    await cookB.changeIngredient(half, { amount: 0.666667, unit: 'count' });
+    await B.engine.sync('full');
+    await A.engine.sync('full');
+    const changed = (await serverRow('meal_ingredients', 'id', half))[0];
+    expect(changed.ingredient).toEqual({ name: 'Tofu', item_id: tofu, qty: { amount: 0.666667, unit: 'count' } });
+    expect(changed.uses).toHaveLength(1);
+    expect(changed.uses).not.toEqual(onB!.uses);
+    expect(await A.db.mealIngredients.get(half)).toMatchObject({ ingredient: changed.ingredient, uses: changed.uses });
+    expect([(await serverRow('items_v2', 'id', tofu))[0].amount, (await A.item(tofu))?.amount]).toEqual([
+      1.333333, 1.333333
+    ]);
+
+    await cookB.removeIngredient(half, { restock: true });
     await B.engine.sync('full');
     await A.engine.sync('full');
     expect((await A.db.mealIngredients.get(half))?.deleted_at).not.toBeNull();
