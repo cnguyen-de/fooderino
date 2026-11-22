@@ -88,6 +88,16 @@ async function upgradeToV5(tx: Transaction): Promise<void> {
   await tx.table('edits').where('store').equals('items').modify(noSeason);
 }
 
+/** A client from before whole meals pulled each one as a dish, so recipes are pulled again from the start. */
+async function upgradeToV7(tx: Transaction): Promise<void> {
+  await tx
+    .table('syncState')
+    .toCollection()
+    .modify((state: SyncStateRow) => {
+      delete state.cursors.recipes;
+    });
+}
+
 export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
   const db = new Dexie(name) as FooderinoDb;
 
@@ -129,6 +139,8 @@ export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
   db.version(5).stores({}).upgrade(upgradeToV5);
 
   db.version(6).stores({ mealIngredients: 'id, seq' });
+
+  db.version(7).stores({}).upgrade(upgradeToV7);
 
   return db;
 }

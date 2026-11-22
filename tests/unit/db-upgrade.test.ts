@@ -4,6 +4,11 @@ import { openFooderinoDb, SYNC_STATE_KEY } from '~~/utils/db';
 import { convertPendingOps, legacyIngredients, type LegacyRecipe } from '~~/utils/db-upgrade';
 import type { ItemRecord, PendingOp } from '~~/types/sync';
 import { pendingSheets } from '~~/utils/sheets';
+import { createSyncEngine } from '~~/utils/sync-engine';
+import { getSyncState } from '~~/utils/sync-state';
+import type { RecipeId } from '~~/types/cook';
+import type { HouseholdId, Instant } from '~~/types/pantry';
+import { FakeServer } from '../support/fake-server';
 import fixture from '../fixtures/legacy-ingredients.json';
 
 const LIST = '11111111-1111-4111-8111-111111111111';
@@ -232,7 +237,7 @@ describe('Dexie v4 upgrade', () => {
     names.push(name);
     const db = openFooderinoDb(name);
     await db.open();
-    expect(db.verno).toBe(6);
+    expect(db.verno).toBe(7);
     expect(await db.commands.count()).toBe(0);
     db.close();
   });
@@ -290,6 +295,48 @@ describe('Dexie v6 upgrade', () => {
 
     expect(await db.table('cooked').toArray()).toEqual([dish]);
     expect(await db.mealIngredients.count()).toBe(0);
+    db.close();
+  });
+});
+
+describe('Dexie v7 upgrade', () => {
+  it('pulls every recipe again, so one a v6 device pulled as a dish reads as the whole meal it is', async () => {
+    const name = `upgrade-v7-${crypto.randomUUID()}`;
+    names.push(name);
+    const v6 = openV3(name);
+    v6.version(4).stores({ recipes: 'id, seq', cooked: 'id, seq', edits: 'id, store' });
+    v6.version(5).stores({});
+    v6.version(6).stores({ mealIngredients: 'id, seq' });
+    const pho = {
+      id: crypto.randomUUID() as RecipeId,
+      household_id: HOUSEHOLD as HouseholdId,
+      name: 'Pho',
+      kind: 'dish' as const,
+      ingredients: [],
+      instructions: '',
+      deleted_at: null,
+      updated_at: '2026-11-20T18:00:00.000Z' as Instant,
+      seq: 5
+    };
+    await v6.table('recipes').add(pho);
+    await v6.table('syncState').put({
+      key: SYNC_STATE_KEY,
+      device_id: 'd1',
+      user_id: null,
+      household_id: HOUSEHOLD,
+      hydrated_at: '2026-11-20T18:00:00.000Z',
+      cursors: { recipes: 5, items: 3 }
+    });
+    v6.close();
+    const server = new FakeServer();
+    server.recipes.set(pho.id, { ...pho, kind: 'whole_meal' });
+
+    const db = openFooderinoDb(name);
+    await db.open();
+    expect((await getSyncState(db)).cursors).toEqual({ items: 3 });
+    await createSyncEngine({ db, transport: server.transport('me') }).sync('full');
+
+    expect(await db.recipes.get(pho.id)).toMatchObject({ name: 'Pho', kind: 'whole_meal' });
     db.close();
   });
 });
