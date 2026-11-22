@@ -150,10 +150,6 @@ export default defineNuxtConfig({
         }
       ]
     },
-    injectManifest: {
-      globPatterns: ['**/*.{js,css,html,ico,svg}'],
-      globIgnores: ['emojis/**', 'manifest**.webmanifest', '**/*.map', 'hero-*.png', 'screenshot-*.jpg']
-    },
     devOptions: {
       enabled: true,
       type: 'module'

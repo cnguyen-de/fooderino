@@ -10,7 +10,12 @@ const colorMode = useColorMode();
 const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)');
 const userColor = useStorage('userColor', `${isPreferredDark.value ? 'dark' : 'light'}`);
 
-colorMode.value = userColor.value ? userColor.value : isPreferredDark.value ? 'dark' : 'light';
+colorMode.value =
+  userColor.value === 'dark' || userColor.value === 'light'
+    ? userColor.value
+    : isPreferredDark.value
+      ? 'dark'
+      : 'light';
 </script>
 
 <template>
