@@ -1,4 +1,4 @@
-import type { Quantity, RecipeId, RecipeKind, RecipeRow } from '~~/types/cook';
+import { RECIPE_KINDS, type Quantity, type RecipeId, type RecipeKind, type RecipeRow } from '~~/types/cook';
 import type { HouseholdId, Instant, Item, ItemId, LocalDate, Tag } from '~~/types/pantry';
 import type { Season } from '~~/types/season';
 import type { PendingSheet } from '~~/types/sync';
@@ -171,7 +171,7 @@ function recipeV3(raw: Json): ExportedRecipe | null {
   const ingredients = Array.isArray(raw.ingredients) ? raw.ingredients : [];
   return {
     name,
-    kind: raw.kind === 'soup' ? 'soup' : 'dish',
+    kind: RECIPE_KINDS.find((k) => k === raw.kind) ?? 'dish',
     ingredients: ingredients.flatMap((i) => {
       const ingredient = isObj(i) ? tidy(text(i.name)) : '';
       return ingredient ? [{ name: ingredient, qty: quantityOf((i as Json).qty) }] : [];

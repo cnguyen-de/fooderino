@@ -115,6 +115,17 @@ describe('export v3', () => {
     expect(parseImport(payload)?.recipes).toEqual([exported({ name: 'Canh chua', kind: 'soup' })]);
   });
 
+  it('round-trips each kind of recipe through parseImport', () => {
+    const kinds = ['dish', 'soup', 'whole_meal'] as const;
+    const payload = buildExportPayload({
+      household: null,
+      items: [],
+      recipes: kinds.map((kind) => recipe({ name: kind, kind })),
+      now: NOW
+    });
+    expect(parseImport(JSON.parse(JSON.stringify(payload)))?.recipes.map((r) => r.kind)).toEqual(kinds);
+  });
+
   it('round-trips through parseImport', () => {
     const payload = buildExportPayload({ household: null, items: [item({ name: 'Rice', unit: 'gram', amount: 800 })], recipes: [], now: NOW });
     expect(parseImport(JSON.parse(JSON.stringify(payload)))?.items).toEqual([
@@ -182,6 +193,11 @@ describe('import', () => {
         instructions: 'Hanoi style\n\nGrill.'
       })
     ]);
+  });
+
+  it('reads a recipe of a kind it does not know as a dish', () => {
+    const file = { version: 3, items: [], recipes: [exported({ name: 'Bun' }), { ...exported({}), kind: 'snack' }] };
+    expect(parseImport(file)?.recipes.map((r) => r.kind)).toEqual(['dish', 'dish']);
   });
 
   it('refuses unknown versions and shapes', () => {
