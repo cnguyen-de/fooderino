@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ArrowRight } from 'lucide-vue-next';
-import { useMediaQuery } from '@vueuse/core';
-
-const isLargeScreen = useMediaQuery('(min-width: 1024px)');
+import AppDemo from '~/components/landing-page/AppDemo.vue';
 </script>
 
 <template>
@@ -39,64 +37,7 @@ const isLargeScreen = useMediaQuery('(min-width: 1024px)');
         </div>
       </div>
 
-      <div class="group relative mt-14">
-        <div
-          class="img-shadow-animation absolute -top-6 right-12 h-12 w-[90%] rounded-full bg-primary/50 blur-3xl lg:h-[80%]"></div>
-
-        <Carousel class="mx-8" :opts="{ loop: true }">
-          <CarouselContent class="-ml-4">
-            <CarouselItem class="pl-4">
-              <img
-                class="img-border-animation relative mx-auto flex w-full cursor-grab items-center rounded-lg border border-t-2 border-t-primary/30 object-contain leading-none md:w-[1200px]"
-                :src="isLargeScreen ? '/hero-inventory-desktop.png' : '/hero-inventory-mobile.png'"
-                alt="Fooderino pantry view" />
-            </CarouselItem>
-          </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext />
-        </Carousel>
-        <div
-          class="absolute bottom-0 left-0 h-20 w-full rounded-lg bg-gradient-to-b from-background/0 via-background/50 to-background md:h-28"></div>
-      </div>
+      <AppDemo class="mt-8 w-full" />
     </div>
   </section>
 </template>
-
-<style scoped>
-.img-shadow-animation {
-  animation-name: img-shadow-animation;
-  animation-iteration-count: infinite;
-  animation-duration: 2s;
-  animation-timing-function: linear;
-  animation-direction: alternate;
-}
-
-.img-border-animation {
-  animation-name: img-border-animation;
-  animation-iteration-count: infinite;
-  animation-duration: 2s;
-  animation-timing-function: linear;
-  animation-direction: alternate;
-}
-
-@keyframes img-shadow-animation {
-  from {
-    opacity: 0.5;
-    transform: translateY(30px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0px);
-  }
-}
-@keyframes img-border-animation {
-  from {
-    @apply border-t-primary/10;
-  }
-
-  to {
-    @apply border-t-primary/60;
-  }
-}
-</style>
