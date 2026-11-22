@@ -87,25 +87,38 @@ export function matchCalendar(calendar: readonly CalendarEntry[], names: readonl
   return undefined;
 }
 
-/** The items with a season of their own: those in season first, then by how soon theirs starts, then by name. */
+/**
+ * The items with a season of their own, by group. Within a group: what ends this month, then what is in stock,
+ * then by how soon the season starts, then by name.
+ */
 export function seasonalItems(items: readonly PantryItem[], month: Month): SeasonalItem[] {
+  const first = (yes: boolean) => (yes ? 0 : 1);
   return items
     .flatMap((item) => {
       if (!item.season) return [];
       const until = monthsUntil(item.season, month);
       const group: SeasonGroup = until === 0 ? 'now' : until <= SOON_MONTHS ? 'soon' : 'off';
-      return [{ item, season: item.season, until, group }];
+      return [{ item, season: item.season, until, group, endsThisMonth: until === 0 && item.season.to === month }];
     })
-    .sort((a, b) => a.until - b.until || a.item.name.localeCompare(b.item.name));
+    .sort(
+      (a, b) =>
+        GROUP_ORDER[a.group] - GROUP_ORDER[b.group] ||
+        first(a.endsThisMonth) - first(b.endsThisMonth) ||
+        first(a.item.amount > 0) - first(b.item.amount > 0) ||
+        a.until - b.until ||
+        a.item.name.localeCompare(b.item.name)
+    );
 }
 
 /** In season now, starting within `SOON_MONTHS`, or further out. */
 export type SeasonGroup = 'now' | 'soon' | 'off';
 export const SOON_MONTHS = 2;
+const GROUP_ORDER: Record<SeasonGroup, number> = { now: 0, soon: 1, off: 2 };
 
 export interface SeasonalItem {
   item: PantryItem;
   season: Season;
   until: number;
   group: SeasonGroup;
+  endsThisMonth: boolean;
 }

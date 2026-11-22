@@ -43,16 +43,14 @@ const status = ({ amount, to_buy }: PantryItem) =>
         ><CollapsibleContent>
           <ul class="space-y-1">
             <li
-              v-for="{ item, season } in rows"
+              v-for="{ item, season, endsThisMonth } in rows"
               :key="item.id"
               class="flex min-h-11 items-center gap-2 rounded-lg bg-muted/40 py-1 pl-2.5 pr-0.5 text-sm transition-colors focus-within:bg-muted/80 hover:bg-muted/80">
               <button type="button" class="min-w-0 flex-1 text-left" @click="selected = item.id">
                 <span class="block truncate font-medium" :title="item.name">{{ item.name }}</span>
                 <span class="flex flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
                   <span>{{ formatSeason(season) }}</span>
-                  <span
-                    v-if="group === 'now' && season.to === month"
-                    class="font-medium text-amber-600 dark:text-amber-400"
+                  <span v-if="endsThisMonth" class="font-medium text-amber-600 dark:text-amber-400"
                     >· Ends this month</span
                   >
                   <span v-if="status(item)">· {{ status(item) }}</span>

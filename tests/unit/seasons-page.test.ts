@@ -68,6 +68,7 @@ describe('Seasons page', () => {
       item('Asparagus', { season: { from: 4, to: 6 } })
     ]);
     const toggle = (label: string) => page.findAll('button[aria-controls]').find((b) => b.text().startsWith(label))!;
+    expect(page.findAll('button[aria-controls]').map((b) => b.text())).toEqual(['In season1', 'Not available1']);
 
     await toggle('Not available').trigger('click');
     expect(rows(page).map((r) => r.find('span').text())).toEqual(['Apples', 'Asparagus']);

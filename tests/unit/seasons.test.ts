@@ -56,7 +56,7 @@ describe('seasonalItems', () => {
   it('lists only items with a season of their own, even when the calendar knows the rest', () => {
     const leeks = item('Leeks', { season: { from: 9, to: 4 } });
     expect(seasonalItems([item('Kale'), item('Salt'), leeks], 11)).toEqual([
-      { item: leeks, season: leeks.season, until: 0, group: 'now' }
+      { item: leeks, season: leeks.season, until: 0, group: 'now', endsThisMonth: false }
     ]);
   });
 
@@ -74,6 +74,28 @@ describe('seasonalItems', () => {
     );
     expect(names(rows)).toEqual(['Apples', 'Kale', 'Chicory', 'Asparagus', 'Rhubarb', 'Strawberries']);
     expect(rows.map((r) => r.until)).toEqual([0, 0, 1, 5, 5, 6]);
+  });
+
+  it('puts what ends this month first in its group, then what is in stock', () => {
+    const rows = seasonalItems(
+      [
+        item('Apples', { season: { from: 8, to: 11 } }),
+        item('Kale', { season: NOV_FEB }),
+        item('Leeks', { season: { from: 9, to: 4 }, amount: 2 }),
+        item('Pears', { season: { from: 8, to: 11 }, amount: 1 }),
+        item('Chicory', { season: { from: 12, to: 3 } }),
+        item('Lamb lettuce', { season: { from: 1, to: 3 }, amount: 1 })
+      ],
+      11
+    );
+    expect(rows.map((r) => [r.item.name, r.group, r.endsThisMonth])).toEqual([
+      ['Pears', 'now', true],
+      ['Apples', 'now', true],
+      ['Leeks', 'now', false],
+      ['Kale', 'now', false],
+      ['Lamb lettuce', 'soon', false],
+      ['Chicory', 'soon', false]
+    ]);
   });
 
   it('groups into in season, starting within two months, and further out', () => {
