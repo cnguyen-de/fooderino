@@ -1,7 +1,6 @@
 import type { LocalDate, PantryItem } from '~~/types/pantry';
-import type { CalendarEntry, Month, ProduceKind, Season } from '~~/types/season';
+import type { CalendarEntry, Month, Season } from '~~/types/season';
 import { normName } from '~~/utils/pantry/ids';
-import type { ItemEdit } from '~~/utils/pantry-ops';
 
 export function isMonth(v: unknown): v is Month {
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 12;
@@ -17,10 +16,6 @@ export function isSeason(v: unknown): v is Season {
 
 export function monthOf(date: LocalDate): Month {
   return Number(date.slice(5, 7)) as Month;
-}
-
-export function addMonths(month: Month, n: number): Month {
-  return ((((month - 1 + n) % 12) + 12) % 12 + 1) as Month;
 }
 
 export function inSeason(season: Season, month: Month): boolean {
@@ -92,86 +87,12 @@ export function matchCalendar(calendar: readonly CalendarEntry[], names: readonl
   return undefined;
 }
 
-export const itemNames = (item: PantryItem): string[] => [item.name, ...item.aliases];
-
-/** "We buy this": the entry's name becomes another name of the item, and fills its season only when it has none. */
-export function linkEdit(item: PantryItem, entry: CalendarEntry): ItemEdit {
-  return { aliases: [...item.aliases, entry.name], season: item.season ?? entry.season };
-}
-
-/** Items offered for "We buy this": those no calendar entry knows come first, since they are the ones a link helps, then by name. */
-export function linkCandidates(items: readonly PantryItem[], calendar: readonly CalendarEntry[]): PantryItem[] {
-  const known = (item: PantryItem) => (matchCalendar(calendar, itemNames(item)) ? 1 : 0);
-  return [...items].sort((a, b) => known(a) - known(b) || a.name.localeCompare(b.name));
-}
-
-export type SeasonRow =
-  | {
-      source: 'item';
-      item: PantryItem;
-      season: Season;
-      /** `calendar` while the item has no season of its own and shows the one its calendar entry gives. */
-      seasonFrom: 'item' | 'calendar';
-      kind: ProduceKind | 'other';
-      endsThisMonth: boolean;
-    }
-  | { source: 'calendar'; entry: CalendarEntry; endsThisMonth: boolean };
-
-export const rowName = (row: SeasonRow): string => (row.source === 'item' ? row.item.name : row.entry.name);
-export const rowSeason = (row: SeasonRow): Season => (row.source === 'item' ? row.season : row.entry.season);
-export const rowKind = (row: SeasonRow): ProduceKind | 'other' => (row.source === 'item' ? row.kind : row.entry.kind);
-
-export interface SeasonView {
-  now: SeasonRow[];
-  soon: SeasonRow[];
-  /** Items with no season whose name the calendar knows; they show in `now` and `soon` with the calendar's season. */
-  fillable: { item: PantryItem; season: Season }[];
-}
-
-export interface SeasonViewInput {
-  /** Live items. */
-  items: readonly PantryItem[];
-  calendar: readonly CalendarEntry[];
-  month: Month;
-  soonMonths?: number;
-}
-
-const KIND_ORDER: Record<ProduceKind | 'other', number> = { vegetable: 0, fruit: 1, other: 2 };
-/** What the household buys ranks above what it never bought. */
-const SOURCE_ORDER: Record<SeasonRow['source'], number> = { item: 0, calendar: 1 };
-
-export function buildSeasonView({ items, calendar, month, soonMonths = 2 }: SeasonViewInput): SeasonView {
-  const endsThisMonth = (season: Season) => season.to === month && inSeason(season, month);
-  const rows: SeasonRow[] = [];
-  const claimed = new Set<CalendarEntry>();
-  const fillable: SeasonView['fillable'] = [];
-  for (const item of items) {
-    const entry = matchCalendar(calendar, itemNames(item));
-    for (const name of itemNames(item)) {
-      const named = matchCalendar(calendar, [name]);
-      if (named) claimed.add(named);
-    }
-    if (!item.season && entry) fillable.push({ item, season: entry.season });
-    const season = item.season ?? entry?.season;
-    if (!season) continue;
-    const seasonFrom = item.season ? 'item' : 'calendar';
-    rows.push({ source: 'item', item, season, seasonFrom, kind: entry?.kind ?? 'other', endsThisMonth: endsThisMonth(season) });
-  }
-  for (const entry of calendar) {
-    if (claimed.has(entry)) continue;
-    rows.push({ source: 'calendar', entry, endsThisMonth: endsThisMonth(entry.season) });
-  }
-
-  const byName = (a: SeasonRow, b: SeasonRow) => rowName(a).localeCompare(rowName(b));
-  const bySource = (a: SeasonRow, b: SeasonRow) => SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
-  const until = (row: SeasonRow) => monthsUntil(rowSeason(row), month);
-  return {
-    now: rows
-      .filter((r) => until(r) === 0)
-      .sort((a, b) => KIND_ORDER[rowKind(a)] - KIND_ORDER[rowKind(b)] || bySource(a, b) || byName(a, b)),
-    soon: rows
-      .filter((r) => until(r) > 0 && until(r) <= soonMonths)
-      .sort((a, b) => bySource(a, b) || until(a) - until(b) || byName(a, b)),
-    fillable
-  };
+/** The items with a season of their own: those in season first, then by how soon theirs starts, then by name. */
+export function seasonalItems(
+  items: readonly PantryItem[],
+  month: Month
+): { item: PantryItem; season: Season; until: number }[] {
+  return items
+    .flatMap((item) => (item.season ? [{ item, season: item.season, until: monthsUntil(item.season, month) }] : []))
+    .sort((a, b) => a.until - b.until || a.item.name.localeCompare(b.item.name));
 }
