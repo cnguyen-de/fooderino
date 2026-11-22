@@ -1,8 +1,6 @@
-import type { LocalDate, Unit } from '~~/types/pantry';
+import type { LocalDate } from '~~/types/pantry';
 import { daysBetween } from '~~/utils/pantry';
 import type { MealNeeds } from '~~/utils/cook';
-
-export const amountText = (amount: number, unit: Unit) => `${amount}${unit === 'gram' ? ' g' : ''}`;
 
 export function eatenText(lastEaten: LocalDate | null, today: LocalDate): string {
   if (!lastEaten) return 'Never eaten';
@@ -16,7 +14,11 @@ export function dateText(date: LocalDate, today: LocalDate): string {
   const days = daysBetween(date, today);
   if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';
-  return new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short'
+  });
 }
 
 export function needsText(needs: MealNeeds): string {

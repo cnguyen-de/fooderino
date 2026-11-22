@@ -2,7 +2,8 @@
 import { X } from 'lucide-vue-next';
 import type { CookLine, RecipeView } from '~/composables/useCook';
 import type { ItemId, LocalDate } from '~~/types/pantry';
-import { amountText } from '~/utils/cook-format';
+import FractionChips from '~/components/cook/FractionChips.vue';
+import { formatAmount, parseAmount } from '~~/utils/pantry';
 const props = defineProps<{ recipe: RecipeView | undefined }>();
 const open = defineModel<boolean>('open', { required: true });
 const cook = useCook();
@@ -10,10 +11,13 @@ const { view, today } = usePantry();
 const lines = ref<CookLine[]>([]);
 const date = ref<LocalDate>(today.value);
 const busy = ref(false);
+/** The line whose amount was last focused; it shows the fraction chips. */
+const active = ref<number | null>(null);
 watch(open, (value) => {
   if (!value || !props.recipe) return;
   lines.value = cook.plan(props.recipe.id);
   date.value = today.value;
+  active.value = null;
 });
 const itemFor = (line: CookLine) => (line.item_id ? view.value.byId(line.item_id) : undefined);
 const choices = (line: CookLine) => (line.status.match.kind === 'several' ? line.status.match.choices : []);
@@ -24,7 +28,7 @@ function unitHint(line: CookLine): string {
   const qty = line.status.ingredient.qty;
   const item = itemFor(line);
   if (!qty || !item || qty.unit === item.unit) return '';
-  return `Recipe says ${amountText(qty.amount, qty.unit)}${qty.unit === 'count' ? ' pcs' : ''}. Enter how many ${item.unit === 'gram' ? 'grams' : 'pieces'} you used.`;
+  return `Recipe says ${formatAmount(qty.amount, qty.unit)}${qty.unit === 'count' ? ' pcs' : ''}. Enter how many ${item.unit === 'gram' ? 'grams' : 'pieces'} you used.`;
 }
 const selected = computed(() => lines.value.filter((line) => line.include && line.item_id).length);
 const check = computed(() => cook.check(lines.value));
@@ -81,12 +85,19 @@ async function confirm() {
                 :id="`cook-qty-${index}`"
                 v-model="line.qty"
                 :aria-label="`Quantity of ${line.status.ingredient.name}`"
-                type="number"
-                min="0"
-                step="any"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                :aria-invalid="line.include && parseAmount(line.qty) === null"
                 :disabled="!line.include"
-                class="h-9 w-20 shrink-0 rounded-lg bg-background text-base tabular-nums" />
+                class="h-9 w-20 shrink-0 rounded-lg bg-background text-base tabular-nums aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive"
+                @focus="active = index" />
             </div>
+            <FractionChips
+              v-if="active === index && line.include && itemFor(line)?.unit === 'count'"
+              :label="`Fractions of ${line.status.ingredient.name}`"
+              class="mt-2 justify-end"
+              @pick="line.qty = $event" />
             <select
               v-if="choices(line).length"
               :value="line.item_id ?? ''"
@@ -95,7 +106,7 @@ async function confirm() {
               @change="choose(index, ($event.target as HTMLSelectElement).value)">
               <option value="">Choose the item to use…</option>
               <option v-for="choice in choices(line)" :key="choice.id" :value="choice.id">
-                {{ choice.name }} · {{ amountText(view.byId(choice.id)?.amount ?? 0, choice.unit) }} at home
+                {{ choice.name }} · {{ formatAmount(view.byId(choice.id)?.amount ?? 0, choice.unit) }} at home
               </option>
             </select>
             <p class="mt-1.5 pl-6 text-xs text-muted-foreground">
@@ -103,7 +114,7 @@ async function confirm() {
                 >{{ itemFor(line)!.name }} ·
                 {{
                   itemFor(line)!.amount > 0
-                    ? `${amountText(itemFor(line)!.amount, itemFor(line)!.unit)} at home`
+                    ? `${formatAmount(itemFor(line)!.amount, itemFor(line)!.unit)} at home`
                     : 'none at home'
                 }}</template
               ><template v-else-if="choices(line).length">Choose a match, or leave it unchecked.</template

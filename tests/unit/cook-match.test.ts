@@ -14,7 +14,8 @@ const item = (id: string, name: string, over: Partial<Item> = {}): Item => ({
   amount: 3,
   to_buy: 0,
   default_amount: 1,
-  shelf_life_days: null, season: null,
+  shelf_life_days: null,
+  season: null,
   best_before: null,
   deleted_at: null,
   merged_into: null,
@@ -129,17 +130,22 @@ describe('ingredient stock', () => {
 describe('planning the cook sheet', () => {
   it('pre-fills the recipe amount for a matched item in the same unit', () => {
     const [line] = planCook([ing('Milch', 2)], pantry([item('milk', 'Milk', { aliases: ['Milch'] })]));
-    expect(line).toMatchObject({ item_id: 'milk', qty: 2, include: true });
+    expect(line).toMatchObject({ item_id: 'milk', qty: '2', include: true });
   });
 
   it('never reads 500 g as 500 items', () => {
     const [line] = planCook([ing('Flour', 500, 'gram')], pantry([item('flour', 'Flour')]));
-    expect(line).toMatchObject({ item_id: 'flour', qty: 1, include: true });
+    expect(line).toMatchObject({ item_id: 'flour', qty: '1', include: true });
+  });
+
+  it('fills a fraction left at home as a fraction sign', () => {
+    const [line] = planCook([ing('Cream', 1)], pantry([item('cream', 'Cream', { amount: 0.333334 })]));
+    expect(line).toMatchObject({ item_id: 'cream', qty: '⅓', include: true });
   });
 
   it('starts at what is at home when the recipe asks for more', () => {
     const [line] = planCook([ing('Pork', 500, 'gram')], pantry([item('pork', 'Pork', { unit: 'gram', amount: 200 })]));
-    expect(line).toMatchObject({ item_id: 'pork', qty: 200, include: true });
+    expect(line).toMatchObject({ item_id: 'pork', qty: '200', include: true });
   });
 
   it('skips missing and empty ingredients and leaves ambiguous ones for the cook', () => {
@@ -159,8 +165,8 @@ describe('planning the cook sheet', () => {
   it('re-plans a row when the cook picks one of several items', () => {
     const lookup = pantry([item('a', 'Milk', { amount: 1 }), item('b', 'Oat drink', { aliases: ['Milk'], amount: 4 })]);
     const [line] = planCook([ing('Milk', 2)], lookup);
-    expect(chooseItem(line!, 'b' as ItemId, lookup)).toMatchObject({ item_id: 'b', qty: 2, include: true });
-    expect(chooseItem(line!, 'a' as ItemId, lookup)).toMatchObject({ item_id: 'a', qty: 1, include: true });
+    expect(chooseItem(line!, 'b' as ItemId, lookup)).toMatchObject({ item_id: 'b', qty: '2', include: true });
+    expect(chooseItem(line!, 'a' as ItemId, lookup)).toMatchObject({ item_id: 'a', qty: '1', include: true });
     expect(chooseItem(line!, null, lookup)).toMatchObject({ item_id: null, include: false });
   });
 });
@@ -172,7 +178,7 @@ describe('checking the cook sheet', () => {
     item('pork', 'Pork', { unit: 'gram', amount: 300 }),
     item('eggs', 'Eggs', { amount: 4 })
   ]);
-  const line = (id: string | null, qty: number, include = true) => ({
+  const line = (id: string | null, qty: string, include = true) => ({
     status: ingredientStatus(ing('x'), lookup),
     item_id: id as ItemId | null,
     qty,
@@ -180,7 +186,7 @@ describe('checking the cook sheet', () => {
   });
 
   it('returns one use per resolved item, totalling lines that resolve to the same item', () => {
-    const check = checkCook([line('milk', 1), line('old', 1), line('eggs', 2)], lookup);
+    const check = checkCook([line('milk', '1'), line('old', '1'), line('eggs', '2')], lookup);
     expect(check).toEqual({
       ok: true,
       uses: [
@@ -191,26 +197,55 @@ describe('checking the cook sheet', () => {
   });
 
   it('refuses when two lines together use more than is at home', () => {
-    expect(checkCook([line('milk', 2), line('old', 2)], lookup)).toEqual({
+    expect(checkCook([line('milk', '2'), line('old', '2')], lookup)).toEqual({
       ok: false,
       problem: 'Only 3 Milk at home. Reduce the quantity or uncheck it.'
     });
   });
 
   it('names grams in the problem for a gram item', () => {
-    const check = checkCook([line('pork', 400)], lookup);
+    const check = checkCook([line('pork', '400')], lookup);
     expect(check.ok === false && check.problem).toContain('Only 300 g Pork');
   });
 
-  it('refuses a quantity that is not greater than zero', () => {
-    for (const qty of [0, -1, NaN, Infinity]) expect(checkCook([line('eggs', qty)], lookup).ok).toBe(false);
+  it('refuses an amount it cannot read', () => {
+    for (const qty of ['-1', '', 'two', '1/0']) expect(checkCook([line('eggs', qty)], lookup).ok).toBe(false);
+  });
+
+  it('accepts zero as used but too little to count, and takes nothing for it', () => {
+    expect(checkCook([line('eggs', '0'), line('milk', '1')], lookup)).toEqual({
+      ok: true,
+      uses: [{ id: 'milk', qty: 1 }]
+    });
+    expect(checkCook([line('eggs', '0'), line('eggs', '1')], lookup)).toEqual({
+      ok: true,
+      uses: [{ id: 'eggs', qty: 1 }]
+    });
   });
 
   it('refuses an item that is no longer at home', () => {
-    expect(checkCook([line('vanished', 1)], lookup).ok).toBe(false);
+    expect(checkCook([line('vanished', '1')], lookup).ok).toBe(false);
+  });
+
+  it('reads fractions, decimal commas and fraction signs', () => {
+    expect(checkCook([line('eggs', '1/2'), line('milk', '0,5'), line('old', '¼')], lookup)).toEqual({
+      ok: true,
+      uses: [
+        { id: 'eggs', qty: 0.5 },
+        { id: 'milk', qty: 0.75 }
+      ]
+    });
+  });
+
+  it('counts a sliver more than is left as enough, and the pantry takes what is left', () => {
+    const left = pantry([item('cream', 'Cream', { amount: 0.333333 })]);
+    const status = ingredientStatus(ing('Cream', 0.34), left);
+    expect(status.stock).toBe('enough');
+    expect(checkCook([{ status, item_id: 'cream' as ItemId, qty: '0.34', include: true }], left).ok).toBe(true);
+    expect(checkCook([{ status, item_id: 'cream' as ItemId, qty: '0.35', include: true }], left).ok).toBe(false);
   });
 
   it('ignores unchecked and unmatched rows, so cooking with nothing to deduct is allowed', () => {
-    expect(checkCook([line('eggs', 99, false), line(null, 1)], lookup)).toEqual({ ok: true, uses: [] });
+    expect(checkCook([line('eggs', '99', false), line(null, '1')], lookup)).toEqual({ ok: true, uses: [] });
   });
 });

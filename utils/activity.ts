@@ -1,5 +1,6 @@
 import type { CommandKind, CommandLogRow, Item, ItemEvent, ItemId } from '~~/types/pantry';
 import type { QueuedCommand } from '~~/types/sync';
+import { formatAmount } from '~~/utils/pantry';
 
 export interface ActivityEntry {
   id: string;
@@ -47,8 +48,7 @@ export function buildActivity(input: {
     event?: ItemEvent
   ) {
     const item = items.get(itemIds[0]!);
-    const unit = item?.unit === 'gram' ? ' g' : '';
-    const qty = (n: number) => `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(n)}${unit}`;
+    const qty = (n: number) => formatAmount(n, item?.unit ?? 'count');
     let description = labels[kind as CommandKind] ?? 'Changed item';
     let detail = '';
     if (event?.kind === 'purchase') description = `Bought ${qty(event.qty)}`;

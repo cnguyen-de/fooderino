@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { House, Minus, Plus, Square } from 'lucide-vue-next';
 import type { PantryItem } from '~~/types/pantry';
+import { formatAmount } from '~~/utils/pantry';
 const props = defineProps<{
   item: PantryItem;
   matched?: string;
@@ -8,7 +9,7 @@ const props = defineProps<{
   adding?: boolean;
   qty?: number;
 }>();
-const unit = computed(() => (props.item.unit === 'gram' ? ' g' : ''));
+const atHome = computed(() => formatAmount(props.item.amount, props.item.unit));
 defineEmits<{ edit: []; action: []; add: [] }>();
 </script>
 <template>
@@ -23,13 +24,14 @@ defineEmits<{ edit: []; action: []; add: [] }>();
       <span
         v-if="shop || adding"
         class="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-muted-foreground"
-        :title="`${item.amount}${unit} at home`"
-        ><House class="size-3" aria-hidden="true" /><span class="sr-only">At home: </span>{{ item.amount
-        }}{{ unit }}</span
+        :title="`${atHome} at home`"
+        ><House class="size-3" aria-hidden="true" /><span class="sr-only">At home: </span>{{ atHome }}</span
       >
     </button>
     <template v-if="shop && !adding">
-      <span class="min-w-8 shrink-0 pr-2 text-right text-sm tabular-nums">{{ qty ?? item.to_buy }}{{ unit }}</span>
+      <span class="min-w-8 shrink-0 pr-2 text-right text-sm tabular-nums">{{
+        formatAmount(qty ?? item.to_buy, item.unit)
+      }}</span>
       <button
         type="button"
         class="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
@@ -69,7 +71,7 @@ defineEmits<{ edit: []; action: []; add: [] }>();
         <span
           class="min-w-6 text-center text-sm font-semibold tabular-nums"
           :class="item.amount > 0 ? 'text-foreground' : 'text-muted-foreground'"
-          >{{ item.amount }}{{ unit }}</span
+          >{{ atHome }}</span
         >
         <Button
           variant="ghost"

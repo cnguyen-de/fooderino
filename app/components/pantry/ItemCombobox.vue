@@ -10,8 +10,7 @@ import {
 } from 'radix-vue';
 import { Link2, Plus } from 'lucide-vue-next';
 import type { PantryItem } from '~~/types/pantry';
-import { normName } from '~~/utils/pantry';
-import { amountText } from '~/utils/cook-format';
+import { formatAmount, normName } from '~~/utils/pantry';
 const props = withDefaults(
   defineProps<{
     modelValue: string;
@@ -66,10 +65,7 @@ function select(value: unknown) {
         :auto-focus="autoFocus"
         class="h-9 w-full rounded-lg border border-input bg-background pl-3 pr-8 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
         @focus="open = true" />
-      <Link2
-        v-if="linked"
-        class="absolute right-2.5 top-2.5 size-4 text-primary"
-        aria-label="Picked from your items" />
+      <Link2 v-if="linked" class="absolute right-2.5 top-2.5 size-4 text-primary" aria-label="Picked from your items" />
     </ComboboxAnchor>
     <ComboboxPortal>
       <ComboboxContent
@@ -85,7 +81,7 @@ function select(value: unknown) {
             class="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-muted"
             ><span class="truncate">{{ option.item.name }}</span
             ><span class="shrink-0 text-xs tabular-nums text-muted-foreground">{{
-              option.item.amount > 0 ? `${amountText(option.item.amount, option.item.unit)} at home` : 'none at home'
+              option.item.amount > 0 ? `${formatAmount(option.item.amount, option.item.unit)} at home` : 'none at home'
             }}</span></ComboboxItem
           >
           <ComboboxItem

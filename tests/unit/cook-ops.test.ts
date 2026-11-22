@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemId, LocalDate } from '~~/types/pantry';
 import type { CookedRow, RecipeId, RecipeRow } from '~~/types/cook';
-import { createCookOps } from '~~/utils/cook';
+import { checkCook, createCookOps, planCook, type PantryLookup } from '~~/utils/cook';
 import { createPantryOps } from '~~/utils/pantry-ops';
 import { notifyLocalChange, setLocalChangeHook } from '~~/utils/sync-hook';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
@@ -18,9 +18,15 @@ async function device() {
   let woken = 0;
   const cook = createCookOps({ db: d.db, pantry: d.ops, notify: () => woken++ });
   const recipes = async () =>
-    [...overlaySheets(await d.db.recipes.toArray(), await pendingSheets(d.db, 'recipes')).values()] as Omit<RecipeRow, 'seq'>[];
+    [...overlaySheets(await d.db.recipes.toArray(), await pendingSheets(d.db, 'recipes')).values()] as Omit<
+      RecipeRow,
+      'seq'
+    >[];
   const dishes = async () =>
-    [...overlaySheets(await d.db.cooked.toArray(), await pendingSheets(d.db, 'cooked')).values()] as Omit<CookedRow, 'seq'>[];
+    [...overlaySheets(await d.db.cooked.toArray(), await pendingSheets(d.db, 'cooked')).values()] as Omit<
+      CookedRow,
+      'seq'
+    >[];
   return { server, ...d, cook, recipes, dishes, woken: () => woken };
 }
 
@@ -99,7 +105,14 @@ describe('cook ops', () => {
     const { pork, eggs, recipe } = await soup(d);
     const woken = d.woken();
 
-    const id = await d.cook.cook({ recipe, date: TODAY, uses: [{ id: pork, qty: 300 }, { id: eggs, qty: 4 }] });
+    const id = await d.cook.cook({
+      recipe,
+      date: TODAY,
+      uses: [
+        { id: pork, qty: 300 },
+        { id: eggs, qty: 4 }
+      ]
+    });
 
     expect([await amountOf(d, pork), await amountOf(d, eggs)]).toEqual([200, 2]);
     const [dish] = await d.dishes();
@@ -145,7 +158,14 @@ describe('cook ops', () => {
     const { pork, eggs, recipe } = await soup(d);
 
     await expect(
-      d.cook.cook({ recipe, date: TODAY, uses: [{ id: eggs, qty: 2 }, { id: pork, qty: 900 }] })
+      d.cook.cook({
+        recipe,
+        date: TODAY,
+        uses: [
+          { id: eggs, qty: 2 },
+          { id: pork, qty: 900 }
+        ]
+      })
     ).rejects.toThrow(RangeError);
 
     expect(await d.dishes()).toEqual([]);
@@ -155,7 +175,14 @@ describe('cook ops', () => {
   it('removes a dish with restock: the dish leaves the meal and the stock comes back, also after a sync', async () => {
     const d = await device();
     const { pork, eggs, recipe } = await soup(d);
-    const id = await d.cook.cook({ recipe, date: TODAY, uses: [{ id: pork, qty: 300 }, { id: eggs, qty: 4 }] });
+    const id = await d.cook.cook({
+      recipe,
+      date: TODAY,
+      uses: [
+        { id: pork, qty: 300 },
+        { id: eggs, qty: 4 }
+      ]
+    });
     await d.engine.sync('full');
 
     await d.cook.removeDish(id, { restock: true });
@@ -191,7 +218,9 @@ describe('cook ops', () => {
     await b.engine.sync('full');
     await a.engine.sync('full');
     expect(a.server.cooked.get(id)?.deleted_at).not.toBeNull();
-    expect([a.server.items.get(eggs)?.amount, await amountOf(a, eggs), (await b.item(eggs))?.amount]).toEqual([6, 6, 6]);
+    expect([a.server.items.get(eggs)?.amount, await amountOf(a, eggs), (await b.item(eggs))?.amount]).toEqual([
+      6, 6, 6
+    ]);
     expect([await a.db.commands.count(), await b.db.commands.count()]).toEqual([0, 0]);
   });
 
@@ -249,5 +278,50 @@ describe('cook ops', () => {
     expect(items.find((i) => i.id === rice)?.to_buy).toBe(1);
 
     expect(await d.cook.addMissingToShopping(recipe)).toBe(0);
+  });
+
+  it('cooks with a zero amount used, deducting nothing for it', async () => {
+    const d = await device();
+    const salt = (await d.ops.createItem({ name: 'Salt', amount: 1 }))!;
+    const eggs = (await d.ops.createItem({ name: 'Eggs', amount: 6 }))!;
+    const recipe = await d.cook.saveRecipe({
+      name: 'Omelette',
+      kind: 'dish',
+      ingredients: [
+        { name: 'Salt', item_id: salt, qty: null },
+        { name: 'Eggs', item_id: eggs, qty: { amount: 2, unit: 'count' } }
+      ],
+      instructions: ''
+    });
+    const { items } = (await project(d.db)).snapshot;
+    const lookup: PantryLookup = { byId: (id) => items.get(id), search: () => [] };
+    const lines = planCook((await d.recipes()).find((r) => r.id === recipe)!.ingredients, lookup);
+    lines[0]!.qty = '0';
+
+    const check = checkCook(lines, lookup);
+    expect(check).toEqual({ ok: true, uses: [{ id: eggs, qty: 2 }] });
+    await d.cook.cook({ recipe, date: TODAY, uses: check.ok ? check.uses : [] });
+
+    expect(await amountOf(d, salt)).toBe(1);
+    expect(await amountOf(d, eggs)).toBe(4);
+    expect((await d.dishes())[0]?.uses).toHaveLength(1);
+  });
+
+  it('lists a whole pack for the part of one that is missing', async () => {
+    const d = await device();
+    const cream = (await d.ops.createItem({ name: 'Cream', amount: 0.25 }))!;
+    const recipe: RecipeId = await d.cook.saveRecipe({
+      name: 'Sauce',
+      kind: 'dish',
+      ingredients: [
+        { name: 'Cream', item_id: cream, qty: { amount: 1.5, unit: 'count' } },
+        { name: 'Onion', item_id: null, qty: { amount: 0.5, unit: 'count' } }
+      ],
+      instructions: ''
+    });
+
+    expect(await d.cook.addMissingToShopping(recipe)).toBe(2);
+    const items = [...(await project(d.db)).snapshot.items.values()];
+    expect(Object.fromEntries(items.map((i) => [i.name, i.to_buy]))).toEqual({ Cream: 2, Onion: 1 });
   });
 });

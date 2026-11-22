@@ -1,4 +1,4 @@
-import type { Hit } from '~~/utils/pantry';
+import { amountField, formatAmount, parseAmount, snapUse, type Hit } from '~~/utils/pantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
 import type { Ingredient } from '~~/types/cook';
 
@@ -44,7 +44,9 @@ const RANK: Record<StockLevel, number> = { enough: 0, short: 1, out: 2, untracke
 function levelOf(ingredient: Ingredient, item: PantryItem): StockLevel {
   if (item.amount <= 0) return 'out';
   const qty = ingredient.qty;
-  return qty && qty.unit === item.unit && item.amount < qty.amount ? 'short' : 'enough';
+  return qty && qty.unit === item.unit && snapUse(qty.amount, item.amount, item.unit) > item.amount
+    ? 'short'
+    : 'enough';
 }
 
 export function ingredientStatus(ingredient: Ingredient, lookup: PantryLookup): IngredientStatus {
@@ -59,16 +61,22 @@ export function ingredientStatus(ingredient: Ingredient, lookup: PantryLookup): 
 export interface CookLine {
   readonly status: IngredientStatus;
   item_id: ItemId | null;
-  qty: number;
+  /** The amount field's text, read with `parseAmount`. */
+  qty: string;
   include: boolean;
 }
 
 function lineFor(status: IngredientStatus, item: PantryItem | undefined): CookLine {
-  if (!item) return { status, item_id: null, qty: 1, include: false };
+  if (!item) return { status, item_id: null, qty: '1', include: false };
   const qty = status.ingredient.qty;
   const wanted = qty && qty.unit === item.unit ? qty.amount : 1;
   const inStock = item.amount > 0;
-  return { status, item_id: item.id, qty: inStock ? Math.min(wanted, item.amount) : wanted, include: inStock };
+  return {
+    status,
+    item_id: item.id,
+    qty: amountField(inStock ? Math.min(wanted, item.amount) : wanted, item.unit),
+    include: inStock
+  };
 }
 
 export function planCook(ingredients: readonly Ingredient[], lookup: PantryLookup): CookLine[] {
@@ -90,16 +98,17 @@ export function checkCook(lines: readonly CookLine[], lookup: PantryLookup): Coo
   const totals = new Map<ItemId, number>();
   for (const line of lines) {
     if (!line.include || !line.item_id) continue;
-    const qty = Number(line.qty);
-    if (!Number.isFinite(qty) || qty <= 0)
-      return { ok: false, problem: 'Enter a quantity greater than zero, or uncheck the ingredient.' };
+    const qty = parseAmount(line.qty);
+    if (qty === null) return { ok: false, problem: 'Enter an amount like 2, 0.5 or 1/3, or uncheck the ingredient.' };
+    // Zero means used, but too little to count, such as a pinch of salt.
+    if (qty === 0) continue;
     const item = lookup.byId(line.item_id);
     if (!item) return { ok: false, problem: 'An ingredient is no longer at home. Uncheck it or reopen this recipe.' };
     const total = (totals.get(item.id) ?? 0) + qty;
-    if (total > item.amount)
+    if (snapUse(total, item.amount, item.unit) > item.amount)
       return {
         ok: false,
-        problem: `Only ${item.amount}${item.unit === 'gram' ? ' g' : ''} ${item.name} at home. Reduce the quantity or uncheck it.`
+        problem: `Only ${formatAmount(item.amount, item.unit)} ${item.name} at home. Reduce the quantity or uncheck it.`
       };
     totals.set(item.id, total);
   }

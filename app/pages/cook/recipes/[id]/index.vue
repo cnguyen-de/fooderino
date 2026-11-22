@@ -11,7 +11,8 @@ import {
 } from 'radix-vue';
 import type { IngredientStatus } from '~~/utils/cook';
 import type { RecipeId } from '~~/types/cook';
-import { amountText, eatenText } from '~/utils/cook-format';
+import { formatAmount } from '~~/utils/pantry';
+import { eatenText } from '~/utils/cook-format';
 const route = useRoute();
 const router = useRouter();
 const cook = useCook();
@@ -25,7 +26,7 @@ function statusText(s: IngredientStatus): string {
   if (s.match.kind === 'none') return 'Not tracked';
   if (s.match.kind === 'several') return `${s.match.choices.length} matching items`;
   const item = s.match.item;
-  return item.amount > 0 ? `${amountText(item.amount, item.unit)} at home` : 'None at home';
+  return item.amount > 0 ? `${formatAmount(item.amount, item.unit)} at home` : 'None at home';
 }
 const STOCK_CLASS = {
   enough: 'bg-emerald-500',
@@ -83,12 +84,18 @@ async function remove() {
               <span class="min-w-0 flex-1">
                 <span class="font-medium">{{ s.ingredient.name }}</span
                 ><span v-if="s.ingredient.qty" class="text-muted-foreground">
-                  · {{ amountText(s.ingredient.qty.amount, s.ingredient.qty.unit) }}</span
+                  · {{ formatAmount(s.ingredient.qty.amount, s.ingredient.qty.unit) }}</span
                 >
               </span>
               <span
                 class="shrink-0 text-xs"
-                :class="s.stock === 'out' ? 'text-destructive' : s.stock === 'short' ? 'text-orange-700 dark:text-orange-300' : 'text-muted-foreground'"
+                :class="
+                  s.stock === 'out'
+                    ? 'text-destructive'
+                    : s.stock === 'short'
+                      ? 'text-orange-700 dark:text-orange-300'
+                      : 'text-muted-foreground'
+                "
                 >{{ statusText(s) }}</span
               >
             </li>
@@ -112,7 +119,8 @@ async function remove() {
           class="fixed left-1/2 top-1/2 z-[70] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-background p-5 shadow-xl">
           <AlertDialogTitle class="text-base font-semibold">Delete “{{ recipe?.name }}”?</AlertDialogTitle>
           <AlertDialogDescription class="mt-2 text-sm text-muted-foreground"
-            >It disappears from your recipes for everyone in the household. Past meals keep its name.</AlertDialogDescription
+            >It disappears from your recipes for everyone in the household. Past meals keep its
+            name.</AlertDialogDescription
           >
           <div class="mt-5 flex justify-end gap-2">
             <AlertDialogCancel as-child

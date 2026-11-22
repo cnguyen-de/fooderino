@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Plus, X } from 'lucide-vue-next';
 import ItemCombobox from '~/components/pantry/ItemCombobox.vue';
+import FractionChips from '~/components/cook/FractionChips.vue';
+import { amountField, parseAmount } from '~~/utils/pantry';
 import type { Ingredient, RecipeKind, RecipeView } from '~/composables/useCook';
 import type { ItemId, PantryItem, Unit } from '~~/types/pantry';
 const props = defineProps<{ recipe?: RecipeView }>();
@@ -19,7 +21,7 @@ const row = (i?: Ingredient): Row => ({
   key: nextKey++,
   name: i?.name ?? '',
   item_id: i?.item_id ?? null,
-  amount: i?.qty ? String(i.qty.amount) : '',
+  amount: i?.qty ? amountField(i.qty.amount, i.qty.unit) : '',
   unit: i?.qty?.unit ?? 'count'
 });
 
@@ -28,6 +30,10 @@ const kind = ref<RecipeKind>(props.recipe?.kind ?? 'dish');
 const rows = ref<Row[]>([...(props.recipe?.ingredients ?? []).map(row), row()]);
 const instructions = ref(props.recipe?.instructions ?? '');
 const busy = ref(false);
+/** The row whose amount was last focused; it shows the fraction chips. */
+const active = ref<number | null>(null);
+const invalid = (r: Row) => r.amount.trim() !== '' && parseAmount(r.amount) === null;
+const unreadable = computed(() => rows.value.some(invalid));
 
 function rename(r: Row, value: string) {
   if (value !== r.name) r.item_id = null;
@@ -47,13 +53,12 @@ function removeRow(r: Row) {
 }
 
 async function save() {
-  if (busy.value) return;
+  if (busy.value || unreadable.value) return;
   busy.value = true;
-  const ingredients: Ingredient[] = rows.value.map((r) => ({
-    name: r.name,
-    item_id: r.item_id,
-    qty: r.amount === '' ? null : { amount: Number(r.amount), unit: r.unit }
-  }));
+  const ingredients: Ingredient[] = rows.value.map((r) => {
+    const amount = parseAmount(r.amount);
+    return { name: r.name, item_id: r.item_id, qty: amount === null ? null : { amount, unit: r.unit } };
+  });
   const id = await cook.saveRecipe({
     id: props.recipe?.id,
     name: name.value,
@@ -93,40 +98,50 @@ async function save() {
     </div>
     <section class="space-y-2 rounded-xl bg-muted/40 p-3">
       <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ingredients</h3>
-      <div v-for="(r, index) in rows" :key="r.key" class="flex items-center gap-1.5">
-        <ItemCombobox
-          :model-value="r.name"
-          :linked="!!r.item_id"
-          :label="`Ingredient ${index + 1}`"
-          @update:model-value="rename(r, $event)"
-          @pick="pick(r, $event)"
-          @typed="r.item_id = null" />
-        <Input
-          v-model="r.amount"
-          type="number"
-          min="0"
-          step="any"
-          placeholder="Qty"
-          :aria-label="`Amount of ingredient ${index + 1}`"
-          class="h-9 w-16 shrink-0 rounded-lg bg-background px-2 text-base tabular-nums" />
-        <select
-          v-model="r.unit"
-          :aria-label="`Unit of ingredient ${index + 1}`"
-          class="h-9 shrink-0 rounded-lg border bg-background px-1.5 text-sm">
-          <option value="count">pcs</option>
-          <option value="gram">g</option>
-        </select>
-        <button
-          type="button"
-          :aria-label="`Remove ingredient ${index + 1}`"
-          class="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-          @click="removeRow(r)">
-          <X class="size-4" />
-        </button>
+      <div v-for="(r, index) in rows" :key="r.key" class="space-y-1.5">
+        <div class="flex items-center gap-1.5">
+          <ItemCombobox
+            :model-value="r.name"
+            :linked="!!r.item_id"
+            :label="`Ingredient ${index + 1}`"
+            @update:model-value="rename(r, $event)"
+            @pick="pick(r, $event)"
+            @typed="r.item_id = null" />
+          <Input
+            v-model="r.amount"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="Qty"
+            :aria-label="`Amount of ingredient ${index + 1}`"
+            :aria-invalid="invalid(r)"
+            class="h-9 w-16 shrink-0 rounded-lg bg-background px-2 text-base tabular-nums aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive"
+            @focus="active = r.key" />
+          <select
+            v-model="r.unit"
+            :aria-label="`Unit of ingredient ${index + 1}`"
+            class="h-9 shrink-0 rounded-lg border bg-background px-1.5 text-sm">
+            <option value="count">pcs</option>
+            <option value="gram">g</option>
+          </select>
+          <button
+            type="button"
+            :aria-label="`Remove ingredient ${index + 1}`"
+            class="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            @click="removeRow(r)">
+            <X class="size-4" />
+          </button>
+        </div>
+        <FractionChips
+          v-if="active === r.key && r.unit === 'count'"
+          :label="`Fractions for ingredient ${index + 1}`"
+          class="justify-end"
+          @pick="r.amount = $event" />
       </div>
       <Button type="button" variant="ghost" size="xs" class="gap-1 text-xs text-primary" @click="addRow"
         ><Plus class="size-3.5" />Add ingredient</Button
       >
+      <p v-if="unreadable" role="alert" class="text-xs text-destructive">Enter amounts like 2, 0.5 or 1/3.</p>
       <p class="text-xs text-muted-foreground">
         Pick an item from home to link it, or type a name for something you do not track.
       </p>
@@ -141,7 +156,7 @@ async function save() {
     </label>
     <div class="flex gap-2">
       <Button type="button" variant="ghost" class="h-10" @click="router.back()">Cancel</Button>
-      <Button type="submit" class="h-10 flex-1 rounded-lg" :disabled="busy">{{
+      <Button type="submit" class="h-10 flex-1 rounded-lg" :disabled="busy || unreadable">{{
         busy ? 'Saving…' : 'Save recipe'
       }}</Button>
     </div>

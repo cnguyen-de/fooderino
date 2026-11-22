@@ -8,6 +8,7 @@ import type { ItemId, PantryItem } from '~~/types/pantry';
 import { House, Leaf, X } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import { inSeasonOn } from '~~/utils/seasons';
+import { formatAmount } from '~~/utils/pantry';
 const { view, search, ops, historyComplete, today } = usePantry();
 const act = usePantryAction();
 const query = ref('');
@@ -23,7 +24,6 @@ async function perform(work: () => Promise<UndoHandle | null>, message?: string)
   if (handle) query.value = '';
   return handle;
 }
-const unit = (item: PantryItem) => (item.unit === 'gram' ? ' g' : '');
 function list(item: PantryItem) {
   return perform(() => ops.addToShopping(item.id), `Listed ${item.name}`);
 }
@@ -45,7 +45,8 @@ async function create() {
 <template>
   <NuxtLayout name="app"
     ><div ref="listPane" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-      <div class="sticky -top-3 z-10 -mx-3 -mb-2 -mt-3 flex items-baseline justify-between gap-2 bg-background/90 px-3 pb-2 pt-3 backdrop-blur-xl">
+      <div
+        class="sticky -top-3 z-10 -mx-3 -mb-2 -mt-3 flex items-baseline justify-between gap-2 bg-background/90 px-3 pb-2 pt-3 backdrop-blur-xl">
         <h1 class="text-xl font-semibold tracking-tight">Shopping<span class="text-primary">.</span></h1>
         <span class="text-xs tabular-nums text-muted-foreground"
           >{{ view.shopping.byStore.reduce((n, group) => n + group.items.length, 0) }} to buy</span
@@ -88,7 +89,9 @@ async function create() {
         </PantryRow>
       </section>
       <p v-if="!view.shopping.byStore.length" class="text-muted-foreground">Your list is clear. Add something below.</p>
-      <NuxtLink to="/seasons" class="flex items-center justify-end gap-1 text-xs font-medium text-primary hover:underline"
+      <NuxtLink
+        to="/seasons"
+        class="flex items-center justify-end gap-1 text-xs font-medium text-primary hover:underline"
         ><Leaf class="size-3" aria-hidden="true" />In season now →</NuxtLink
       >
       <section v-if="view.shopping.probablyNeed.length" class="space-y-1">
@@ -112,19 +115,19 @@ async function create() {
             >
             <span
               class="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-muted-foreground"
-              :title="`${entry.item.amount}${unit(entry.item)} at home`"
-              ><House class="size-3" aria-hidden="true" /><span class="sr-only">At home: </span>{{ entry.item.amount
-              }}{{ unit(entry.item) }}</span
+              :title="`${formatAmount(entry.item.amount, entry.item.unit)} at home`"
+              ><House class="size-3" aria-hidden="true" /><span class="sr-only">At home: </span
+              >{{ formatAmount(entry.item.amount, entry.item.unit) }}</span
             >
             <span class="shrink-0 text-[11px] tabular-nums text-muted-foreground"
-              ><span class="sr-only">Suggested: </span>×{{ entry.qty }}{{ unit(entry.item) }}</span
+              ><span class="sr-only">Suggested: </span>×{{ formatAmount(entry.qty, entry.item.unit) }}</span
             >
           </button>
           <Button
             variant="ghost"
             size="xs"
             class="shrink-0 text-xs text-primary hover:bg-primary/10 hover:text-primary"
-            :aria-label="`Add ${entry.qty} ${entry.item.name} to shopping list`"
+            :aria-label="`Add ${formatAmount(entry.qty, entry.item.unit)} ${entry.item.name} to shopping list`"
             @click="perform(() => ops.addToShopping(entry.item.id, entry.qty), `Listed ${entry.item.name}`)"
             >Add</Button
           ><Button
@@ -169,7 +172,7 @@ async function create() {
         <h2 class="pb-1 text-xs font-semibold text-primary">In the bag ({{ view.shopping.bag.length }})</h2>
         <div v-for="line in view.shopping.bag" :key="line.id" class="flex min-h-8 items-center gap-2 text-sm">
           <button class="min-w-0 flex-1 truncate text-left" @click="selected = line.item.id">
-            {{ line.item.name }} · {{ line.qty }}</button
+            {{ line.item.name }} · {{ formatAmount(line.qty, line.item.unit) }}</button
           ><Button
             variant="ghost"
             size="xs"

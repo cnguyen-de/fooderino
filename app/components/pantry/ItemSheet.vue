@@ -2,7 +2,7 @@
 import type { ItemId, ItemMetadata } from '~~/types/pantry';
 import type { Month } from '~~/types/season';
 import TagCombobox from '~/components/pantry/TagCombobox.vue';
-import { localDate, normName } from '~~/utils/pantry';
+import { amountField, localDate, normName, parseAmount } from '~~/utils/pantry';
 import { formatSeason, matchCalendar, monthName } from '~~/utils/seasons';
 import { SEASON_CALENDAR } from '~~/utils/seasons/calendar';
 import { toast } from 'vue-sonner';
@@ -30,9 +30,18 @@ const newItem = (name = ''): ItemMetadata => ({
   season: null
 });
 const draft = ref(newItem());
-const amount = ref(0);
-const toBuy = ref(0);
-let loadedToBuy = 0;
+const amount = ref('');
+const toBuy = ref('');
+const defaultAmount = ref('');
+/** What each amount field was filled with, so a field left alone saves the stored amount, not its rounded text. */
+let loaded = { amount: 0, to_buy: 0, default_amount: 0, text: { amount: '', to_buy: '', default_amount: '' } };
+const read = (field: keyof typeof loaded.text, text: string) =>
+  text.trim() === loaded.text[field] ? loaded[field] : parseAmount(text);
+const unreadable = computed(() =>
+  [read('amount', amount.value), read('to_buy', toBuy.value), read('default_amount', defaultAmount.value)].some(
+    (n) => n === null
+  )
+);
 const best = ref('');
 const shelf = ref('');
 const alias = ref('');
@@ -91,8 +100,19 @@ watch([() => props.id, () => props.creating], ([id, creating]) => {
         season: item.season
       }
     : newItem(props.initialName?.trim());
-  amount.value = item?.amount ?? 1;
-  toBuy.value = loadedToBuy = item?.to_buy ?? 0;
+  const unit = draft.value.unit;
+  const start = { amount: item?.amount ?? 1, to_buy: item?.to_buy ?? 0, default_amount: draft.value.default_amount };
+  loaded = {
+    ...start,
+    text: {
+      amount: amountField(start.amount, unit),
+      to_buy: amountField(start.to_buy, unit),
+      default_amount: amountField(start.default_amount, unit)
+    }
+  };
+  amount.value = loaded.text.amount;
+  toBuy.value = loaded.text.to_buy;
+  defaultAmount.value = loaded.text.default_amount;
   best.value = item?.best_before ?? '';
   shelf.value = item?.shelf_life_days?.toString() ?? '';
   alias.value = '';
@@ -108,7 +128,9 @@ watch([() => props.id, () => props.creating], ([id, creating]) => {
 watch(
   () => (props.id ? view.value.byId(props.id)?.to_buy : undefined),
   (live) => {
-    if (live !== undefined && Number(toBuy.value) === loadedToBuy) toBuy.value = loadedToBuy = live;
+    if (live === undefined || toBuy.value.trim() !== loaded.text.to_buy) return;
+    loaded.to_buy = live;
+    toBuy.value = loaded.text.to_buy = amountField(live, draft.value.unit);
   }
 );
 const matches = computed(() => search(mergeQuery.value).filter((h) => h.item.id !== props.id));
@@ -124,17 +146,17 @@ function addTag() {
   tag.value = '';
 }
 async function save() {
-  if (busy.value) return;
+  if (busy.value || unreadable.value) return;
   busy.value = true;
   try {
     addAlias();
     addTag();
     const fields = {
       ...draft.value,
-      default_amount: Number(draft.value.default_amount),
+      default_amount: read('default_amount', defaultAmount.value)!,
       shelf_life_days: shelf.value === '' ? null : Number(shelf.value),
-      amount: Number(amount.value),
-      ...(Number(toBuy.value) !== loadedToBuy && { to_buy: Number(toBuy.value) }),
+      amount: read('amount', amount.value)!,
+      ...(toBuy.value.trim() !== loaded.text.to_buy && { to_buy: parseAmount(toBuy.value)! }),
       best_before: best.value ? localDate(best.value) : null
     };
     if (props.creating) {
@@ -222,33 +244,34 @@ async function remove() {
                 >At home<Input
                   v-model="amount"
                   aria-label="Amount at home"
-                  type="number"
-                  min="0"
-                  step="any"
-                  required
-                  class="h-9 rounded-lg bg-background text-base"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  :aria-invalid="read('amount', amount) === null"
+                  class="h-9 rounded-lg bg-background text-base aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive"
               /></label>
               <label class="flex flex-col justify-end space-y-1 text-xs font-medium"
                 >To buy<Input
                   v-model="toBuy"
                   aria-label="Amount to buy"
-                  type="number"
-                  min="0"
-                  step="any"
-                  required
-                  class="h-9 rounded-lg bg-background text-base"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  :aria-invalid="read('to_buy', toBuy) === null"
+                  class="h-9 rounded-lg bg-background text-base aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive"
               /></label>
               <label class="flex flex-col justify-end space-y-1 text-xs font-medium"
                 >Default amount<Input
-                  v-model="draft.default_amount"
+                  v-model="defaultAmount"
                   aria-label="Default amount"
-                  type="number"
-                  min="0"
-                  step="any"
-                  required
-                  class="h-9 rounded-lg bg-background text-base"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  :aria-invalid="read('default_amount', defaultAmount) === null"
+                  class="h-9 rounded-lg bg-background text-base aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive"
               /></label>
             </div>
+            <p v-if="unreadable" role="alert" class="text-xs text-destructive">Enter amounts like 2, 0.5 or 1/3.</p>
           </section>
           <section class="space-y-2 rounded-xl bg-muted/40 p-3">
             <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Storage</h3>
@@ -426,7 +449,7 @@ async function remove() {
           <Button type="button" variant="ghost" class="h-10 text-muted-foreground" @click="emit('close')"
             >Cancel</Button
           >
-          <Button type="submit" :disabled="busy" class="h-10 flex-1 rounded-lg">{{
+          <Button type="submit" :disabled="busy || unreadable" class="h-10 flex-1 rounded-lg">{{
             busy ? 'Saving…' : creating ? 'Add item' : 'Save changes'
           }}</Button>
         </footer>

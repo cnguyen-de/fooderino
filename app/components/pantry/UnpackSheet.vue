@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { BagId, PantryItem } from '~~/types/pantry';
-import { addDays, localDate } from '~~/utils/pantry';
+import { addDays, formatAmount, localDate } from '~~/utils/pantry';
 import { MapPin } from 'lucide-vue-next';
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ 'update:open': [boolean] }>();
@@ -60,7 +60,7 @@ async function unpack() {
             <span class="min-w-0 flex-1 truncate font-medium" :title="line.item.name"
               >{{ line.item.name
               }}<span class="font-normal tabular-nums text-muted-foreground">
-                ×{{ line.qty }}{{ line.item.unit === 'gram' ? ' g' : '' }}</span
+                ×{{ formatAmount(line.qty, line.item.unit) }}</span
               ></span
             >
             <span
