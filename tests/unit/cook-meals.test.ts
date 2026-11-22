@@ -142,6 +142,19 @@ describe('meal history', () => {
     expect(needs(['canh', 'ga', 'ca'])).toEqual({ soup: false, dishes: 0 });
     expect(mealNeeds([])).toEqual({ soup: true, dishes: 2 });
   });
+
+  it('counts a meal holding a whole-meal recipe as complete, whatever else it holds', () => {
+    const recipes = [recipe('pho', 'whole_meal', []), recipe('ga', 'dish', [])];
+    const map = new Map(recipes.map((r) => [r.id, r]));
+    const needs = (ids: string[]) =>
+      buildMeals(
+        ids.map((id) => cooked(id, TODAY)),
+        map,
+        []
+      )[0]!.needs;
+    expect(needs(['pho'])).toEqual({ soup: false, dishes: 0 });
+    expect(needs(['ga', 'pho'])).toEqual({ soup: false, dishes: 0 });
+  });
 });
 
 describe('meal ingredients', () => {
@@ -257,5 +270,33 @@ describe('suggestions for today', () => {
     );
     expect(full.dishes).toEqual([]);
     expect(full.needs).toEqual({ soup: false, dishes: 0 });
+  });
+
+  describe('whole meals', () => {
+    const recipes = [
+      recipe('canh', 'soup', [ing('Tomato')]),
+      recipe('ga', 'dish', [ing('Pork')]),
+      ...['p1', 'p2', 'p3', 'p4'].map((id) => recipe(id, 'whole_meal', [ing('Tofu')])),
+      recipe('bun', 'whole_meal', [ing('Eggs')])
+    ];
+
+    it('offers up to three, ranked like the rest, while today holds no recipe, beside soups and dishes', () => {
+      const out = suggest(recipes, [cooked('p1', '2026-11-17')]);
+      expect(names(out.wholeMeals)).toEqual(['p2', 'p3', 'p4']);
+      expect(names(out.soups)).toEqual(['canh']);
+      expect(names(out.dishes)).toEqual(['ga']);
+    });
+
+    it('offers nothing once today holds one', () => {
+      const out = suggest(recipes, [cooked('p1', TODAY)]);
+      expect(out).toMatchObject({ soups: [], dishes: [], wholeMeals: [], needs: { soup: false, dishes: 0 } });
+    });
+
+    it('stops offering them once today holds a soup or a dish, and keeps offering what it lacks', () => {
+      const withDish = suggest(recipes, [cooked('ga', TODAY)]);
+      expect(withDish.wholeMeals).toEqual([]);
+      expect(names(withDish.soups)).toEqual(['canh']);
+      expect(suggest(recipes, [cooked('canh', TODAY)]).wholeMeals).toEqual([]);
+    });
   });
 });

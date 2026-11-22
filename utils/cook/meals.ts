@@ -17,9 +17,10 @@ type CookedRow = Omit<Cooked, 'seq'>;
 type MealIngredientRow = Omit<Used, 'seq'>;
 import { ingredientStatus, type IngredientStatus, type PantryLookup } from './match';
 
+/** What a meal wants, unless it holds a whole-meal recipe, which completes it alone. */
 export const MEAL_RULE = { soups: 1, dishes: 2, maxDishes: 3 } as const;
 export const RECENT_DAYS = 7;
-const SUGGESTION_LIMIT = { soups: 2, dishes: 3 } as const;
+const SUGGESTION_LIMIT = { soups: 2, dishes: 3, wholeMeals: 3 } as const;
 
 export interface RecipeView extends Omit<RecipeSheet, 'household_id' | 'deleted_at'> {
   lastEaten: LocalDate | null;
@@ -85,7 +86,10 @@ export interface Meal {
 const countKind = (dishes: readonly MealDish[], kind: RecipeKind) =>
   dishes.filter((d) => d.recipe.kind === kind).length;
 
+const hasWholeMeal = (dishes: readonly MealDish[]) => countKind(dishes, 'whole_meal') > 0;
+
 export function mealNeeds(dishes: readonly MealDish[]): MealNeeds {
+  if (hasWholeMeal(dishes)) return { soup: false, dishes: 0 };
   return {
     soup: countKind(dishes, 'soup') < MEAL_RULE.soups,
     dishes: Math.max(0, MEAL_RULE.dishes - countKind(dishes, 'dish'))
@@ -140,6 +144,8 @@ export interface MealSuggestions {
   needs: MealNeeds;
   soups: Suggestion[];
   dishes: Suggestion[];
+  /** Offered only while today's meal holds no recipe. */
+  wholeMeals: Suggestion[];
 }
 
 function rank(a: Suggestion, b: Suggestion): number {
@@ -172,9 +178,11 @@ export function suggestFor(input: {
     .sort(rank);
   const pick = (kind: RecipeKind, limit: number, open: boolean) =>
     open ? ranked.filter((s) => s.recipe.kind === kind).slice(0, limit) : [];
+  const whole = hasWholeMeal(dishes);
   return {
     needs: mealNeeds(dishes),
-    soups: pick('soup', SUGGESTION_LIMIT.soups, countKind(dishes, 'soup') < MEAL_RULE.soups),
-    dishes: pick('dish', SUGGESTION_LIMIT.dishes, countKind(dishes, 'dish') < MEAL_RULE.maxDishes)
+    soups: pick('soup', SUGGESTION_LIMIT.soups, !whole && countKind(dishes, 'soup') < MEAL_RULE.soups),
+    dishes: pick('dish', SUGGESTION_LIMIT.dishes, !whole && countKind(dishes, 'dish') < MEAL_RULE.maxDishes),
+    wholeMeals: pick('whole_meal', SUGGESTION_LIMIT.wholeMeals, dishes.length === 0)
   };
 }
