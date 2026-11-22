@@ -37,7 +37,7 @@ export interface SyncTransport {
     limit: number
   ): Promise<HouseholdRows[S][]>;
   /**
-   * Upserts whole sheets into `table.remote`, sending only `table.sheet.columns`, and resolves
+   * Upserts whole sheets into `table.remote`, each as `wireRow` makes it, and resolves
    * with the rows that landed. A sheet older than the stored row is dropped by the server.
    */
   pushSheets<S extends SheetStore>(table: SheetTableDef<S>, sheets: readonly PendingSheet<S>[]): Promise<HouseholdRows[S][]>;

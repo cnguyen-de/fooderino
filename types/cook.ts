@@ -7,7 +7,9 @@ export type RecipeId = Brand<string, 'RecipeId'>;
 export type CookedId = Brand<string, 'CookedId'>;
 export type MealIngredientId = Brand<string, 'MealIngredientId'>;
 
-export type RecipeKind = 'dish' | 'soup';
+/** A whole meal is complete on its own, such as pho. Any other meal wants a soup and dishes. */
+export const RECIPE_KINDS = ['dish', 'soup', 'whole_meal'] as const;
+export type RecipeKind = (typeof RECIPE_KINDS)[number];
 
 /** `amount > 0`. Amount and unit come together or not at all. */
 export interface Quantity {

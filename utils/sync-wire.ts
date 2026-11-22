@@ -28,6 +28,7 @@ import type {
   MealIngredientRow,
   Quantity,
   RecipeId,
+  RecipeKind,
   RecipeRow
 } from '~~/types/cook';
 import type { Season } from '~~/types/season';
@@ -80,6 +81,11 @@ function instant(v: unknown, path: string): Instant {
 function date(v: unknown, path: string): LocalDate {
   if (typeof v !== 'string' || !DATE.test(v)) throw new WireError(path, 'a YYYY-MM-DD date', v);
   return v as LocalDate;
+}
+
+function bool(v: unknown, path: string): boolean {
+  if (typeof v !== 'boolean') throw new WireError(path, 'a boolean', v);
+  return v;
 }
 
 function oneOf<T extends string>(v: unknown, options: readonly T[], path: string): T {
@@ -315,13 +321,26 @@ function parseIngredient(raw: unknown, path: string): Ingredient {
   };
 }
 
+/** A recipe as `household_recipes` stores it: a whole meal is a dish with `whole_meal` set. */
+export type RecipeWire<R extends { kind: RecipeKind }> = Omit<R, 'kind'> & {
+  kind: 'dish' | 'soup';
+  whole_meal: boolean;
+};
+
+export function recipeToWire<R extends { kind: RecipeKind }>({ kind, ...rest }: R): RecipeWire<R> {
+  return { ...rest, kind: kind === 'soup' ? 'soup' : 'dish', whole_meal: kind === 'whole_meal' };
+}
+
 export function parseRecipe(raw: unknown): RecipeRow {
   const r = obj(raw, 'recipe');
+  const kind = oneOf(r.kind, ['dish', 'soup'] as const, 'recipe.kind');
+  // A soup that is still marked a whole meal was made a soup by a client that cannot see the mark.
+  const wholeMeal = kind === 'dish' && r.whole_meal !== undefined && bool(r.whole_meal, 'recipe.whole_meal');
   return {
     id: uuid<RecipeId>(r.id, 'recipe.id'),
     household_id: uuid<HouseholdId>(r.household_id, 'recipe.household_id'),
     name: str(r.name, 'recipe.name'),
-    kind: oneOf(r.kind, ['dish', 'soup'] as const, 'recipe.kind'),
+    kind: wholeMeal ? 'whole_meal' : kind,
     ingredients: arr(r.ingredients, 'recipe.ingredients').map((v, i) => parseIngredient(v, `recipe.ingredients[${i}]`)),
     instructions: str(r.instructions, 'recipe.instructions'),
     deleted_at: optInstant(r.deleted_at, 'recipe.deleted_at'),

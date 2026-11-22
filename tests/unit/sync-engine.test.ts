@@ -4,7 +4,7 @@ import type { CommandId, HouseholdId, Instant, ItemId, ItemRow, LocalDate } from
 import type { PendingSheet, QueuedCommand } from '~~/types/sync';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 import { PendingCommandsError, type SyncTransport } from '~~/utils/sync-engine';
-import { HOUSEHOLD_STORES } from '~~/utils/sync-registry';
+import { HOUSEHOLD_STORES, wireRow } from '~~/utils/sync-registry';
 import { getSyncState } from '~~/utils/sync-state';
 import { FakeServer, HOUSEHOLD, OTHER_HOUSEHOLD } from '../support/fake-server';
 import { makeDevice, project } from '../support/device';
@@ -337,6 +337,32 @@ describe('recipe and cooked sheets', () => {
     expect(await alice.db.edits.count()).toBe(0);
     expect(await bob.db.recipes.toArray()).toEqual([server.recipes.get(soup.id)]);
     expect(await bob.db.cooked.toArray()).toEqual([server.cooked.get(dinner.id)]);
+  });
+
+  it('pushes a whole-meal recipe as a dish marked whole_meal, and the other phone pulls it as a whole meal', async () => {
+    const server = new FakeServer();
+    const pushed: Record<string, unknown>[] = [];
+    const transport = server.transport(ALICE);
+    const alice = await makeDevice(
+      {
+        ...transport,
+        pushSheets: (def, sheets) => {
+          pushed.push(...sheets.map((sheet) => wireRow(def, sheet)));
+          return transport.pushSheets(def, sheets);
+        }
+      },
+      HOUSEHOLD
+    );
+    const bob = await makeDevice(server.transport(BOB), HOUSEHOLD);
+    const pho = recipeSheet({ name: 'Pho', kind: 'whole_meal' });
+    await alice.db.edits.put(pho);
+
+    await alice.engine.sync('full');
+    await bob.engine.sync('full');
+
+    expect(pushed).toEqual([expect.objectContaining({ id: pho.id, kind: 'dish', whole_meal: true })]);
+    expect(pushed[0]).not.toHaveProperty('store');
+    expect(await bob.db.recipes.get(pho.id)).toMatchObject({ name: 'Pho', kind: 'whole_meal' });
   });
 
   it('pushes a recipe before a dish that references it, whatever order they were queued in', async () => {

@@ -1,6 +1,7 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { HouseholdId } from '~~/types/pantry';
 import { TransportRefused, type SyncTransport } from '~~/utils/sync-engine';
+import { wireRow } from '~~/utils/sync-registry';
 import { parseApplyResponse } from '~~/utils/sync-wire';
 
 /** Statuses where PostgREST judged the request itself invalid: RLS, a constraint, a malformed value. */
@@ -54,8 +55,7 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
     },
 
     async pushSheets(table, sheets) {
-      // Columns a client is not granted would get the whole upsert refused.
-      const rows = sheets.map((sheet) => Object.fromEntries(table.sheet.columns.map((c) => [c, sheet[c]])));
+      const rows = sheets.map((sheet) => wireRow(table, sheet));
       const { data, error, status } = await request(
         client.from(table.remote).upsert(rows, { onConflict: 'id' }).select('*')
       );

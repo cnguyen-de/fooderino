@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseItem, parseMealIngredient, WireError } from '~~/utils/sync-wire';
+import { parseItem, parseMealIngredient, parseRecipe, recipeToWire, WireError } from '~~/utils/sync-wire';
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: '00000000-0000-4000-8000-0000000000aa',
@@ -77,5 +77,68 @@ describe('parseMealIngredient', () => {
     ['a use that is not a command id', { uses: ['salt'] }]
   ])('refuses %s', (_, over) => {
     expect(() => parseMealIngredient(entry(over))).toThrow(WireError);
+  });
+});
+
+const recipe = (over: Record<string, unknown> = {}) => ({
+  id: '00000000-0000-4000-8000-0000000000dd',
+  household_id: '00000000-0000-4000-8000-000000000001',
+  name: 'Pho',
+  kind: 'dish',
+  whole_meal: false,
+  ingredients: [],
+  instructions: '',
+  deleted_at: null,
+  updated_at: '2026-11-20T18:00:00.000Z',
+  seq: 3,
+  ...over
+});
+
+describe('parseRecipe: kind', () => {
+  it('reads a dish marked whole_meal as a whole meal, and a plain dish or soup as itself', () => {
+    expect(parseRecipe(recipe({ whole_meal: true })).kind).toBe('whole_meal');
+    expect(parseRecipe(recipe()).kind).toBe('dish');
+    expect(parseRecipe(recipe({ kind: 'soup' })).kind).toBe('soup');
+  });
+
+  it('reads a row from before whole_meal existed as a dish or a soup', () => {
+    const { whole_meal: _, ...legacy } = recipe();
+    expect(parseRecipe(legacy).kind).toBe('dish');
+    expect(parseRecipe({ ...legacy, kind: 'soup' }).kind).toBe('soup');
+  });
+
+  it('reads a soup still marked whole_meal as a soup, as an older client that changed it to one wrote it', () => {
+    expect(parseRecipe(recipe({ kind: 'soup', whole_meal: true })).kind).toBe('soup');
+  });
+
+  it.each([
+    ['text', 'true'],
+    ['null', null],
+    ['a number', 1]
+  ])('refuses whole_meal as %s', (_, whole_meal) => {
+    expect(() => parseRecipe(recipe({ whole_meal }))).toThrow(WireError);
+  });
+
+  it('refuses whole_meal as a kind, which older clients cannot read', () => {
+    expect(() => parseRecipe(recipe({ kind: 'whole_meal' }))).toThrow(WireError);
+  });
+});
+
+describe('recipeToWire', () => {
+  it('stores a whole meal as a dish marked whole_meal, and a dish or soup unmarked', () => {
+    const pick = (kind: 'dish' | 'soup' | 'whole_meal') => {
+      const { kind: k, whole_meal } = recipeToWire({ ...parseRecipe(recipe()), kind });
+      return { kind: k, whole_meal };
+    };
+    expect(pick('whole_meal')).toEqual({ kind: 'dish', whole_meal: true });
+    expect(pick('dish')).toEqual({ kind: 'dish', whole_meal: false });
+    expect(pick('soup')).toEqual({ kind: 'soup', whole_meal: false });
+  });
+
+  it('reads back as the recipe it was made from, for every kind', () => {
+    for (const row of [recipe({ whole_meal: true }), recipe(), recipe({ kind: 'soup' })]) {
+      const parsed = parseRecipe(row);
+      expect(parseRecipe(recipeToWire(parsed))).toEqual(parsed);
+    }
   });
 });

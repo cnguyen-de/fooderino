@@ -18,7 +18,7 @@ import type { CookedId, CookedRow, MealIngredientId, MealIngredientRow, RecipeId
 import type { HouseholdRows, HouseholdStore, PendingSheet } from '~~/types/sync';
 import { applyCommand } from '~~/utils/pantry';
 import { TransportRefused, type SyncTransport } from '~~/utils/sync-engine';
-import type { SheetTableDef } from '~~/utils/sync-registry';
+import { wireRow, type SheetTableDef } from '~~/utils/sync-registry';
 import type { ApplyResponse, CommandResult } from '~~/utils/sync-wire';
 
 export const HOUSEHOLD = '00000000-0000-4000-8000-000000000001' as HouseholdId;
@@ -163,7 +163,7 @@ export class FakeServer {
   }
 
   pushSheet(actor: string, def: SheetTableDef, sheet: PendingSheet): HouseholdRows[typeof def.store] | null {
-    const wire = Object.fromEntries(def.sheet.columns.map((c) => [c, sheet[c]])) as unknown as { id: string; household_id: HouseholdId };
+    const wire = wireRow(def, sheet) as { id: string; household_id: HouseholdId };
     const table = {
       items: this.items,
       recipes: this.recipes,
@@ -180,7 +180,9 @@ export class FakeServer {
       throw new TransportRefused('insert or update on table "cooked_recipes" violates foreign key constraint');
     }
     if (row && Date.parse(sheet.updated_at) < Date.parse(row.updated_at)) return null;
-    const next = { ...row, ...wire, seq: this.tick() } as HouseholdRows[typeof def.store];
+    // An upsert writes only the columns it names, so a column a sheet leaves out keeps what is stored.
+    const stored = row && (def.sheet.toWire ? def.sheet.toWire(row as never) : row);
+    const next = def.parse({ ...stored, ...wire, seq: this.tick() });
     table.set(wire.id, next);
     return next;
   }

@@ -9,7 +9,9 @@ import {
   parseItem,
   parseMealIngredient,
   parseMember,
-  parseRecipe
+  parseRecipe,
+  recipeToWire,
+  type RecipeWire
 } from '~~/utils/sync-wire';
 
 export interface HouseholdTableDef<S extends HouseholdStore = HouseholdStore> {
@@ -25,8 +27,13 @@ export interface HouseholdTableDef<S extends HouseholdStore = HouseholdStore> {
   sheet?: S extends SheetStore ? SheetDef<S> : never;
 }
 
+/** A sheet as its server table stores it. Only a recipe differs. */
+type WireSheet<S extends SheetStore> = S extends 'recipes' ? RecipeWire<PendingSheet<'recipes'>> : PendingSheet<S>;
+
 export interface SheetDef<S extends SheetStore> {
-  columns: readonly Exclude<keyof PendingSheet<S>, 'store'>[];
+  /** Each one granted to clients: a column they are not granted gets the whole upsert refused. */
+  columns: readonly Exclude<keyof WireSheet<S>, 'store'>[];
+  toWire?: (sheet: PendingSheet<S>) => WireSheet<S>;
   waitsFor?: (sheet: PendingSheet<S>) => readonly CommandId[];
 }
 
@@ -60,7 +67,20 @@ export const HOUSEHOLD_TABLES = [
     scope: 'household_id',
     key: (r) => r.id,
     parse: parseRecipe,
-    sheet: { columns: ['id', 'household_id', 'name', 'kind', 'ingredients', 'instructions', 'updated_at', 'deleted_at'] }
+    sheet: {
+      columns: [
+        'id',
+        'household_id',
+        'name',
+        'kind',
+        'whole_meal',
+        'ingredients',
+        'instructions',
+        'updated_at',
+        'deleted_at'
+      ],
+      toWire: recipeToWire
+    }
   }),
   def({
     store: 'cooked',
@@ -92,6 +112,11 @@ export const HOUSEHOLD_TABLES = [
 export const HOUSEHOLD_STORES: readonly HouseholdStore[] = HOUSEHOLD_TABLES.map((d) => d.store);
 
 export const SHEET_TABLES = HOUSEHOLD_TABLES.filter((d) => d.sheet !== undefined) as readonly SheetTableDef[];
+
+export function wireRow<S extends SheetStore>(def: SheetTableDef<S>, sheet: PendingSheet<S>): Record<string, unknown> {
+  const wire = (def.sheet.toWire ? def.sheet.toWire(sheet) : sheet) as Record<string, unknown>;
+  return Object.fromEntries(def.sheet.columns.map((c) => [c, wire[c as string]]));
+}
 
 export const PAGE_SIZE = 1000;
 export const COMMAND_BATCH = 50;
