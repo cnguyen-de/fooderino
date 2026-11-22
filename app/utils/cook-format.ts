@@ -21,6 +21,13 @@ export function dateText(date: LocalDate, today: LocalDate): string {
   });
 }
 
+export function addedText(name: string, date: LocalDate, today: LocalDate): string {
+  const day = dateText(date, today);
+  if (day === 'Today') return `Added ${name} to today`;
+  if (day === 'Yesterday') return `Added ${name} to yesterday's meal`;
+  return `Added ${name} to ${day}`;
+}
+
 export function needsText(needs: MealNeeds): string {
   const dishes = needs.dishes ? `${needs.dishes} more dish${needs.dishes === 1 ? '' : 'es'}` : '';
   if (needs.soup) return dishes ? `Add a soup and ${dishes}` : 'Add a soup';

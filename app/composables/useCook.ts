@@ -25,6 +25,7 @@ import {
 } from '~~/utils/cook';
 import { db, SYNC_STATE_KEY } from '~~/utils/db';
 import { normName } from '~~/utils/pantry';
+import { addedText } from '~/utils/cook-format';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 import { notifyLocalChange } from '~~/utils/sync-hook';
 
@@ -215,7 +216,7 @@ export function useCook(): Cook {
       try {
         const dish = await ops.cook({ recipe: id, date, uses: checked.uses });
         const name = byId.value.get(id)?.name ?? 'the dish';
-        toast(date === today.value ? `Added ${name} to today` : `Added ${name} to ${date}`, {
+        toast(addedText(name, date, today.value), {
           action: { label: 'Undo', onClick: () => void removeDish(dish, { restock: true }) }
         });
         return true;
@@ -236,7 +237,7 @@ export function useCook(): Cook {
       try {
         const id = await ops.addIngredient({ date, ingredient: checked.ingredient, use: checked.use });
         const name = checked.ingredient.name;
-        toast(date === today.value ? `Added ${name} to today` : `Added ${name} to ${date}`, {
+        toast(addedText(name, date, today.value), {
           action: { label: 'Undo', onClick: () => void removeIngredient(id, { restock: true }) }
         });
         return true;
