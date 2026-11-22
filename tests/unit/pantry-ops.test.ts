@@ -287,3 +287,77 @@ describe('item seasons', () => {
     expect(d.server.items.get(id)?.season).toEqual({ from: 4, to: 5 });
   });
 });
+
+/** A wire quantity in millionths, read from its JSON text the way Postgres reads it into `numeric`. */
+function micros(qty: number): bigint {
+  const match = /^(\d+)(?:\.(\d{1,6}))?$/.exec(JSON.stringify(qty));
+  if (!match) throw new Error(`${qty} has more places than the reducer keeps`);
+  return BigInt(match[1]!) * 1_000_000n + BigInt((match[2] ?? '').padEnd(6, '0'));
+}
+
+describe('fractional amounts', () => {
+  it('empties a pack in three thirds, offline and on the server, with nothing refused', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Cream', amount: 1 }))!;
+    await d.engine.sync('full');
+
+    for (let i = 0; i < 3; i++) expect(await d.ops.useItems([{ id, qty: 1 / 3 }])).not.toBeNull();
+    expect((await d.item(id))?.amount).toBe(0);
+    await d.engine.sync('full');
+
+    expect(d.notices).toEqual([]);
+    expect(d.server.items.get(id)?.amount).toBe(0);
+    const uses = d.server.batches.flat().flatMap((c) => (c.kind === 'use' ? [micros(c.qty)] : []));
+    expect(uses.reduce((a, b) => a + b)).toBe(1_000_000n);
+  });
+
+  it('keeps decimal uses exact, so the last one empties the item where float sums drift', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Oil', amount: 1 }))!;
+    for (const qty of [0.1, 0.2, 0.3]) await d.ops.useUp(id, qty);
+    expect((await d.item(id))?.amount).toBe(0.4);
+    await d.ops.useUp(id, 0.4);
+    await d.engine.sync('full');
+
+    expect(d.notices).toEqual([]);
+    expect(d.server.items.get(id)?.amount).toBe(0);
+  });
+
+  it('empties a pack in thirds across syncs, each use planned on confirmed stock', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Cream', amount: 1 }))!;
+    for (let i = 0; i < 3; i++) {
+      await d.ops.useUp(id, 1 / 3);
+      await d.engine.sync('full');
+    }
+    expect(d.notices).toEqual([]);
+    expect(d.server.items.get(id)?.amount).toBe(0);
+  });
+
+  it('uses the rest with the minus button when less than one is left, and logs a bin the same way', async () => {
+    const d = await device();
+    const cream = (await d.ops.createItem({ name: 'Cream', amount: 1.5 }))!;
+    const milk = (await d.ops.createItem({ name: 'Milk', amount: 0.25 }))!;
+
+    await d.ops.useUp(cream);
+    expect((await d.item(cream))?.amount).toBe(0.5);
+    await d.ops.useUp(cream);
+    expect((await d.item(cream))?.amount).toBe(0);
+    await d.ops.bin(milk);
+    expect((await d.item(milk))?.amount).toBe(0);
+    expect(d.notices).toEqual([]);
+    expect((await project(d.db)).events.map((e) => [e.kind, 'qty' in e && e.qty])).toEqual([
+      ['consume', 1],
+      ['consume', 0.5],
+      ['waste', 0.25]
+    ]);
+  });
+
+  it('still refuses a use of more than a sliver beyond what is left', async () => {
+    const d = await device();
+    const id = (await d.ops.createItem({ name: 'Cream', amount: 0.5 }))!;
+    await expect(d.ops.useItems([{ id, qty: 0.75 }])).rejects.toThrow(RangeError);
+    expect(await d.ops.useUp(id, 0.75)).toBeNull();
+    expect(d.notices).toEqual([expect.objectContaining({ reason: 'insufficient_stock' })]);
+  });
+});

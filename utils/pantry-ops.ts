@@ -19,7 +19,15 @@ import type {
 import type { Season } from '~~/types/season';
 import type { PendingSheet, QueuedCommand, RejectionNotice } from '~~/types/sync';
 import type { FooderinoDb } from '~~/utils/db';
-import { applyCommand, newId, normalizeAliases, normalizeTags, resolveItem } from '~~/utils/pantry';
+import {
+  applyCommand,
+  newId,
+  normalizeAliases,
+  normalizeTags,
+  resolveItem,
+  roundAmount,
+  snapUse
+} from '~~/utils/pantry';
 import { projectPantry, readDeviceRows } from '~~/utils/pantry-projection';
 import { isSeason } from '~~/utils/seasons';
 import { stampAbove } from '~~/utils/sheets';
@@ -59,11 +67,11 @@ export interface PantryOps {
   createItem(draft: ItemDraft): Promise<ItemId | null>;
   /** Throws a RangeError when the metadata is invalid, such as a blank name; the edit sheet validates first. */
   editItem(id: ItemId, edit: ItemEdit): Promise<UndoHandle | null>;
-  /** Defaults to 1. */
+  /** Defaults to 1, or to what is left when that is less. A use within a sliver of what is left takes all of it. */
   useUp(id: ItemId, qty?: number): Promise<UndoHandle | null>;
   /** Uses several ingredients together, checking their combined quantities before queueing any change. */
   useItems(lines: readonly { id: ItemId; qty: number }[]): Promise<UndoHandle | null>;
-  /** Like `useUp`, logged as waste. Defaults to 1. */
+  /** Like `useUp`, logged as waste. */
   bin(id: ItemId, qty?: number): Promise<UndoHandle | null>;
   /** Sets the listed amount to `qty`. Without one, adds the item's default quantity to the list. */
   addToShopping(id: ItemId, qty?: number): Promise<UndoHandle | null>;
@@ -144,6 +152,27 @@ function defaultQty(item: Item): number {
   return item.default_amount > 0 ? item.default_amount : 1;
 }
 
+/** Quantities leave at the precision the reducer keeps. */
+function quantize(c: Command): Command {
+  switch (c.kind) {
+    case 'use':
+    case 'want':
+      return { ...c, qty: roundAmount(c.qty) };
+    case 'tick':
+      return { ...c, qty: roundAmount(c.qty), from_list: roundAmount(c.from_list) };
+    case 'set':
+      return c.amount === undefined ? c : { ...c, amount: roundAmount(c.amount) };
+    case 'create': {
+      const start = { ...c.start };
+      if (start.amount !== undefined) start.amount = roundAmount(start.amount);
+      if (start.to_buy !== undefined) start.to_buy = roundAmount(start.to_buy);
+      return { ...c, start };
+    }
+    default:
+      return c;
+  }
+}
+
 export function createPantryOps({
   db,
   notify = () => {},
@@ -176,7 +205,7 @@ export function createPantryOps({
       let state = snapshot;
       let seq = rows.commands.at(-1)?.created_seq ?? 0;
       const queued: QueuedCommand[] = [];
-      for (const command of p.commands) {
+      for (const command of p.commands.map(quantize)) {
         const result = applyCommand(state, command);
         if ('reason' in result) {
           const item = resolveItem(state.items, command.item_id) ?? state.items.get(command.item_id);
@@ -230,6 +259,13 @@ export function createPantryOps({
     run((ctx) => {
       const c = command(ctx);
       return c ? { commands: [c] } : null;
+    });
+
+  const use = (waste: boolean) => (id: ItemId, qty?: number) =>
+    one((ctx) => {
+      const item = live(ctx, id);
+      const step = qty ?? (item && item.amount > 0 && item.amount < 1 ? item.amount : 1);
+      return { ...base(ctx, id), kind: 'use', qty: item ? snapUse(step, item.amount, item.unit) : step, waste };
     });
 
   return {
@@ -293,7 +329,7 @@ export function createPantryOps({
       });
     },
 
-    useUp: (id, qty = 1) => one((ctx) => ({ ...base(ctx, id), kind: 'use', qty, waste: false })),
+    useUp: use(false),
 
     useItems: (lines) =>
       run((ctx) => {
@@ -304,15 +340,17 @@ export function createPantryOps({
           if (!item) throw new Error('An ingredient is no longer available. Reopen the recipe and try again.');
           totals.set(item.id, (totals.get(item.id) ?? 0) + line.qty);
         }
-        for (const [id, qty] of totals) {
+        const commands = [...totals].map(([id, total]): Command => {
           const item = live(ctx, id)!;
+          const qty = snapUse(total, item.amount, item.unit);
           if (qty > item.amount)
             throw new RangeError(`Not enough ${item.name} at home. Adjust the quantity or skip it.`);
-        }
-        return { commands: [...totals].map(([id, qty]) => ({ ...base(ctx, id), kind: 'use', qty, waste: false })) };
+          return { ...base(ctx, id), kind: 'use', qty, waste: false };
+        });
+        return { commands };
       }),
 
-    bin: (id, qty = 1) => one((ctx) => ({ ...base(ctx, id), kind: 'use', qty, waste: true })),
+    bin: use(true),
 
     addToShopping: (id, qty) =>
       one((ctx) => {

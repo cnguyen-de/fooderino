@@ -3,7 +3,7 @@ import type { CookedId, CookedSheet, Ingredient, RecipeId, RecipeKind, RecipeShe
 import type { PendingSheet, SheetRows, SheetStore } from '~~/types/sync';
 import { SYNC_STATE_KEY, type FooderinoDb } from '~~/utils/db';
 import { pantryTables, type PantryOps } from '~~/utils/pantry-ops';
-import { buildSearchIndex, newId, resolveItem, tidy } from '~~/utils/pantry';
+import { buildSearchIndex, newId, resolveItem, roundAmount, tidy } from '~~/utils/pantry';
 import { projectPantry, readDeviceRows } from '~~/utils/pantry-projection';
 import { stampAbove } from '~~/utils/sheets';
 import { ingredientStatus, type PantryLookup, type UseLine } from './match';
@@ -68,7 +68,10 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
     return id;
   }
 
-  async function current<S extends 'recipes' | 'cooked'>(store: S, id: RecipeId | CookedId): Promise<SheetRows[S] | undefined> {
+  async function current<S extends 'recipes' | 'cooked'>(
+    store: S,
+    id: RecipeId | CookedId
+  ): Promise<SheetRows[S] | undefined> {
     const pending = (await db.edits.get(id)) as PendingSheet<S> | undefined;
     if (pending) {
       const { store: _, updated_at: __, ...sheet } = pending;
@@ -160,10 +163,11 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
         if (match.kind === 'item' && (stock === 'out' || stock === 'short')) {
           const item = match.item;
           if (item.to_buy > 0) continue;
-          const missing = qty && qty.unit === item.unit ? qty.amount - item.amount : undefined;
+          // A pack is bought whole, so a part of one missing lists a whole one.
+          const missing = qty && qty.unit === item.unit ? Math.ceil(roundAmount(qty.amount - item.amount)) : undefined;
           if (await pantry.addToShopping(item.id, missing)) listed++;
         } else if (match.kind === 'none') {
-          const to_buy = qty?.unit === 'count' ? qty.amount : 1;
+          const to_buy = qty?.unit === 'count' ? Math.ceil(qty.amount) : 1;
           if (await pantry.createItem({ name: ingredient.name, unit: 'count', to_buy })) listed++;
         }
       }

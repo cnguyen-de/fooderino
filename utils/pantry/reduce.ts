@@ -14,6 +14,7 @@ import type {
   Snapshot,
   Stock
 } from '~~/types/pantry';
+import { roundAmount } from './amount';
 import { isLocalDate, minDate } from './dates';
 import { normalizeAliases, normalizeTags } from './ids';
 import { absorb, resolveItem } from './merge';
@@ -185,7 +186,7 @@ function effectOf(state: Snapshot, cmd: Command): Outcome {
     case 'use': {
       if (!isQty(cmd.qty)) return 'invalid';
       if (item.amount < cmd.qty) return 'insufficient_stock';
-      const after = item.amount - cmd.qty;
+      const after = roundAmount(item.amount - cmd.qty);
       return {
         items: [{ ...item, amount: after }],
         event: { kind: cmd.waste ? 'waste' : 'consume', item_id: item.id, qty: cmd.qty, after },
@@ -253,7 +254,8 @@ function effectOf(state: Snapshot, cmd: Command): Outcome {
 
 function commit(state: Snapshot, cmd: Command, effect: Effect): Applied {
   const items = new Map(state.items);
-  for (const item of effect.items ?? []) items.set(item.id, item);
+  for (const item of effect.items ?? [])
+    items.set(item.id, { ...item, amount: roundAmount(item.amount), to_buy: roundAmount(item.to_buy) });
   const bag = effect.bag ? new Map(state.bag).set(effect.bag.id, effect.bag) : state.bag;
   const log = new Map(state.log).set(cmd.id, effect.inverse);
   if (effect.undoes) log.set(effect.undoes, null);
