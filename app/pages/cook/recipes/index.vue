@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ChevronRight, Plus, Search } from 'lucide-vue-next';
-import type { RecipeKind } from '~~/types/cook';
+import { RECIPE_KINDS, type RecipeKind } from '~~/types/cook';
 import { normName } from '~~/utils/pantry';
-import { eatenText } from '~/utils/cook-format';
+import { eatenText, KIND_TEXT } from '~/utils/cook-format';
 const { recipes, today, ready } = useCook();
 const query = ref('');
 const filter = ref<RecipeKind | 'all'>('all');
+const filters = [
+  { value: 'all', label: 'All' },
+  ...RECIPE_KINDS.map((k) => ({ value: k, label: KIND_TEXT[k].one }))
+] as const;
 const shown = computed(() => {
   const q = normName(query.value);
   return recipes.value.filter(
@@ -36,11 +40,7 @@ const shown = computed(() => {
         </label>
         <div role="radiogroup" aria-label="Kind" class="flex shrink-0 gap-0.5 rounded-lg bg-muted p-0.5">
           <button
-            v-for="option in [
-              { value: 'all', label: 'All' },
-              { value: 'dish', label: 'Dish' },
-              { value: 'soup', label: 'Soup' }
-            ] as const"
+            v-for="option in filters"
             :key="option.value"
             type="button"
             role="radio"

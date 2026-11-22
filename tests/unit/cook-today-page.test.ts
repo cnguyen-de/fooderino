@@ -3,7 +3,14 @@ import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
 import type { CookedId, MealIngredientId, RecipeId } from '~~/types/cook';
 import type { LocalDate } from '~~/types/pantry';
-import { mealNeeds, type Meal, type MealDish, type MealIngredient } from '~~/utils/cook';
+import {
+  mealNeeds,
+  type Meal,
+  type MealDish,
+  type MealIngredient,
+  type MealSuggestions,
+  type RecipeView
+} from '~~/utils/cook';
 import CookToday from '../../app/pages/cook/index.vue';
 import MealCard from '../../app/components/cook/MealCard.vue';
 
@@ -15,12 +22,15 @@ const omelette: MealDish = {
   uses: []
 };
 
-function renderToday(dishes: MealDish[], ingredients: MealIngredient[] = []) {
+const noSuggestions = { soups: [], dishes: [], wholeMeals: [] };
+
+function renderToday(dishes: MealDish[], ingredients: MealIngredient[] = [], suggested: Partial<MealSuggestions> = {}) {
   const todayMeal = ref<Meal>({ date: TODAY, dishes, ingredients, needs: mealNeeds(dishes) });
+  const recipes = [...(suggested.soups ?? []), ...(suggested.dishes ?? []), ...(suggested.wholeMeals ?? [])];
   vi.stubGlobal('useCook', () => ({
-    recipes: ref([]),
+    recipes: ref(recipes.map((s) => s.recipe)),
     todayMeal,
-    suggestions: ref({ soups: [], dishes: [] }),
+    suggestions: ref({ needs: todayMeal.value.needs, ...noSuggestions, ...suggested }),
     today: ref(TODAY),
     ready: ref(true),
     recipe: () => undefined,
@@ -77,5 +87,26 @@ describe('Cook Today page', () => {
 
     expect(page.text()).toContain('Add your first recipe');
     expect(page.text()).toContain('Add ingredient');
+  });
+
+  it('suggests one-dish meals after the soups and dishes', () => {
+    const suggestion = (name: string, kind: RecipeView['kind']) => ({
+      recipe: { id: name, name, kind, lastEaten: null, short: 0 } as unknown as RecipeView,
+      daysSince: null,
+      expiring: 0
+    });
+    const page = renderToday([], [], {
+      soups: [suggestion('Canh chua', 'soup')],
+      dishes: [suggestion('Ga xao', 'dish')],
+      wholeMeals: [suggestion('Pho', 'whole_meal')]
+    });
+
+    const suggested = page.findAll('section').filter((s) => s.find('h2').text().startsWith('Suggested'));
+    expect(suggested.map((s) => s.find('h2').text())).toEqual([
+      'Suggested soups',
+      'Suggested dishes',
+      'Suggested one-dish meals'
+    ]);
+    expect(suggested[2]!.text()).toContain('Pho');
   });
 });

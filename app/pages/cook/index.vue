@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Plus } from 'lucide-vue-next';
 import type { RecipeId } from '~~/types/cook';
-import { eatenText } from '~/utils/cook-format';
+import { eatenText, KIND_TEXT } from '~/utils/cook-format';
 const cook = useCook();
 const { recipes, todayMeal, suggestions, today, ready } = cook;
 const cooking = ref<RecipeId | null>(null);
@@ -13,8 +13,9 @@ const open = computed({
 });
 const sections = computed(() =>
   [
-    { title: 'Soups', list: suggestions.value.soups },
-    { title: 'Dishes', list: suggestions.value.dishes }
+    { title: KIND_TEXT.soup.many, list: suggestions.value.soups },
+    { title: KIND_TEXT.dish.many, list: suggestions.value.dishes },
+    { title: KIND_TEXT.whole_meal.many, list: suggestions.value.wholeMeals }
   ].filter((s) => s.list.length)
 );
 function add(id: RecipeId) {

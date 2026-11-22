@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
-import type { RecipeId } from '~~/types/cook';
+import type { RecipeId, RecipeView } from '~/composables/useCook';
 import RecipeEditor from '../../app/components/cook/RecipeEditor.vue';
 
-function renderEditor() {
+function renderEditor(recipe?: RecipeView) {
   const saveRecipe = vi.fn(async () => 'r1' as RecipeId);
   vi.stubGlobal('useCook', () => ({ saveRecipe }));
   vi.stubGlobal('useRouter', () => ({ replace: vi.fn(), back: vi.fn() }));
   const editor = mount(RecipeEditor, {
+    props: { recipe },
     global: {
       stubs: {
         ItemCombobox: {
@@ -71,5 +72,44 @@ describe('recipe editor amounts', () => {
     await editor.get('form').trigger('submit');
     await flushPromises();
     expect(saveRecipe).not.toHaveBeenCalled();
+  });
+});
+
+describe('recipe editor kind', () => {
+  const kinds = (editor: ReturnType<typeof mount>) =>
+    editor.findAll('[role="radiogroup"][aria-label="Kind"] [role="radio"]').map((b) => ({
+      label: b.text(),
+      checked: b.attributes('aria-checked') === 'true'
+    }));
+
+  it('offers a dish, a soup or a one-dish meal, and saves a one-dish meal picked', async () => {
+    const { editor, saveRecipe } = renderEditor();
+    expect(kinds(editor)).toEqual([
+      { label: 'Dish', checked: true },
+      { label: 'Soup', checked: false },
+      { label: 'One-dish', checked: false }
+    ]);
+
+    await editor.get('input[placeholder="Canh chua"]').setValue('Pho');
+    await editor
+      .findAll('[role="radio"]')
+      .find((b) => b.text() === 'One-dish')!
+      .trigger('click');
+    await editor.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(saveRecipe).toHaveBeenCalledWith(expect.objectContaining({ name: 'Pho', kind: 'whole_meal' }));
+  });
+
+  it('opens a one-dish recipe with One-dish picked', () => {
+    const pho = {
+      id: 'r1',
+      name: 'Pho',
+      kind: 'whole_meal',
+      ingredients: [],
+      instructions: ''
+    } as unknown as RecipeView;
+    const { editor } = renderEditor(pho);
+    expect(kinds(editor).find((k) => k.checked)?.label).toBe('One-dish');
   });
 });

@@ -1,7 +1,14 @@
 import type { LocalDate } from '~~/types/pantry';
-import type { Quantity } from '~~/types/cook';
+import type { Quantity, RecipeKind } from '~~/types/cook';
 import { daysBetween, formatAmount } from '~~/utils/pantry';
 import type { MealNeeds } from '~~/utils/cook';
+
+/** What the app calls each kind of recipe, alone and as a list heading. */
+export const KIND_TEXT: Record<RecipeKind, { one: string; many: string }> = {
+  dish: { one: 'Dish', many: 'Dishes' },
+  soup: { one: 'Soup', many: 'Soups' },
+  whole_meal: { one: 'One-dish', many: 'One-dish meals' }
+};
 
 export function eatenText(lastEaten: LocalDate | null, today: LocalDate): string {
   if (!lastEaten) return 'Never eaten';

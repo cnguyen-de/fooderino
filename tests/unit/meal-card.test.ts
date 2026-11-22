@@ -317,3 +317,22 @@ describe('changing the amount of an ingredient in a meal', () => {
     expect(cook.changeIngredient).toHaveBeenCalledWith(salt, expect.objectContaining({ name: 'Salt', amount: '5' }));
   });
 });
+
+describe('meal card with a one-dish meal', () => {
+  it('calls a meal holding a one-dish recipe complete, with nothing more to add', () => {
+    const pho: MealDish = {
+      id: '00000000-0000-4000-8000-0000000000c2' as CookedId,
+      recipe: {
+        id: '00000000-0000-4000-8000-0000000000a2' as RecipeId,
+        name: 'Pho',
+        kind: 'whole_meal',
+        deleted: false
+      },
+      uses: []
+    };
+    const { card } = renderCard({ date: TODAY, dishes: [pho] });
+
+    expect(card.text()).toContain('Complete meal');
+    expect(card.text()).not.toContain('Add a soup');
+  });
+});

@@ -5,6 +5,8 @@ import FractionChips from '~/components/cook/FractionChips.vue';
 import { amountField, parseAmount } from '~~/utils/pantry';
 import type { Ingredient, RecipeKind, RecipeView } from '~/composables/useCook';
 import type { ItemId, PantryItem, Unit } from '~~/types/pantry';
+import { RECIPE_KINDS } from '~~/types/cook';
+import { KIND_TEXT } from '~/utils/cook-format';
 const props = defineProps<{ recipe?: RecipeView }>();
 const cook = useCook();
 const router = useRouter();
@@ -80,20 +82,17 @@ async function save() {
         placeholder="Canh chua"
         class="mt-1 h-10 rounded-lg border-0 bg-muted/50 text-base font-semibold shadow-none" />
     </label>
-    <div role="radiogroup" aria-label="Kind" class="grid grid-cols-2 gap-1 rounded-lg bg-muted p-0.5">
+    <div role="radiogroup" aria-label="Kind" class="grid grid-cols-3 gap-1 rounded-lg bg-muted p-0.5">
       <button
-        v-for="option in [
-          { value: 'dish', label: 'Dish' },
-          { value: 'soup', label: 'Soup' }
-        ] as const"
-        :key="option.value"
+        v-for="option in RECIPE_KINDS"
+        :key="option"
         type="button"
         role="radio"
-        :aria-checked="kind === option.value"
+        :aria-checked="kind === option"
         class="rounded-md py-1.5 text-sm font-medium transition-colors"
-        :class="kind === option.value ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground'"
-        @click="kind = option.value">
-        {{ option.label }}
+        :class="kind === option ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground'"
+        @click="kind = option">
+        {{ KIND_TEXT[option].one }}
       </button>
     </div>
     <section class="space-y-2 rounded-xl bg-muted/40 p-3">
