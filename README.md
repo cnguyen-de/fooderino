@@ -54,11 +54,13 @@ Create `.env` with:
 | `BASE_URL` | Public origin, used to build share links (defaults to `http://localhost:3000`) |
 
 Apply `supabase/schema-v2.sql`, then `supabase/cook.sql`, then `supabase/seasons.sql`, then
-`supabase/meal-ingredients.sql`, to the database before the first run. An existing database gets
-`supabase/seasons.sql` before this client deploys, since the client pushes the `season` column with
-every item sheet. It also gets `supabase/meal-ingredients.sql` before this client deploys, since the
-client pulls the `meal_ingredients` table on every sync and a missing table fails the pull. Both
-files are safe to run again.
+`supabase/meal-ingredients.sql`, then `supabase/whole-meal.sql`, to the database before the first
+run. An existing database gets `supabase/seasons.sql` before this client deploys, since the client
+pushes the `season` column with every item sheet. It also gets `supabase/meal-ingredients.sql` before
+this client deploys, since the client pulls the `meal_ingredients` table on every sync and a missing
+table fails the pull. It also gets `supabase/whole-meal.sql` before this client deploys, since the
+client pushes the `whole_meal` column with every recipe sheet and the server refuses a sheet with a
+column it does not have. These three files are safe to run again.
 Migrating an existing database also needs `supabase/backfill-v2.sql`, then `supabase/verify-v2.sql`
 to check it. A database that predates recipes in households gets `supabase/cook.sql` before this
 client deploys: it moves each user's saved recipes to their household.

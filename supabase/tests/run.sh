@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Applies the v2 schema, cook.sql, seasons.sql, meal-ingredients.sql (twice, as it must be safe to
-# rerun), backfill and verify to a throwaway Postgres 16 in Docker, then runs every supabase/tests/*.test.sql against it.
+# Applies the v2 schema, cook.sql, seasons.sql, meal-ingredients.sql and whole-meal.sql (each twice, as
+# they must be safe to rerun), backfill and verify to a throwaway Postgres 16 in Docker, then runs every supabase/tests/*.test.sql against it.
 # Usage: bash supabase/tests/run.sh [name-filter]. KEEP=1 leaves the container up.
 set -euo pipefail
 shopt -s nullglob
@@ -53,6 +53,8 @@ step "cook.sql" supabase/cook.sql
 step "seasons.sql" supabase/seasons.sql
 step "meal-ingredients.sql" supabase/meal-ingredients.sql
 step "meal-ingredients.sql again" supabase/meal-ingredients.sql
+step "whole-meal.sql" supabase/whole-meal.sql
+step "whole-meal.sql again" supabase/whole-meal.sql
 step "backfill-v2.sql" supabase/backfill-v2.sql
 step "verify-v2.sql" supabase/verify-v2.sql
 step "test helpers" supabase/tests/helpers.sql
