@@ -14,7 +14,7 @@ import type {
   RejectionReason,
   Snapshot
 } from '~~/types/pantry';
-import type { CookedId, CookedRow, RecipeId, RecipeRow } from '~~/types/cook';
+import type { CookedId, CookedRow, MealIngredientId, MealIngredientRow, RecipeId, RecipeRow } from '~~/types/cook';
 import type { HouseholdRows, HouseholdStore, PendingSheet } from '~~/types/sync';
 import { applyCommand } from '~~/utils/pantry';
 import { TransportRefused, type SyncTransport } from '~~/utils/sync-engine';
@@ -42,6 +42,7 @@ export class FakeServer {
   rejected = new Map<CommandId, RejectionReason>();
   recipes = new Map<RecipeId, RecipeRow>();
   cooked = new Map<CookedId, CookedRow>();
+  mealIngredients = new Map<MealIngredientId, MealIngredientRow>();
   /** Each actor's live household. */
   membership = new Map<string, HouseholdId | null>();
   batches: Command[][] = [];
@@ -153,6 +154,7 @@ export class FakeServer {
       items: [...this.items.values()],
       recipes: [...this.recipes.values()],
       cooked: [...this.cooked.values()],
+      mealIngredients: [...this.mealIngredients.values()],
       bag: [...this.bag.values()],
       events: [...this.events.values()],
       log: [...this.log.values()]
@@ -162,7 +164,12 @@ export class FakeServer {
 
   pushSheet(actor: string, def: SheetTableDef, sheet: PendingSheet): HouseholdRows[typeof def.store] | null {
     const wire = Object.fromEntries(def.sheet.columns.map((c) => [c, sheet[c]])) as unknown as { id: string; household_id: HouseholdId };
-    const table = { items: this.items, recipes: this.recipes, cooked: this.cooked }[def.store] as Map<string, HouseholdRows[typeof def.store]>;
+    const table = {
+      items: this.items,
+      recipes: this.recipes,
+      cooked: this.cooked,
+      mealIngredients: this.mealIngredients
+    }[def.store] as Map<string, HouseholdRows[typeof def.store]>;
     const row = table.get(wire.id);
     const household = this.membership.get(actor) ?? HOUSEHOLD;
     if (wire.household_id !== household || (row && row.household_id !== household)) {

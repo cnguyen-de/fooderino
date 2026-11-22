@@ -7,6 +7,7 @@ import {
   parseEvent,
   parseHousehold,
   parseItem,
+  parseMealIngredient,
   parseMember,
   parseRecipe
 } from '~~/utils/sync-wire';
@@ -70,6 +71,17 @@ export const HOUSEHOLD_TABLES = [
     sheet: {
       columns: ['id', 'household_id', 'recipe_id', 'date', 'uses', 'updated_at', 'deleted_at'],
       waitsFor: (dish) => dish.uses
+    }
+  }),
+  def({
+    store: 'mealIngredients',
+    remote: 'meal_ingredients',
+    scope: 'household_id',
+    key: (r) => r.id,
+    parse: parseMealIngredient,
+    sheet: {
+      columns: ['id', 'household_id', 'date', 'ingredient', 'uses', 'updated_at', 'deleted_at'],
+      waitsFor: (entry) => entry.uses
     }
   }),
   def({ store: 'bag', remote: 'bag_entries', scope: 'household_id', key: (r) => r.id, parse: parseBagEntry }),

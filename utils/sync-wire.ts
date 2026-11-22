@@ -20,7 +20,16 @@ import type {
   Tag,
   TagKind
 } from '~~/types/pantry';
-import type { CookedId, CookedRow, Ingredient, Quantity, RecipeId, RecipeRow } from '~~/types/cook';
+import type {
+  CookedId,
+  CookedRow,
+  Ingredient,
+  MealIngredientId,
+  MealIngredientRow,
+  Quantity,
+  RecipeId,
+  RecipeRow
+} from '~~/types/cook';
 import type { Season } from '~~/types/season';
 import { isSeason } from '~~/utils/seasons';
 
@@ -332,6 +341,20 @@ export function parseCooked(raw: unknown): CookedRow {
     deleted_at: optInstant(r.deleted_at, 'cooked.deleted_at'),
     updated_at: instant(r.updated_at, 'cooked.updated_at'),
     seq: num(r.seq, 'cooked.seq')
+  };
+}
+
+export function parseMealIngredient(raw: unknown): MealIngredientRow {
+  const r = obj(raw, 'meal_ingredient');
+  return {
+    id: uuid<MealIngredientId>(r.id, 'meal_ingredient.id'),
+    household_id: uuid<HouseholdId>(r.household_id, 'meal_ingredient.household_id'),
+    date: date(r.date, 'meal_ingredient.date'),
+    ingredient: parseIngredient(r.ingredient, 'meal_ingredient.ingredient'),
+    uses: arr(r.uses, 'meal_ingredient.uses').map((id, i) => uuid<CommandId>(id, `meal_ingredient.uses[${i}]`)),
+    deleted_at: optInstant(r.deleted_at, 'meal_ingredient.deleted_at'),
+    updated_at: instant(r.updated_at, 'meal_ingredient.updated_at'),
+    seq: num(r.seq, 'meal_ingredient.seq')
   };
 }
 

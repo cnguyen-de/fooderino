@@ -7,7 +7,7 @@ import type {
   ItemRow,
   MemberRow
 } from '~~/types/pantry';
-import type { CookedRow, RecipeRow } from '~~/types/cook';
+import type { CookedRow, MealIngredientRow, RecipeRow } from '~~/types/cook';
 import type { ItemRecord, PendingOp, PendingSheet, QueuedCommand, SyncStateRow } from '~~/types/sync';
 import { convertPendingOps, legacyRecipeSheet, type LegacyRecipe } from '~~/utils/db-upgrade';
 
@@ -25,6 +25,7 @@ export type FooderinoDb = Dexie & {
   log: EntityTable<CommandLogRow, 'command_id'>;
   recipes: EntityTable<RecipeRow, 'id'>;
   cooked: EntityTable<CookedRow, 'id'>;
+  mealIngredients: EntityTable<MealIngredientRow, 'id'>;
   commands: EntityTable<QueuedCommand, 'id'>;
   edits: Table<PendingSheet, PendingSheet['id'], PendingSheet>;
   syncState: EntityTable<SyncStateRow, 'key'>;
@@ -126,6 +127,8 @@ export function openFooderinoDb(name = 'FooderinoDB'): FooderinoDb {
     .upgrade(upgradeToV4);
 
   db.version(5).stores({}).upgrade(upgradeToV5);
+
+  db.version(6).stores({ mealIngredients: 'id, seq' });
 
   return db;
 }

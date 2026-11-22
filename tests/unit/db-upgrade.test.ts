@@ -112,7 +112,7 @@ describe('Dexie v3 upgrade', () => {
     await db.open();
 
     expect(db.tables.map((t) => t.name).sort()).toEqual(
-      ['bag', 'commands', 'cooked', 'edits', 'events', 'households', 'items', 'log', 'members', 'recipes', 'syncState'].sort()
+      ['bag', 'commands', 'cooked', 'edits', 'events', 'households', 'items', 'log', 'mealIngredients', 'members', 'recipes', 'syncState'].sort()
     );
     expect(await db.items.count()).toBe(0);
     expect(await db.recipes.count()).toBe(0);
@@ -232,7 +232,7 @@ describe('Dexie v4 upgrade', () => {
     names.push(name);
     const db = openFooderinoDb(name);
     await db.open();
-    expect(db.verno).toBe(5);
+    expect(db.verno).toBe(6);
     expect(await db.commands.count()).toBe(0);
     db.close();
   });
@@ -261,6 +261,35 @@ describe('Dexie v5 upgrade', () => {
     expect(await db.table('items').get(row.id)).toEqual({ ...row, season: null });
     expect(await db.table('edits').get(sheet.id)).toEqual({ ...sheet, season: null });
     expect(await db.table('edits').get(recipe.id)).toEqual(recipe);
+    db.close();
+  });
+});
+
+describe('Dexie v6 upgrade', () => {
+  it('keeps the meals a v5 device holds and adds an empty store for meal ingredients', async () => {
+    const name = `upgrade-v6-${crypto.randomUUID()}`;
+    names.push(name);
+    const v5 = openV3(name);
+    v5.version(4).stores({ recipes: 'id, seq', cooked: 'id, seq', edits: 'id, store' });
+    v5.version(5).stores({});
+    const dish = {
+      id: crypto.randomUUID(),
+      household_id: LIST,
+      recipe_id: crypto.randomUUID(),
+      date: '2026-11-18',
+      uses: [],
+      deleted_at: null,
+      updated_at: '2026-11-18T18:00:00.000Z',
+      seq: 4
+    };
+    await v5.table('cooked').add(dish);
+    v5.close();
+
+    const db = openFooderinoDb(name);
+    await db.open();
+
+    expect(await db.table('cooked').toArray()).toEqual([dish]);
+    expect(await db.mealIngredients.count()).toBe(0);
     db.close();
   });
 });

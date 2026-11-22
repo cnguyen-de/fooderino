@@ -14,7 +14,14 @@ import type {
   MemberRow,
   RejectionReason
 } from '~~/types/pantry';
-import type { CookedRow, CookedSheet, RecipeRow, RecipeSheet } from '~~/types/cook';
+import type {
+  CookedRow,
+  CookedSheet,
+  MealIngredientRow,
+  MealIngredientSheet,
+  RecipeRow,
+  RecipeSheet
+} from '~~/types/cook';
 
 /** Every LWW-synced record carries these three fields. */
 export interface SyncRecord {
@@ -31,6 +38,7 @@ export interface SheetRows {
   items: ItemSheet;
   recipes: RecipeSheet;
   cooked: CookedSheet;
+  mealIngredients: MealIngredientSheet;
 }
 export type SheetStore = keyof SheetRows;
 
@@ -46,6 +54,7 @@ export interface HouseholdRows {
   items: ItemRow;
   recipes: RecipeRow;
   cooked: CookedRow;
+  mealIngredients: MealIngredientRow;
   bag: BagEntryRow;
   events: ItemEventRow;
   log: CommandLogRow;

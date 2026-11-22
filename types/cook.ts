@@ -5,6 +5,7 @@ type Brand<T, B extends string> = T & { readonly [brand]: B };
 
 export type RecipeId = Brand<string, 'RecipeId'>;
 export type CookedId = Brand<string, 'CookedId'>;
+export type MealIngredientId = Brand<string, 'MealIngredientId'>;
 
 export type RecipeKind = 'dish' | 'soup';
 
@@ -49,3 +50,16 @@ export interface CookedSheet {
   deleted_at: Instant | null;
 }
 export type CookedRow = CookedSheet & { updated_at: Instant; seq: number };
+
+/** One fact: the household used this ingredient in the meal on this date, without a recipe. */
+export interface MealIngredientSheet {
+  id: MealIngredientId;
+  household_id: HouseholdId;
+  date: LocalDate;
+  /** A null `qty` means used, but too little to count, such as salt. */
+  ingredient: Ingredient;
+  /** The `use` commands this queued. Empty when nothing was deducted. */
+  uses: CommandId[];
+  deleted_at: Instant | null;
+}
+export type MealIngredientRow = MealIngredientSheet & { updated_at: Instant; seq: number };
