@@ -1,5 +1,14 @@
-import type { CommandId, HouseholdId, Instant, Item, ItemId, LocalDate } from '~~/types/pantry';
-import type { CookedId, CookedSheet, Ingredient, RecipeId, RecipeKind, RecipeSheet } from '~~/types/cook';
+import type { HouseholdId, Instant, Item, ItemId, LocalDate } from '~~/types/pantry';
+import type {
+  CookedId,
+  CookedSheet,
+  Ingredient,
+  MealIngredientId,
+  MealIngredientSheet,
+  RecipeId,
+  RecipeKind,
+  RecipeSheet
+} from '~~/types/cook';
 import type { PendingSheet, SheetRows, SheetStore } from '~~/types/sync';
 import { SYNC_STATE_KEY, type FooderinoDb } from '~~/utils/db';
 import { pantryTables, type PantryOps } from '~~/utils/pantry-ops';
@@ -26,6 +35,12 @@ export interface CookOps {
    */
   cook(input: { recipe: RecipeId; date: LocalDate; uses: readonly UseLine[] }): Promise<CookedId>;
   removeDish(id: CookedId, opts: { restock: boolean }): Promise<void>;
+  /**
+   * Deducts `use` and records the ingredient in the meal in one transaction, as `cook` does.
+   * A null `use` records it without deducting. RangeError on a blank name.
+   */
+  addIngredient(input: { date: LocalDate; ingredient: Ingredient; use: UseLine | null }): Promise<MealIngredientId>;
+  removeIngredient(id: MealIngredientId, opts: { restock: boolean }): Promise<void>;
   /** Lists out or short items; untracked names become new count items to buy. Resolves with how many were listed. */
   addMissingToShopping(id: RecipeId): Promise<number>;
 }
@@ -59,6 +74,8 @@ function tidyIngredients(ingredients: readonly Ingredient[]): Ingredient[] {
   });
 }
 
+type CookStore = Exclude<SheetStore, 'items'>;
+
 export function createCookOps({ db, pantry, notify = () => {}, now = () => new Date() }: CookOpsOptions): CookOps {
   const at = () => now().toISOString() as Instant;
 
@@ -68,10 +85,7 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
     return id;
   }
 
-  async function current<S extends 'recipes' | 'cooked'>(
-    store: S,
-    id: RecipeId | CookedId
-  ): Promise<SheetRows[S] | undefined> {
+  async function current<S extends CookStore>(store: S, id: SheetRows[S]['id']): Promise<SheetRows[S] | undefined> {
     const pending = (await db.edits.get(id)) as PendingSheet<S> | undefined;
     if (pending) {
       const { store: _, updated_at: __, ...sheet } = pending;
@@ -83,14 +97,29 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
     return sheet;
   }
 
-  async function queue<S extends 'recipes' | 'cooked'>(store: S, sheet: SheetRows[S]): Promise<void> {
+  async function queue<S extends CookStore>(store: S, sheet: SheetRows[S]): Promise<void> {
     const [confirmed, pending] = await Promise.all([db.table(store).get(sheet.id), db.edits.get(sheet.id)]);
     const updated_at = stampAbove(at(), confirmed?.updated_at, pending?.updated_at);
     await db.edits.put({ ...sheet, store, updated_at } as PendingSheet<SheetStore>);
   }
 
-  const sheetTables = (store: 'recipes' | 'cooked') => [db.syncState, db.edits, db.table(store)];
-  const cookTables = () => [...pantryTables(db), db.cooked];
+  const sheetTables = (store: CookStore) => [db.syncState, db.edits, db.table(store)];
+  const cookTables = () => [...pantryTables(db), db.cooked, db.mealIngredients];
+
+  async function removeFromMeal(
+    store: 'cooked' | 'mealIngredients',
+    id: CookedId | MealIngredientId,
+    restock: boolean
+  ) {
+    const queued = await db.transaction('rw', cookTables(), async () => {
+      const entry = await current(store, id);
+      if (!entry || entry.deleted_at) return false;
+      if (restock && entry.uses.length > 0) await pantry.undoCommands(entry.uses);
+      await queue(store, { ...entry, deleted_at: at() });
+      return true;
+    });
+    if (queued) notify();
+  }
 
   return {
     async saveRecipe(input) {
@@ -141,16 +170,29 @@ export function createCookOps({ db, pantry, notify = () => {}, now = () => new D
       return id;
     },
 
-    async removeDish(id, { restock }) {
-      const queued = await db.transaction('rw', cookTables(), async () => {
-        const dish = await current('cooked', id);
-        if (!dish || dish.deleted_at) return false;
-        if (restock && dish.uses.length > 0) await pantry.undoCommands(dish.uses as CommandId[]);
-        await queue('cooked', { ...dish, deleted_at: at() });
-        return true;
+    removeDish: (id, { restock }) => removeFromMeal('cooked', id, restock),
+
+    async addIngredient({ date, ingredient, use }) {
+      const [tidied] = tidyIngredients([ingredient]);
+      if (!tidied) throw new RangeError('Pick an item or type a name.');
+      const id = newId<MealIngredientId>();
+      await db.transaction('rw', cookTables(), async () => {
+        const handle = use ? await pantry.useItems([use]) : null;
+        const sheet: MealIngredientSheet = {
+          id,
+          household_id: await household(),
+          date,
+          ingredient: tidied,
+          uses: handle?.commands.map((c) => c.id) ?? [],
+          deleted_at: null
+        };
+        await queue('mealIngredients', sheet);
       });
-      if (queued) notify();
+      notify();
+      return id;
     },
+
+    removeIngredient: (id, { restock }) => removeFromMeal('mealIngredients', id, restock),
 
     async addMissingToShopping(id) {
       const recipe = await current('recipes', id);

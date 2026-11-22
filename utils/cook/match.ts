@@ -1,5 +1,5 @@
-import { amountField, formatAmount, parseAmount, snapUse, type Hit } from '~~/utils/pantry';
-import type { ItemId, PantryItem } from '~~/types/pantry';
+import { amountField, formatAmount, parseAmount, snapUse, tidy, type Hit } from '~~/utils/pantry';
+import type { ItemId, PantryItem, Unit } from '~~/types/pantry';
 import type { Ingredient } from '~~/types/cook';
 
 export type PantryHit = Pick<Hit, 'match' | 'via'> & { item: PantryItem };
@@ -113,4 +113,44 @@ export function checkCook(lines: readonly CookLine[], lookup: PantryLookup): Coo
     totals.set(item.id, total);
   }
   return { ok: true, uses: [...totals].map(([id, qty]) => ({ id, qty })) };
+}
+
+/** The add-ingredient form. `unit` applies only to a typed name; a picked item brings its own. */
+export interface IngredientDraft {
+  name: string;
+  item_id: ItemId | null;
+  amount: string;
+  unit: Unit;
+}
+
+export type IngredientCheck =
+  | { ok: true; ingredient: Ingredient; use: UseLine | null }
+  | { ok: false; problem: string };
+
+/** A blank amount, or zero, records the ingredient as used but too little to count, and deducts nothing. */
+export function checkIngredient(draft: IngredientDraft, lookup: PantryLookup): IngredientCheck {
+  const name = tidy(draft.name);
+  if (!name) return { ok: false, problem: 'Pick an item or type a name.' };
+  const amount = draft.amount.trim() ? parseAmount(draft.amount) : 0;
+  if (amount === null) return { ok: false, problem: 'Enter an amount like 2, 0.5 or 1/3, or leave it blank.' };
+  if (!draft.item_id) {
+    return {
+      ok: true,
+      ingredient: { name, item_id: null, qty: amount > 0 ? { amount, unit: draft.unit } : null },
+      use: null
+    };
+  }
+  const item = lookup.byId(draft.item_id);
+  if (!item) return { ok: false, problem: `${name} is no longer at home. Pick it again or type a name.` };
+  if (snapUse(amount, item.amount, item.unit) > item.amount)
+    return {
+      ok: false,
+      problem: `Only ${formatAmount(item.amount, item.unit)} ${item.name} at home. Reduce the amount.`
+    };
+  if (amount === 0) return { ok: true, ingredient: { name, item_id: item.id, qty: null }, use: null };
+  return {
+    ok: true,
+    ingredient: { name, item_id: item.id, qty: { amount, unit: item.unit } },
+    use: { id: item.id, qty: amount }
+  };
 }

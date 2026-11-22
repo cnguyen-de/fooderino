@@ -16,7 +16,7 @@ const omelette: MealDish = {
 };
 
 function renderToday(dishes: MealDish[]) {
-  const todayMeal = ref<Meal>({ date: TODAY, dishes, needs: mealNeeds(dishes) });
+  const todayMeal = ref<Meal>({ date: TODAY, dishes, ingredients: [], needs: mealNeeds(dishes) });
   vi.stubGlobal('useCook', () => ({
     recipes: ref([]),
     todayMeal,
@@ -24,6 +24,7 @@ function renderToday(dishes: MealDish[]) {
     today: ref(TODAY),
     ready: ref(true),
     recipe: () => undefined,
+    findRecipes: () => [],
     removeDish: vi.fn()
   }));
   const passthrough = { template: '<div><slot /></div>' };

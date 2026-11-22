@@ -1,7 +1,9 @@
-import type { CookedId, RecipeId } from '~~/types/cook';
+import type { CookedId, MealIngredientId, RecipeId } from '~~/types/cook';
 import type { BagId, CommandId, EventId, HouseholdId, ItemId, Tag } from '~~/types/pantry';
 
-export function newId<T extends ItemId | HouseholdId | BagId | CommandId | EventId | RecipeId | CookedId>(): T {
+export function newId<
+  T extends ItemId | HouseholdId | BagId | CommandId | EventId | RecipeId | CookedId | MealIngredientId
+>(): T {
   return crypto.randomUUID() as T;
 }
 

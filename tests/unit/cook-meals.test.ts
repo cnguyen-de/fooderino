@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { buildMeals, buildRecipeViews, mealNeeds, suggestFor, type PantryLookup } from '~~/utils/cook';
 import { buildSearchIndex, resolveItem } from '~~/utils/pantry';
 import type { CommandId, HouseholdId, Instant, Item, ItemId, LocalDate } from '~~/types/pantry';
-import type { CookedId, CookedRow, Ingredient, RecipeId, RecipeKind, RecipeRow } from '~~/types/cook';
+import type {
+  CookedId,
+  CookedRow,
+  Ingredient,
+  MealIngredientId,
+  MealIngredientRow,
+  RecipeId,
+  RecipeKind,
+  RecipeRow
+} from '~~/types/cook';
 
 const TODAY = '2026-11-18' as LocalDate;
 const H = 'h' as HouseholdId;
@@ -67,6 +76,21 @@ const cooked = (recipe_id: string, date: string, opts: { deleted?: boolean; at?:
   seq: n
 });
 
+const used = (
+  ingredient: Ingredient,
+  date: string,
+  opts: { deleted?: boolean; at?: string } = {}
+): MealIngredientRow => ({
+  id: `m${++n}` as MealIngredientId,
+  household_id: H,
+  date: date as LocalDate,
+  ingredient,
+  uses: ingredient.qty ? [`cmd${n}` as CommandId] : [],
+  deleted_at: opts.deleted ? ('2026-11-18T12:00:00Z' as Instant) : null,
+  updated_at: (opts.at ?? `${date}T18:00:00Z`) as Instant,
+  seq: n
+});
+
 const lookup = pantry([
   item('pork', 'Pork', 2),
   item('tofu', 'Tofu', 1),
@@ -77,7 +101,7 @@ const lookup = pantry([
 
 function suggest(recipes: RecipeRow[], rows: CookedRow[] = [], useSoon?: Set<ItemId>) {
   const views = buildRecipeViews(recipes, rows, lookup);
-  const meals = buildMeals(rows, new Map(recipes.map((r) => [r.id, r])));
+  const meals = buildMeals(rows, new Map(recipes.map((r) => [r.id, r])), []);
   return suggestFor({ recipes: views, meals, today: TODAY, useSoon });
 }
 const names = (list: { recipe: { name: string } }[]) => list.map((s) => s.recipe.name);
@@ -91,7 +115,7 @@ describe('meal history', () => {
       cooked('rau muong', '2026-11-18'),
       cooked('rau muong', '2026-11-17', { deleted: true })
     ];
-    const meals = buildMeals(rows, new Map(recipes.map((r) => [r.id, r])));
+    const meals = buildMeals(rows, new Map(recipes.map((r) => [r.id, r])), []);
     expect(meals.map((m) => [m.date, m.dishes.map((d) => d.recipe.name)])).toEqual([
       ['2026-11-18', ['rau muong']],
       ['2026-11-17', ['canh chua', 'thit kho']]
@@ -101,7 +125,7 @@ describe('meal history', () => {
 
   it('keeps a deleted recipe readable in past meals', () => {
     const recipes = [recipe('bun bo', 'soup', [], true)];
-    const [meal] = buildMeals([cooked('bun bo', '2026-11-10')], new Map(recipes.map((r) => [r.id, r])));
+    const [meal] = buildMeals([cooked('bun bo', '2026-11-10')], new Map(recipes.map((r) => [r.id, r])), []);
     expect(meal!.dishes[0]!.recipe).toEqual({ id: 'bun bo', name: 'bun bo', kind: 'soup', deleted: true });
   });
 
@@ -111,11 +135,51 @@ describe('meal history', () => {
     const needs = (ids: string[]) =>
       buildMeals(
         ids.map((id) => cooked(id, TODAY)),
-        map
+        map,
+        []
       )[0]!.needs;
     expect(needs(['ga'])).toEqual({ soup: true, dishes: 1 });
     expect(needs(['canh', 'ga', 'ca'])).toEqual({ soup: false, dishes: 0 });
     expect(mealNeeds([])).toEqual({ soup: true, dishes: 2 });
+  });
+});
+
+describe('meal ingredients', () => {
+  const recipes = new Map([recipe('canh', 'soup', []), recipe('ga', 'dish', [])].map((r) => [r.id, r]));
+
+  it('lists ingredients under their meal in the order added, and leaves removed ones out', () => {
+    const tofu = used(ing('Tofu', 0.5), TODAY, { at: `${TODAY}T18:05:00Z` });
+    const salt = used(ing('Salt'), TODAY, { at: `${TODAY}T18:01:00Z` });
+    const [meal] = buildMeals([cooked('ga', TODAY)], recipes, [
+      tofu,
+      salt,
+      used(ing('Fish', 1), TODAY, { deleted: true })
+    ]);
+
+    expect(meal!.dishes.map((d) => d.recipe.name)).toEqual(['ga']);
+    expect(meal!.ingredients).toEqual([
+      { id: salt.id, ingredient: { name: 'Salt', item_id: null, qty: null }, uses: [] },
+      { id: tofu.id, ingredient: { name: 'Tofu', item_id: null, qty: { amount: 0.5, unit: 'count' } }, uses: tofu.uses }
+    ]);
+  });
+
+  it('makes a meal of a date that has only ingredients, ordered with the other meals', () => {
+    const meals = buildMeals([cooked('canh', '2026-11-16'), cooked('ga', '2026-11-16', { deleted: true })], recipes, [
+      used(ing('Tofu', 1), '2026-11-17'),
+      used(ing('Salt'), '2026-11-16', { deleted: true })
+    ]);
+
+    expect(meals.map((m) => [m.date, m.dishes.length, m.ingredients.length])).toEqual([
+      ['2026-11-17', 0, 1],
+      ['2026-11-16', 1, 0]
+    ]);
+    expect(meals[0]!.needs).toEqual({ soup: true, dishes: 2 });
+  });
+
+  it('does not count ingredients toward a soup and two dishes', () => {
+    const [meal] = buildMeals([cooked('ga', TODAY)], recipes, [used(ing('Tofu', 1), TODAY), used(ing('Salt'), TODAY)]);
+
+    expect(meal!.needs).toEqual({ soup: true, dishes: 1 });
   });
 });
 

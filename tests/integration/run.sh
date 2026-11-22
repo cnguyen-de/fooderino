@@ -23,7 +23,7 @@ supabase db reset --workdir tests/integration >/dev/null 2>&1
 db="supabase_db_fooderino-e2e"
 for sql in supabase/schema-v2.sql supabase/cook.sql supabase/seasons.sql supabase/meal-ingredients.sql; do
   docker exec -i "$db" psql -X -q -U postgres -d postgres -v ON_ERROR_STOP=1 < "$sql" 2>&1 \
-    | grep -v 'already exists, skipping' || true
+    | grep -v ', skipping' || true
 done
 docker exec "$db" psql -X -q -U postgres -d postgres -c "notify pgrst, 'reload schema'"
 

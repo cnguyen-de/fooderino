@@ -1,9 +1,20 @@
 import { daysBetween } from '~~/utils/pantry';
 import type { CommandId, ItemId, LocalDate } from '~~/types/pantry';
-import type { CookedId, CookedRow as Cooked, RecipeId, RecipeKind, RecipeRow as Recipe, RecipeSheet } from '~~/types/cook';
+import type {
+  CookedId,
+  CookedRow as Cooked,
+  Ingredient,
+  MealIngredientId,
+  MealIngredientRow as Used,
+  RecipeId,
+  RecipeKind,
+  RecipeRow as Recipe,
+  RecipeSheet
+} from '~~/types/cook';
 
 type RecipeRow = Omit<Recipe, 'seq'>;
 type CookedRow = Omit<Cooked, 'seq'>;
+type MealIngredientRow = Omit<Used, 'seq'>;
 import { ingredientStatus, type IngredientStatus, type PantryLookup } from './match';
 
 export const MEAL_RULE = { soups: 1, dishes: 2, maxDishes: 3 } as const;
@@ -52,6 +63,13 @@ export interface MealDish {
   uses: CommandId[];
 }
 
+/** An ingredient used in the meal without a recipe. It does not count toward the meal rule. */
+export interface MealIngredient {
+  id: MealIngredientId;
+  ingredient: Ingredient;
+  uses: CommandId[];
+}
+
 export interface MealNeeds {
   soup: boolean;
   dishes: number;
@@ -60,6 +78,7 @@ export interface MealNeeds {
 export interface Meal {
   date: LocalDate;
   dishes: MealDish[];
+  ingredients: MealIngredient[];
   needs: MealNeeds;
 }
 
@@ -73,28 +92,41 @@ export function mealNeeds(dishes: readonly MealDish[]): MealNeeds {
   };
 }
 
-export function buildMeals(cooked: readonly CookedRow[], recipes: ReadonlyMap<RecipeId, RecipeRow>): Meal[] {
-  const byDate = new Map<LocalDate, CookedRow[]>();
+const inOrderAdded = (a: { updated_at: string; id: string }, b: { updated_at: string; id: string }) =>
+  a.updated_at.localeCompare(b.updated_at) || a.id.localeCompare(b.id);
+
+export function buildMeals(
+  cooked: readonly CookedRow[],
+  recipes: ReadonlyMap<RecipeId, RecipeRow>,
+  ingredients: readonly MealIngredientRow[]
+): Meal[] {
+  const days = new Map<LocalDate, { dishes: CookedRow[]; ingredients: MealIngredientRow[] }>();
+  const day = (date: LocalDate) => {
+    const rows = days.get(date) ?? { dishes: [], ingredients: [] };
+    days.set(date, rows);
+    return rows;
+  };
   for (const row of cooked) {
-    if (row.deleted_at !== null || !recipes.has(row.recipe_id)) continue;
-    const rows = byDate.get(row.date) ?? [];
-    rows.push(row);
-    byDate.set(row.date, rows);
+    if (row.deleted_at === null && recipes.has(row.recipe_id)) day(row.date).dishes.push(row);
   }
-  return [...byDate]
+  for (const row of ingredients) {
+    if (row.deleted_at === null) day(row.date).ingredients.push(row);
+  }
+  return [...days]
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([date, rows]) => {
-      const dishes = rows
-        .sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.id.localeCompare(b.id))
-        .map((row): MealDish => {
-          const recipe = recipes.get(row.recipe_id)!;
-          return {
-            id: row.id,
-            recipe: { id: recipe.id, name: recipe.name, kind: recipe.kind, deleted: recipe.deleted_at !== null },
-            uses: row.uses
-          };
-        });
-      return { date, dishes, needs: mealNeeds(dishes) };
+      const dishes = rows.dishes.sort(inOrderAdded).map((row): MealDish => {
+        const recipe = recipes.get(row.recipe_id)!;
+        return {
+          id: row.id,
+          recipe: { id: recipe.id, name: recipe.name, kind: recipe.kind, deleted: recipe.deleted_at !== null },
+          uses: row.uses
+        };
+      });
+      const used = rows.ingredients
+        .sort(inOrderAdded)
+        .map(({ id, ingredient, uses }): MealIngredient => ({ id, ingredient, uses }));
+      return { date, dishes, ingredients: used, needs: mealNeeds(dishes) };
     });
 }
 

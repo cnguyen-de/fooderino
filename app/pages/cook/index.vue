@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Plus, Search } from 'lucide-vue-next';
 import type { RecipeId } from '~~/types/cook';
-import { normName } from '~~/utils/pantry';
 import { eatenText } from '~/utils/cook-format';
 const cook = useCook();
 const { recipes, todayMeal, suggestions, today, ready } = cook;
@@ -13,10 +12,7 @@ const open = computed({
   }
 });
 const query = ref('');
-const picks = computed(() => {
-  const q = normName(query.value);
-  return q ? recipes.value.filter((r) => normName(r.name).includes(q)).slice(0, 6) : [];
-});
+const picks = computed(() => cook.findRecipes(query.value));
 const sections = computed(() =>
   [
     { title: 'Soups', list: suggestions.value.soups },

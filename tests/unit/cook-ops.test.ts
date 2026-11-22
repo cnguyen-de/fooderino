@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemId, LocalDate } from '~~/types/pantry';
-import type { CookedRow, RecipeId, RecipeRow } from '~~/types/cook';
-import { checkCook, createCookOps, planCook, type PantryLookup } from '~~/utils/cook';
+import type { CookedRow, MealIngredientRow, RecipeId, RecipeRow } from '~~/types/cook';
+import {
+  checkCook,
+  checkIngredient,
+  createCookOps,
+  planCook,
+  type IngredientDraft,
+  type PantryLookup
+} from '~~/utils/cook';
 import { createPantryOps } from '~~/utils/pantry-ops';
 import { notifyLocalChange, setLocalChangeHook } from '~~/utils/sync-hook';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
@@ -27,7 +34,11 @@ async function device() {
       CookedRow,
       'seq'
     >[];
-  return { server, ...d, cook, recipes, dishes, woken: () => woken };
+  const used = async () =>
+    [
+      ...overlaySheets(await d.db.mealIngredients.toArray(), await pendingSheets(d.db, 'mealIngredients')).values()
+    ] as Omit<MealIngredientRow, 'seq'>[];
+  return { server, ...d, cook, recipes, dishes, used, woken: () => woken };
 }
 
 type Device = Awaited<ReturnType<typeof device>>;
@@ -323,5 +334,140 @@ describe('cook ops', () => {
     expect(await d.cook.addMissingToShopping(recipe)).toBe(2);
     const items = [...(await project(d.db)).snapshot.items.values()];
     expect(Object.fromEntries(items.map((i) => [i.name, i.to_buy]))).toEqual({ Cream: 2, Onion: 1 });
+  });
+});
+
+describe('ingredients added to a meal', () => {
+  async function addTo(d: Device, draft: Partial<IngredientDraft>) {
+    const { items } = (await project(d.db)).snapshot;
+    const lookup: PantryLookup = { byId: (id) => items.get(id), search: () => [] };
+    const check = checkIngredient({ name: '', item_id: null, amount: '', unit: 'count', ...draft }, lookup);
+    if (!check.ok) throw new Error(check.problem);
+    return d.cook.addIngredient({ date: TODAY, ingredient: check.ingredient, use: check.use });
+  }
+
+  it('takes half a pack of tofu from home and records it in the meal, also on the server', async () => {
+    const d = await device();
+    const tofu = (await d.ops.createItem({ name: 'Tofu', amount: 2 }))!;
+
+    const id = await addTo(d, { name: 'Tofu', item_id: tofu, amount: '½' });
+
+    expect(await amountOf(d, tofu)).toBe(1.5);
+    const [entry] = await d.used();
+    expect(entry).toMatchObject({ id, date: TODAY, deleted_at: null });
+    expect(entry!.ingredient).toEqual({ name: 'Tofu', item_id: tofu, qty: { amount: 0.5, unit: 'count' } });
+    const uses = (await project(d.db)).events.filter((e) => e.kind === 'consume').map((e) => e.command_id);
+    expect(entry!.uses).toEqual(uses);
+    expect(entry!.uses).toHaveLength(1);
+
+    await d.engine.sync('full');
+    expect(d.server.mealIngredients.get(id)).toMatchObject({ date: TODAY, uses: entry!.uses });
+    expect(d.server.items.get(tofu)?.amount).toBe(1.5);
+  });
+
+  it('records salt with an amount of zero or none as used, deducting nothing', async () => {
+    const d = await device();
+    const salt = (await d.ops.createItem({ name: 'Salt', amount: 1 }))!;
+    const queued = await d.db.commands.count();
+
+    await addTo(d, { name: 'Salt', item_id: salt, amount: '0' });
+    await addTo(d, { name: 'Salt', item_id: salt, amount: ' ' });
+    await addTo(d, { name: 'Pepper', amount: '' });
+
+    expect(await amountOf(d, salt)).toBe(1);
+    expect((await d.used()).map((u) => [u.ingredient.name, u.ingredient.qty, u.uses])).toEqual(
+      expect.arrayContaining([
+        ['Salt', null, []],
+        ['Salt', null, []],
+        ['Pepper', null, []]
+      ])
+    );
+    expect(await d.db.commands.count()).toBe(queued);
+  });
+
+  it('records a typed name with its amount and takes nothing from home', async () => {
+    const d = await device();
+    const tofu = (await d.ops.createItem({ name: 'Tofu', amount: 2 }))!;
+
+    await addTo(d, { name: '  Bean  sprouts ', amount: '200', unit: 'gram' });
+
+    expect((await d.used())[0]!.ingredient).toEqual({
+      name: 'Bean sprouts',
+      item_id: null,
+      qty: { amount: 200, unit: 'gram' }
+    });
+    expect(await amountOf(d, tofu)).toBe(2);
+  });
+
+  it('records nothing when the pantry refuses the deduction', async () => {
+    const d = await device();
+    const tofu = (await d.ops.createItem({ name: 'Tofu', amount: 1 }))!;
+
+    await expect(
+      d.cook.addIngredient({
+        date: TODAY,
+        ingredient: { name: 'Tofu', item_id: tofu, qty: { amount: 3, unit: 'count' } },
+        use: { id: tofu, qty: 3 }
+      })
+    ).rejects.toThrow(RangeError);
+
+    expect(await d.used()).toEqual([]);
+    expect(await amountOf(d, tofu)).toBe(1);
+  });
+
+  it('refuses a blank name', async () => {
+    const d = await device();
+    await expect(
+      d.cook.addIngredient({ date: TODAY, ingredient: { name: '  ', item_id: null, qty: null }, use: null })
+    ).rejects.toThrow(RangeError);
+    expect(await d.used()).toEqual([]);
+  });
+
+  it('removes an ingredient and puts it back, on this phone and the server', async () => {
+    const d = await device();
+    const tofu = (await d.ops.createItem({ name: 'Tofu', amount: 2 }))!;
+    const id = await addTo(d, { name: 'Tofu', item_id: tofu, amount: '1/3' });
+    await d.engine.sync('full');
+
+    await d.cook.removeIngredient(id, { restock: true });
+
+    expect((await d.used())[0]?.deleted_at).not.toBeNull();
+    expect(await amountOf(d, tofu)).toBe(2);
+    await d.engine.sync('full');
+    expect(d.server.mealIngredients.get(id)?.deleted_at).not.toBeNull();
+    expect(d.server.items.get(tofu)?.amount).toBe(2);
+  });
+
+  it('removes an ingredient without restock, leaving the stock as used', async () => {
+    const d = await device();
+    const tofu = (await d.ops.createItem({ name: 'Tofu', amount: 2 }))!;
+    const id = await addTo(d, { name: 'Tofu', item_id: tofu, amount: '1' });
+
+    await d.cook.removeIngredient(id, { restock: false });
+
+    expect((await d.used())[0]?.deleted_at).not.toBeNull();
+    expect(await amountOf(d, tofu)).toBe(1);
+  });
+});
+
+describe('checkIngredient', () => {
+  const tofu = { id: 'tofu' as ItemId, name: 'Tofu', unit: 'count', amount: 1 } as never;
+  const lookup: PantryLookup = { byId: (id) => (id === 'tofu' ? tofu : undefined), search: () => [] };
+  const check = (draft: Partial<IngredientDraft>) =>
+    checkIngredient({ name: 'Tofu', item_id: 'tofu' as ItemId, amount: '', unit: 'count', ...draft }, lookup);
+
+  it('takes the last third of a pack whole', () => {
+    expect(check({ amount: '0.995' })).toMatchObject({ ok: true, use: { id: 'tofu', qty: 0.995 } });
+  });
+
+  it.each([
+    ['more than is at home', { amount: '1.5' }, 'Only 1 Tofu at home'],
+    ['an amount it cannot read', { amount: 'half' }, '1/3'],
+    ['a blank name', { name: ' ', item_id: null }, 'type a name'],
+    ['an item no longer at home', { item_id: 'gone' as ItemId }, 'no longer at home']
+  ])('refuses %s', (_, draft, problem) => {
+    const result = check(draft);
+    expect(result.ok).toBe(false);
+    expect(result.ok ? '' : result.problem).toContain(problem);
   });
 });

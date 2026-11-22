@@ -1,12 +1,13 @@
 import { liveQuery } from 'dexie';
 import { toast } from 'vue-sonner';
 import type { ComputedRef, Ref } from 'vue';
-import type { CookedId, CookedRow, RecipeId, RecipeRow } from '~~/types/cook';
+import type { CookedId, CookedRow, MealIngredientId, MealIngredientRow, RecipeId, RecipeRow } from '~~/types/cook';
 import type { ItemId, LocalDate } from '~~/types/pantry';
 import {
   buildMeals,
   buildRecipeViews,
   checkCook,
+  checkIngredient,
   chooseItem,
   createCookOps,
   mealNeeds,
@@ -14,6 +15,8 @@ import {
   suggestFor,
   type CookCheck,
   type CookLine,
+  type IngredientCheck,
+  type IngredientDraft,
   type Meal,
   type MealSuggestions,
   type PantryLookup,
@@ -21,10 +24,20 @@ import {
   type RecipeView
 } from '~~/utils/cook';
 import { db, SYNC_STATE_KEY } from '~~/utils/db';
+import { normName } from '~~/utils/pantry';
 import { overlaySheets, pendingSheets } from '~~/utils/sheets';
 import { notifyLocalChange } from '~~/utils/sync-hook';
 
-export type { CookLine, Meal, MealDish, MealSuggestions, RecipeView, Suggestion } from '~~/utils/cook';
+export type {
+  CookLine,
+  IngredientDraft,
+  Meal,
+  MealDish,
+  MealIngredient,
+  MealSuggestions,
+  RecipeView,
+  Suggestion
+} from '~~/utils/cook';
 export type { RecipeInput } from '~~/utils/cook';
 export type * from '~~/types/cook';
 
@@ -32,24 +45,28 @@ type Shown<R> = Omit<R, 'seq'>;
 interface CookRows {
   recipes: Shown<RecipeRow>[];
   cooked: Shown<CookedRow>[];
+  mealIngredients: Shown<MealIngredientRow>[];
 }
 
 const rows = shallowRef<CookRows | null>(null);
 let started = false;
 
 async function readCookRows(): Promise<CookRows> {
-  return db.transaction('r', [db.syncState, db.recipes, db.cooked, db.edits], async () => {
+  return db.transaction('r', [db.syncState, db.recipes, db.cooked, db.mealIngredients, db.edits], async () => {
     const household = (await db.syncState.get(SYNC_STATE_KEY))?.household_id ?? null;
-    const [recipes, cooked, pendingRecipes, pendingCooked] = await Promise.all([
+    const [recipes, cooked, mealIngredients, pendingRecipes, pendingCooked, pendingIngredients] = await Promise.all([
       db.recipes.toArray(),
       db.cooked.toArray(),
+      db.mealIngredients.toArray(),
       pendingSheets(db, 'recipes'),
-      pendingSheets(db, 'cooked')
+      pendingSheets(db, 'cooked'),
+      pendingSheets(db, 'mealIngredients')
     ]);
     const mine = <T extends { household_id: string }>(list: T[]) => list.filter((r) => r.household_id === household);
     return {
       recipes: [...overlaySheets(mine(recipes), mine(pendingRecipes)).values()],
-      cooked: [...overlaySheets(mine(cooked), mine(pendingCooked)).values()]
+      cooked: [...overlaySheets(mine(cooked), mine(pendingCooked)).values()],
+      mealIngredients: [...overlaySheets(mine(mealIngredients), mine(pendingIngredients)).values()]
     };
   });
 }
@@ -69,7 +86,7 @@ export interface Cook {
   /** Live recipes by name, with stock and the last date eaten. */
   recipes: ComputedRef<readonly RecipeView[]>;
   recipe(id: RecipeId): RecipeView | undefined;
-  /** Every date with at least one dish, newest first. */
+  /** Every date with at least one dish or ingredient, newest first. */
   meals: ComputedRef<readonly Meal[]>;
   today: Readonly<Ref<LocalDate>>;
   todayMeal: ComputedRef<Meal>;
@@ -77,11 +94,16 @@ export interface Cook {
   plan(id: RecipeId): CookLine[];
   choose(line: CookLine, id: ItemId | null): CookLine;
   check(lines: readonly CookLine[]): CookCheck;
+  checkIngredient(draft: IngredientDraft): IngredientCheck;
+  /** Live recipes whose name contains `query`, at most six. None for a blank query. */
+  findRecipes(query: string): RecipeView[];
 
   saveRecipe(input: RecipeInput): Promise<RecipeId | null>;
   deleteRecipe(id: RecipeId): Promise<boolean>;
   addToMeal(id: RecipeId, date: LocalDate, lines: readonly CookLine[]): Promise<boolean>;
   removeDish(id: CookedId, opts: { restock: boolean }): Promise<boolean>;
+  addIngredient(date: LocalDate, draft: IngredientDraft): Promise<boolean>;
+  removeIngredient(id: MealIngredientId, opts: { restock: boolean }): Promise<boolean>;
   addMissingToShopping(id: RecipeId): Promise<boolean>;
   ready: ComputedRef<boolean>;
 }
@@ -100,10 +122,20 @@ export function useCook(): Cook {
   const recipes = computed(() => buildRecipeViews(rows.value?.recipes ?? [], rows.value?.cooked ?? [], lookup));
   const byId = computed(() => new Map(recipes.value.map((r) => [r.id, r])));
   const meals = computed(() =>
-    buildMeals(rows.value?.cooked ?? [], new Map((rows.value?.recipes ?? []).map((r) => [r.id, r])))
+    buildMeals(
+      rows.value?.cooked ?? [],
+      new Map((rows.value?.recipes ?? []).map((r) => [r.id, r])),
+      rows.value?.mealIngredients ?? []
+    )
   );
   const todayMeal = computed<Meal>(
-    () => meals.value.find((m) => m.date === today.value) ?? { date: today.value, dishes: [], needs: mealNeeds([]) }
+    () =>
+      meals.value.find((m) => m.date === today.value) ?? {
+        date: today.value,
+        dishes: [],
+        ingredients: [],
+        needs: mealNeeds([])
+      }
   );
   const suggestions = computed(() =>
     suggestFor({
@@ -125,6 +157,17 @@ export function useCook(): Cook {
     }
   }
 
+  async function removeIngredient(id: MealIngredientId, opts: { restock: boolean }) {
+    try {
+      await ops.removeIngredient(id, opts);
+      toast(opts.restock ? 'Removed the ingredient and put it back' : 'Removed the ingredient');
+      return true;
+    } catch (e) {
+      failed(e, 'Could not remove the ingredient.');
+      return false;
+    }
+  }
+
   return {
     recipes,
     recipe: (id) => byId.value.get(id),
@@ -135,6 +178,11 @@ export function useCook(): Cook {
     plan: (id) => planCook(byId.value.get(id)?.ingredients ?? [], lookup),
     choose: (line, id) => chooseItem(line, id, lookup),
     check: (lines) => checkCook(lines, lookup),
+    checkIngredient: (draft) => checkIngredient(draft, lookup),
+    findRecipes(query) {
+      const q = normName(query);
+      return q ? recipes.value.filter((r) => normName(r.name).includes(q)).slice(0, 6) : [];
+    },
 
     async saveRecipe(input) {
       try {
@@ -178,6 +226,27 @@ export function useCook(): Cook {
     },
 
     removeDish,
+
+    async addIngredient(date, draft) {
+      const checked = checkIngredient(draft, lookup);
+      if (!checked.ok) {
+        toast.error(checked.problem);
+        return false;
+      }
+      try {
+        const id = await ops.addIngredient({ date, ingredient: checked.ingredient, use: checked.use });
+        const name = checked.ingredient.name;
+        toast(date === today.value ? `Added ${name} to today` : `Added ${name} to ${date}`, {
+          action: { label: 'Undo', onClick: () => void removeIngredient(id, { restock: true }) }
+        });
+        return true;
+      } catch (e) {
+        failed(e, 'Could not add the ingredient.');
+        return false;
+      }
+    },
+
+    removeIngredient,
 
     async addMissingToShopping(id) {
       try {

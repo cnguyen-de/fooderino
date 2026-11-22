@@ -1,4 +1,4 @@
-export { matchIngredient, ingredientStatus, planCook, chooseItem, checkCook } from './match';
+export { matchIngredient, ingredientStatus, planCook, chooseItem, checkCook, checkIngredient } from './match';
 export type {
   PantryHit,
   PantryLookup,
@@ -7,9 +7,11 @@ export type {
   IngredientStatus,
   CookLine,
   UseLine,
-  CookCheck
+  CookCheck,
+  IngredientDraft,
+  IngredientCheck
 } from './match';
 export { MEAL_RULE, RECENT_DAYS, buildRecipeViews, buildMeals, mealNeeds, suggestFor } from './meals';
-export type { RecipeView, MealDish, MealNeeds, Meal, Suggestion, MealSuggestions } from './meals';
+export type { RecipeView, MealDish, MealIngredient, MealNeeds, Meal, Suggestion, MealSuggestions } from './meals';
 export { createCookOps } from './ops';
 export type { CookOps, CookOpsOptions, RecipeInput } from './ops';

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { CookedId, RecipeId } from '~~/types/cook';
+import { createCookOps } from '~~/utils/cook';
 import type { BagId, CommandId, HouseholdId, Instant, Item, LocalDate } from '~~/types/pantry';
 import type { QueuedCommand } from '~~/types/sync';
 import { createSupabaseTransport } from '~/utils/supabase-transport';
@@ -297,6 +298,55 @@ describe('two devices through PostgREST, RLS and Realtime', () => {
     const hijack = { ...(await A.db.recipes.get(recipe))!, name: 'Hijacked', updated_at: new Date(Date.now() + 3600_000).toISOString() };
     await expect(outsider.pushSheets(recipeSheets, [hijack as never])).rejects.toBeInstanceOf(TransportRefused);
     expect((await serverRow('household_recipes', 'id', recipe))[0].name).toBe('Canh chua');
+  });
+
+  it("A's ingredient entries reach B with their deduction; an outsider can neither read nor write them", async () => {
+    const tofu = (await A.ops.createItem({ name: 'Tofu', amount: 2 }))!;
+    await A.engine.sync('full');
+    const cook = createCookOps({ db: A.db, pantry: A.ops });
+    const half = await cook.addIngredient({
+      date: '2026-11-20' as LocalDate,
+      ingredient: { name: 'Tofu', item_id: tofu, qty: { amount: 0.5, unit: 'count' } },
+      use: { id: tofu, qty: 0.5 }
+    });
+    const salt = await cook.addIngredient({
+      date: '2026-11-20' as LocalDate,
+      ingredient: { name: 'Salt', item_id: null, qty: null },
+      use: null
+    });
+    await A.engine.sync('full');
+    await B.engine.sync('full');
+
+    expect([await A.db.edits.count(), await A.db.commands.count()]).toEqual([0, 0]);
+    const onB = await B.db.mealIngredients.get(half);
+    expect(onB).toMatchObject({
+      household_id: home,
+      date: '2026-11-20',
+      ingredient: { name: 'Tofu', item_id: tofu, qty: { amount: 0.5, unit: 'count' } }
+    });
+    expect(onB!.uses).toHaveLength(1);
+    expect(await B.db.mealIngredients.get(salt)).toMatchObject({
+      ingredient: { name: 'Salt', item_id: null, qty: null },
+      uses: []
+    });
+    expect((await B.item(tofu))?.amount).toBe(1.5);
+
+    await createCookOps({ db: B.db, pantry: B.ops }).removeIngredient(half, { restock: true });
+    await B.engine.sync('full');
+    await A.engine.sync('full');
+    expect((await A.db.mealIngredients.get(half))?.deleted_at).not.toBeNull();
+    expect([(await serverRow('items_v2', 'id', tofu))[0].amount, (await A.item(tofu))?.amount]).toEqual([2, 2]);
+
+    const outsider = createSupabaseTransport(carol.client);
+    const def = SHEET_TABLES.find((d) => d.store === 'mealIngredients')!;
+    expect(await outsider.pull(def, home, 0, 1000)).toEqual([]);
+    const hijack = {
+      ...(await A.db.mealIngredients.get(salt))!,
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date(Date.now() + 3600_000).toISOString()
+    };
+    await expect(outsider.pushSheets(def, [hijack as never])).rejects.toBeInstanceOf(TransportRefused);
+    expect((await serverRow('meal_ingredients', 'id', salt))[0].deleted_at).toBeNull();
   });
 
   it('keeps a non-member out of the household through RLS', async () => {
