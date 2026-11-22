@@ -300,6 +300,46 @@ describe('two devices through PostgREST, RLS and Realtime', () => {
     expect((await serverRow('household_recipes', 'id', recipe))[0].name).toBe('Canh chua');
   });
 
+  it("A's one-dish recipe reaches B as one-dish, and a sheet from an older client keeps it one-dish", async () => {
+    const pho = crypto.randomUUID() as RecipeId;
+    await A.db.edits.put({
+      store: 'recipes',
+      id: pho,
+      household_id: home,
+      name: 'Pho',
+      kind: 'whole_meal',
+      ingredients: [],
+      instructions: '',
+      deleted_at: null,
+      updated_at: new Date().toISOString() as Instant
+    });
+    await A.engine.sync('full');
+    await B.engine.sync('full');
+
+    expect(await B.db.recipes.get(pho)).toMatchObject({ name: 'Pho', kind: 'whole_meal' });
+    expect((await serverRow('household_recipes', 'id', pho))[0]).toMatchObject({ kind: 'dish', whole_meal: true });
+
+    const recipeSheets = SHEET_TABLES.find((d) => d.store === 'recipes')!;
+    const columns = (recipeSheets.sheet.columns as readonly string[]).filter((c) => c !== 'whole_meal');
+    const olderSheets = { ...recipeSheets, sheet: { columns } };
+    const renamed = {
+      ...(await B.db.recipes.get(pho))!,
+      store: 'recipes',
+      kind: 'dish',
+      name: 'Pho bo',
+      updated_at: new Date(Date.now() + 1000).toISOString()
+    };
+    await createSupabaseTransport(bob.client).pushSheets(olderSheets as never, [renamed as never]);
+    await A.engine.sync('full');
+
+    expect((await serverRow('household_recipes', 'id', pho))[0]).toMatchObject({
+      name: 'Pho bo',
+      kind: 'dish',
+      whole_meal: true
+    });
+    expect(await A.db.recipes.get(pho)).toMatchObject({ name: 'Pho bo', kind: 'whole_meal' });
+  });
+
   it("A's ingredient entries reach B with their deduction; an outsider can neither read nor write them", async () => {
     const tofu = (await A.ops.createItem({ name: 'Tofu', amount: 2 }))!;
     await A.engine.sync('full');
