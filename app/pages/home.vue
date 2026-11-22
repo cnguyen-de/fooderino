@@ -13,7 +13,7 @@ import {
   Snowflake,
   WashingMachine
 } from 'lucide-vue-next';
-import { normName } from '~~/utils/pantry';
+import { formatAmount, normName, oneUse } from '~~/utils/pantry';
 import type { ItemId, PantryItem } from '~~/types/pantry';
 const { view, search, ops, ready } = usePantry();
 const act = usePantryAction();
@@ -52,6 +52,7 @@ const quickPicks = computed(() => {
     );
   return [...picks, ...candidates.slice(0, 10 - picks.length).map(({ item }) => item)];
 });
+const oneTap = (item: PantryItem) => formatAmount(oneUse(item.amount, item.unit), item.unit);
 function use(item: PantryItem, bin = false) {
   return act(() => (bin ? ops.bin(item.id) : ops.useUp(item.id)), `${bin ? 'Binned' : 'Used'} ${item.name}`);
 }
@@ -115,14 +116,14 @@ function matchText(hit: ReturnType<typeof search>[number]) {
                 variant="ghost"
                 size="xs"
                 class="text-xs text-primary hover:bg-primary/10 hover:text-primary"
-                :aria-label="`Use ${entry.item.name}`"
+                :aria-label="`Use ${oneTap(entry.item)} ${entry.item.name}`"
                 @click="use(entry.item)"
                 >Used it</Button
               ><Button
                 variant="ghost"
                 size="xs"
                 class="text-xs text-muted-foreground"
-                :aria-label="`Bin ${entry.item.name}`"
+                :aria-label="`Bin ${oneTap(entry.item)} ${entry.item.name}`"
                 @click="use(entry.item, true)"
                 >Binned</Button
               >

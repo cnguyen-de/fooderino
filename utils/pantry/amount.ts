@@ -63,3 +63,8 @@ const SNAP: Record<Unit, number> = { count: 0.01, gram: 0.5 };
 export function snapUse(requested: number, amount: number, unit: Unit): number {
   return Math.abs(amount - requested) < SNAP[unit] ? amount : requested;
 }
+
+/** What one tap of use or bin takes: one, or what is left when that is less. */
+export function oneUse(amount: number, unit: Unit): number {
+  return snapUse(amount > 0 && amount < 1 ? amount : 1, amount, unit);
+}

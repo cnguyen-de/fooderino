@@ -24,6 +24,7 @@ import {
   newId,
   normalizeAliases,
   normalizeTags,
+  oneUse,
   resolveItem,
   roundAmount,
   snapUse
@@ -264,7 +265,7 @@ export function createPantryOps({
   const use = (waste: boolean) => (id: ItemId, qty?: number) =>
     one((ctx) => {
       const item = live(ctx, id);
-      const step = qty ?? (item && item.amount > 0 && item.amount < 1 ? item.amount : 1);
+      const step = qty ?? (item ? oneUse(item.amount, item.unit) : 1);
       return { ...base(ctx, id), kind: 'use', qty: item ? snapUse(step, item.amount, item.unit) : step, waste };
     });
 

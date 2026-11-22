@@ -2,7 +2,7 @@ export type * from '~~/types/pantry';
 export { SERVER_OWNED_ITEM_FIELDS } from '~~/types/pantry';
 export { newId, normName, normalizeTags, normalizeAliases, tidy } from './ids';
 export { isLocalDate, localDate, instant, localDateOf, addDays, daysBetween } from './dates';
-export { FRACTION_GLYPHS, amountField, formatAmount, parseAmount, roundAmount, snapUse } from './amount';
+export { FRACTION_GLYPHS, amountField, formatAmount, oneUse, parseAmount, roundAmount, snapUse } from './amount';
 export { applyCommand, replayPending } from './reduce';
 export type { Applied, Replayed } from './reduce';
 export { planHouseholdMerge, resolveItem, isLive } from './merge';

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { House, Minus, Plus, Square } from 'lucide-vue-next';
 import type { PantryItem } from '~~/types/pantry';
-import { formatAmount } from '~~/utils/pantry';
+import { formatAmount, oneUse } from '~~/utils/pantry';
 const props = defineProps<{
   item: PantryItem;
   matched?: string;
@@ -10,6 +10,7 @@ const props = defineProps<{
   qty?: number;
 }>();
 const atHome = computed(() => formatAmount(props.item.amount, props.item.unit));
+const oneTap = computed(() => formatAmount(oneUse(props.item.amount, props.item.unit), props.item.unit));
 defineEmits<{ edit: []; action: []; add: [] }>();
 </script>
 <template>
@@ -64,7 +65,7 @@ defineEmits<{ edit: []; action: []; add: [] }>();
           size="icon"
           class="size-8 text-muted-foreground hover:bg-primary/10 hover:text-primary"
           :disabled="item.amount <= 0"
-          :aria-label="`Use one ${item.name}`"
+          :aria-label="`Use ${oneTap} ${item.name}`"
           @click="$emit('action')"
           ><Minus class="size-4" aria-hidden="true"
         /></Button>
