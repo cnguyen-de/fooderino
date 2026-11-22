@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
-import type { CookedId, RecipeId } from '~~/types/cook';
+import type { CookedId, MealIngredientId, RecipeId } from '~~/types/cook';
 import type { LocalDate } from '~~/types/pantry';
-import { mealNeeds, type Meal, type MealDish } from '~~/utils/cook';
+import { mealNeeds, type Meal, type MealDish, type MealIngredient } from '~~/utils/cook';
 import CookToday from '../../app/pages/cook/index.vue';
 import MealCard from '../../app/components/cook/MealCard.vue';
 
@@ -15,8 +15,8 @@ const omelette: MealDish = {
   uses: []
 };
 
-function renderToday(dishes: MealDish[]) {
-  const todayMeal = ref<Meal>({ date: TODAY, dishes, ingredients: [], needs: mealNeeds(dishes) });
+function renderToday(dishes: MealDish[], ingredients: MealIngredient[] = []) {
+  const todayMeal = ref<Meal>({ date: TODAY, dishes, ingredients, needs: mealNeeds(dishes) });
   vi.stubGlobal('useCook', () => ({
     recipes: ref([]),
     todayMeal,
@@ -57,6 +57,18 @@ describe('Cook Today page', () => {
     const page = renderToday([omelette]);
 
     expect(page.text()).toContain('Omelette');
+    expect(page.text()).not.toContain('Add your first recipe');
+  });
+
+  it('shows today’s meal when it holds only an ingredient and there are no recipes', () => {
+    const salt: MealIngredient = {
+      id: '00000000-0000-4000-8000-0000000000d1' as MealIngredientId,
+      ingredient: { name: 'Salt', item_id: null, qty: null },
+      uses: []
+    };
+    const page = renderToday([], [salt]);
+
+    expect(page.text()).toContain('Salt');
     expect(page.text()).not.toContain('Add your first recipe');
   });
 

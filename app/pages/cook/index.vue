@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Search } from 'lucide-vue-next';
+import { Plus } from 'lucide-vue-next';
 import type { RecipeId } from '~~/types/cook';
 import { eatenText } from '~/utils/cook-format';
 const cook = useCook();
@@ -11,8 +11,6 @@ const open = computed({
     if (!value) cooking.value = null;
   }
 });
-const query = ref('');
-const picks = computed(() => cook.findRecipes(query.value));
 const sections = computed(() =>
   [
     { title: 'Soups', list: suggestions.value.soups },
@@ -21,7 +19,6 @@ const sections = computed(() =>
 );
 function add(id: RecipeId) {
   cooking.value = id;
-  query.value = '';
 }
 </script>
 <template>
@@ -30,7 +27,9 @@ function add(id: RecipeId) {
     <div class="space-y-4 p-3">
       <h1 class="text-xl font-semibold tracking-tight">What’s for dinner<span class="text-primary">?</span></h1>
       <p v-if="!ready" role="status">Loading…</p>
-      <div v-else-if="!recipes.length && !todayMeal.dishes.length" class="space-y-3 rounded-xl border border-dashed p-5 text-center">
+      <div
+        v-else-if="!recipes.length && !todayMeal.dishes.length && !todayMeal.ingredients.length"
+        class="space-y-3 rounded-xl border border-dashed p-5 text-center">
         <p class="text-muted-foreground">
           Add the dishes and soups you cook. Cook then suggests what to make from what is at home, and keeps a history
           of your meals.
@@ -71,22 +70,7 @@ function add(id: RecipeId) {
         </p>
         <section class="space-y-1">
           <h2 class="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Add another recipe</h2>
-          <label class="relative block">
-            <Search class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" aria-hidden="true" />
-            <Input v-model="query" aria-label="Find a recipe" placeholder="Find a recipe…" class="h-9 rounded-lg pl-8 text-base" />
-          </label>
-          <button
-            v-for="r in picks"
-            :key="r.id"
-            type="button"
-            class="flex h-10 w-full items-center gap-2 rounded-lg px-3 text-left transition-colors hover:bg-muted"
-            @click="add(r.id)">
-            <span class="min-w-0 flex-1 truncate font-medium">{{ r.name }}</span><KindBadge :kind="r.kind" /><StockBadge
-              :recipe="r" />
-          </button>
-          <p v-if="query.trim() && !picks.length" class="px-1 text-sm text-muted-foreground">
-            No recipe matches. <NuxtLink to="/cook/recipes/new" class="text-primary underline">Create one</NuxtLink>
-          </p>
+          <RecipePicker @pick="add" />
         </section>
       </template>
     </div>

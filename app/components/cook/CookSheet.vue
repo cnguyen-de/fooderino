@@ -4,7 +4,7 @@ import type { CookLine, RecipeView } from '~/composables/useCook';
 import type { ItemId, LocalDate } from '~~/types/pantry';
 import FractionChips from '~/components/cook/FractionChips.vue';
 import { formatAmount, parseAmount } from '~~/utils/pantry';
-const props = defineProps<{ recipe: RecipeView | undefined }>();
+const props = defineProps<{ recipe: RecipeView | undefined; initialDate?: LocalDate }>();
 const open = defineModel<boolean>('open', { required: true });
 const cook = useCook();
 const { view, today } = usePantry();
@@ -16,7 +16,7 @@ const active = ref<number | null>(null);
 watch(open, (value) => {
   if (!value || !props.recipe) return;
   lines.value = cook.plan(props.recipe.id);
-  date.value = today.value;
+  date.value = props.initialDate ?? today.value;
   active.value = null;
 });
 const itemFor = (line: CookLine) => (line.item_id ? view.value.byId(line.item_id) : undefined);
