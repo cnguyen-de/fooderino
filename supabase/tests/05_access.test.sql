@@ -188,5 +188,5 @@ select test.throws(format('update public.items_v2 set aliases = %L where id = %L
 -- Realtime
 select test.eq((select array_agg(tablename::text order by tablename) from pg_publication_tables where pubname = 'supabase_realtime'),
                array['bag_entries', 'command_log', 'cooked_recipes', 'household_members', 'household_recipes', 'households',
-                     'item_events', 'items_v2', 'rejected_commands'],
+                     'item_events', 'items_v2', 'meal_ingredients', 'rejected_commands'],
                'Realtime publishes every household table');

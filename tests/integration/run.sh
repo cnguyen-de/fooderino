@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Drives two sync engines through a real local Supabase (Postgres, PostgREST,
 # GoTrue, Realtime). Starts the stack from tests/integration/supabase, resets
-# its database, applies supabase/schema-v2.sql, cook.sql and seasons.sql, builds and starts the Nitro
-# server against it, then runs tests/integration.
+# its database, applies supabase/schema-v2.sql, cook.sql, seasons.sql and
+# meal-ingredients.sql, builds and starts the Nitro server against it, then runs tests/integration.
 # Usage: bash tests/integration/run.sh. STOP=1 stops the stack afterwards.
 set -euo pipefail
 
@@ -21,7 +21,7 @@ esac
 
 supabase db reset --workdir tests/integration >/dev/null 2>&1
 db="supabase_db_fooderino-e2e"
-for sql in supabase/schema-v2.sql supabase/cook.sql supabase/seasons.sql; do
+for sql in supabase/schema-v2.sql supabase/cook.sql supabase/seasons.sql supabase/meal-ingredients.sql; do
   docker exec -i "$db" psql -X -q -U postgres -d postgres -v ON_ERROR_STOP=1 < "$sql" 2>&1 \
     | grep -v 'already exists, skipping' || true
 done

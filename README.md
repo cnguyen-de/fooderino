@@ -6,7 +6,7 @@ A local-first grocery list and recipe app built on Nuxt (`ssr: false`), Dexie an
 
 - **The device holds one household.** Dexie keeps the confirmed server state of the user's
   household plus two outboxes: `commands` (state changes such as "used one", "ticked",
-  "unpacked") and `edits` (whole sheets: item metadata, recipes and cooked dishes). `usePantry()`
+  "unpacked") and `edits` (whole sheets: item metadata, recipes, cooked dishes and meal ingredients). `usePantry()`
   replays the outbox over the confirmed state in memory, so every tap shows at once, offline included.
 - **Commands are applied by the server, in order.** `utils/sync-engine.ts` drains the outbox
   through the `apply_commands` RPC, 50 at a time. Each command id is minted once, so a retry
@@ -28,7 +28,8 @@ A local-first grocery list and recipe app built on Nuxt (`ssr: false`), Dexie an
 - **Recipes and meals belong to the household.** Every member sees and edits the same recipes.
   An ingredient is either picked from the items, and follows that item through renames and merges,
   or typed as a free name. A cooked dish records its date and the `use` commands that deducted its
-  ingredients. Changing household removes the old household's recipes and meals from the device.
+  ingredients. An ingredient can also join a meal without a recipe, such as half a pack of tofu, or
+  salt with no amount, which deducts nothing. Changing household removes the old household's recipes and meals from the device.
 - **Items have alternate names.** Add them under **More options → Other names** in the editor;
   search matches every name, ignoring case and accents. Places and stores can be picked from
   existing tags or entered in the same field. New items use count units, including data imports;
@@ -52,9 +53,12 @@ Create `.env` with:
 | `SUPABASE_SERVICE_KEY` | Service-role key. The household routes use it to call `move_household`, the only writer of memberships. **Never commit it.** |
 | `BASE_URL` | Public origin, used to build share links (defaults to `http://localhost:3000`) |
 
-Apply `supabase/schema-v2.sql`, then `supabase/cook.sql`, then `supabase/seasons.sql`, to the database before the
-first run. An existing database gets `supabase/seasons.sql` before this client deploys, since the client pushes the
-`season` column with every item sheet.
+Apply `supabase/schema-v2.sql`, then `supabase/cook.sql`, then `supabase/seasons.sql`, then
+`supabase/meal-ingredients.sql`, to the database before the first run. An existing database gets
+`supabase/seasons.sql` before this client deploys, since the client pushes the `season` column with
+every item sheet. It also gets `supabase/meal-ingredients.sql` before this client deploys, since the
+client pulls the `meal_ingredients` table on every sync and a missing table fails the pull. Both
+files are safe to run again.
 Migrating an existing database also needs `supabase/backfill-v2.sql`, then `supabase/verify-v2.sql`
 to check it. A database that predates recipes in households gets `supabase/cook.sql` before this
 client deploys: it moves each user's saved recipes to their household.
